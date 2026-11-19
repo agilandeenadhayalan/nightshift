@@ -1,0 +1,494 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "User": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "ta",
+              "en"
+            ]
+          }
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "customer",
+            "listener"
+          ]
+        },
+        "listenerApproved": {
+          "type": "boolean"
+        },
+        "online": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "displayName",
+        "languages",
+        "mode",
+        "listenerApproved",
+        "online"
+      ],
+      "additionalProperties": false
+    },
+    "Rate": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "const": "test-audio-v1",
+          "type": "string"
+        },
+        "coinsPerMinute": {
+          "type": "integer"
+        },
+        "microcreditsPerCoin": {
+          "type": "integer"
+        },
+        "microcreditsPerSecond": {
+          "type": "integer"
+        },
+        "freeThroughSeconds": {
+          "type": "integer"
+        },
+        "minimumChargedSeconds": {
+          "type": "integer"
+        },
+        "listenerPaisePerHour": {
+          "type": "integer"
+        },
+        "testOnly": {
+          "const": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "coinsPerMinute",
+        "microcreditsPerCoin",
+        "microcreditsPerSecond",
+        "freeThroughSeconds",
+        "minimumChargedSeconds",
+        "listenerPaisePerHour",
+        "testOnly"
+      ],
+      "additionalProperties": false
+    },
+    "Wallet": {
+      "type": "object",
+      "properties": {
+        "balanceMicrocredits": {
+          "type": "integer"
+        },
+        "heldMicrocredits": {
+          "type": "integer"
+        },
+        "availableMicrocredits": {
+          "type": "integer"
+        },
+        "testOnly": {
+          "const": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "balanceMicrocredits",
+        "heldMicrocredits",
+        "availableMicrocredits",
+        "testOnly"
+      ],
+      "additionalProperties": false
+    },
+    "Listener": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "ta",
+              "en"
+            ]
+          }
+        },
+        "online": {
+          "type": "boolean"
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "busy": {
+          "type": "boolean"
+        },
+        "favorite": {
+          "type": "boolean"
+        },
+        "testOnly": {
+          "type": "boolean"
+        },
+        "rate": {
+          "$ref": "#/$defs/Rate"
+        }
+      },
+      "required": [
+        "id",
+        "displayName",
+        "languages",
+        "online",
+        "available",
+        "busy",
+        "favorite",
+        "testOnly",
+        "rate"
+      ],
+      "additionalProperties": false
+    },
+    "Call": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "customerId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "listenerId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "customerName": {
+          "type": "string"
+        },
+        "listenerName": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "ringing",
+            "connecting",
+            "connected",
+            "reconnecting",
+            "ended"
+          ]
+        },
+        "version": {
+          "type": "integer"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "acceptedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "endedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "connectedMs": {
+          "type": "integer"
+        },
+        "chargeMicrocredits": {
+          "type": "integer"
+        },
+        "earningPaise": {
+          "type": "integer"
+        },
+        "rate": {
+          "$ref": "#/$defs/Rate"
+        },
+        "maxDurationSeconds": {
+          "type": "integer"
+        },
+        "testOnly": {
+          "const": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "customerId",
+        "listenerId",
+        "customerName",
+        "listenerName",
+        "state",
+        "version",
+        "createdAt",
+        "expiresAt",
+        "acceptedAt",
+        "endedAt",
+        "reason",
+        "connectedMs",
+        "chargeMicrocredits",
+        "earningPaise",
+        "rate",
+        "maxDurationSeconds",
+        "testOnly"
+      ],
+      "additionalProperties": false
+    },
+    "Snapshot": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/$defs/User"
+        },
+        "activeCall": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Call"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "listeners": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Listener"
+          }
+        },
+        "wallet": {
+          "$ref": "#/$defs/Wallet"
+        },
+        "serverTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "user",
+        "activeCall",
+        "listeners",
+        "wallet",
+        "serverTime"
+      ],
+      "additionalProperties": false
+    },
+    "CallPage": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Call"
+          }
+        },
+        "nextCursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "items",
+        "nextCursor"
+      ],
+      "additionalProperties": false
+    },
+    "ListenerPage": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Listener"
+          }
+        },
+        "nextCursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "items",
+        "nextCursor"
+      ],
+      "additionalProperties": false
+    },
+    "Login": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "user": {
+          "$ref": "#/$defs/User"
+        },
+        "testOnly": {
+          "const": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "token",
+        "expiresAt",
+        "user",
+        "testOnly"
+      ],
+      "additionalProperties": false
+    },
+    "RtcToken": {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "type": "string"
+        },
+        "channel": {
+          "type": "string"
+        },
+        "uid": {
+          "type": "integer",
+          "enum": [
+            1,
+            2
+          ]
+        },
+        "remoteUid": {
+          "type": "integer",
+          "enum": [
+            1,
+            2
+          ]
+        },
+        "token": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "appId",
+        "channel",
+        "uid",
+        "remoteUid",
+        "token",
+        "expiresAt"
+      ],
+      "additionalProperties": false
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ],
+          "additionalProperties": false
+        },
+        "requestId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "error",
+        "requestId"
+      ],
+      "additionalProperties": false
+    },
+    "Event": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "call.invited",
+            "call.state_changed"
+          ]
+        },
+        "entityId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data": {
+          "$ref": "#/$defs/Call"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "entityId",
+        "version",
+        "timestamp",
+        "data"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$ref": "#/$defs/Event"
+}

@@ -1,6 +1,6 @@
 # NightShift decision register
 
-Recorded: 20 November 2026. Decision contact: Agilan Deenadhayalan.  
+Recorded: 20 November 2026. Decision contact: Agilan Deenadhayalan.
 Related issue: [FA-001 / #1](https://github.com/agilandeenadhayalan/nightshift/issues/1).
 
 **Confirmed** below means explicitly requested by the owner. **Proposed** means an engineering default or planning assumption. **Pending** means owner, provider, professional or real-device evidence is still required. Development can continue on independent work; pending items do not authorize a real-money or public release.

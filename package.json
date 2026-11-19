@@ -1,0 +1,20 @@
+{
+  "name": "nightshift",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/api"],
+  "engines": {"node": ">=24.13.0 <25"},
+  "scripts": {
+    "build": "npm run build --workspace @nightshift/api",
+    "typecheck": "npm run typecheck --workspace @nightshift/api",
+    "test": "npm run test --workspace @nightshift/api",
+    "test:integration": "npm run test:integration --workspace @nightshift/api",
+    "test:audio": "cd audio && node --test",
+    "db:migrate": "npm run db:migrate --workspace @nightshift/api",
+    "db:seed": "npm run db:seed --workspace @nightshift/api",
+    "start:api": "npm run start --workspace @nightshift/api",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "check:contracts": "node packages/contracts/build-contract.mjs --check",
+    "smoke:api": "node --env-file-if-exists=.env scripts/smoke-api.mjs"
+  }
+}
