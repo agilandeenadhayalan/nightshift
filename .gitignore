@@ -6,6 +6,7 @@
 node_modules/
 __pycache__/
 *.log
+*.hprof
 *.tsbuildinfo
 dist/
 coverage/

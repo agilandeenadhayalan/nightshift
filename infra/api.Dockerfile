@@ -17,4 +17,4 @@ COPY db db
 USER node
 WORKDIR /app/apps/api
 EXPOSE 3000
-CMD ["sh", "-c", "node dist/src/migrate.js && node dist/src/seed.js && node dist/src/main.js"]
+CMD ["sh", "-c", "node dist/src/migrate.js && node dist/src/seed.js && exec node dist/src/main.js"]

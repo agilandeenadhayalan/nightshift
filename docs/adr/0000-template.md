@@ -1,8 +1,8 @@
 # ADR-NNNN: Decision title
 
-Date: YYYY-MM-DD  
-Status: Proposed / Accepted for development / Accepted for production / Superseded  
-Related GitHub issues: links using actual issue numbers  
+Date: YYYY-MM-DD
+Status: Proposed / Accepted for development / Accepted for production / Superseded
+Related GitHub issues: links using actual issue numbers
 Decision owner: name, with approval status
 
 ## Context

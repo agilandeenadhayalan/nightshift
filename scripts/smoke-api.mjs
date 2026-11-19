@@ -27,6 +27,16 @@ try {
     sessions.push(session);
   }
   const [customer, listener] = sessions;
+  if (process.env.SMOKE_CALL_ID) {
+    for (const session of sessions) {
+      const call = await request('GET', `/calls/${process.env.SMOKE_CALL_ID}`, session.token);
+      assert.equal(call.id, process.env.SMOKE_CALL_ID);
+      assert.equal(call.state, 'ended');
+      assert.equal(call.chargeMicrocredits, 0);
+    }
+    console.log(JSON.stringify({ result: 'passed', callId: process.env.SMOKE_CALL_ID,
+      checks: ['both participants retain completed history after API restart'], mediaVerification: 'NOT performed' }, null, 2));
+  } else {
   await request('PUT', '/me/mode', customer.token, { mode: 'customer' });
   await request('PUT', '/me/mode', listener.token, { mode: 'listener' });
   await request('PUT', '/me/availability', listener.token, { online: true });
@@ -57,6 +67,7 @@ try {
     'HTTP authentication', 'online listener discovery', 'idempotent invitation', 'listener accepts',
     'customer ends', 'zero charge without media', 'same completed call in both histories', 'claims released',
   ], mediaVerification: 'NOT performed: two phones and Agora test credentials required' }, null, 2));
+  }
 } finally {
   for (const session of sessions) {
     // Logout ends any abandoned test encounter and clears presence.

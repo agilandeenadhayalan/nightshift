@@ -1,7 +1,7 @@
 # NightShift product scope
 
-Issue: [FA-001 / #1](https://github.com/agilandeenadhayalan/nightshift/issues/1)  
-Recorded: 20 November 2026  
+Issue: [FA-001 / #1](https://github.com/agilandeenadhayalan/nightshift/issues/1)
+Recorded: 20 November 2026
 Decision source: owner instructions in the implementation request and `NightShift_Master_Plan.md` (20 November 2026 revision).
 
 ## Agreed engineering scope

@@ -1,6 +1,6 @@
 # Development economics scenarios
 
-Related issue: [FA-003 / #3](https://github.com/agilandeenadhayalan/nightshift/issues/3).  
+Related issue: [FA-003 / #3](https://github.com/agilandeenadhayalan/nightshift/issues/3).
 Model and proposed caps revised: 20 November 2026. Decision owner: Agilan Deenadhayalan, with the finance appointment and specialist review still pending.
 
 The calculator now reproduces the historical ₹17 illustration and compares ₹500 per paid connected hour at ₹12, ₹15 and ₹20 per customer minute, using both 15% and 30% channel-fee assumptions. These are arithmetic scenarios, not approved NightShift prices, current provider quotations, tax conclusions or competitor profit estimates.

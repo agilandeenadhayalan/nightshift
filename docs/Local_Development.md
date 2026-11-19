@@ -18,9 +18,10 @@ bash scripts/setup-local.sh
 docker compose --env-file .env -f infra/compose.yaml --profile api up -d --build --wait
 docker compose --env-file .env -f infra/compose.yaml ps
 curl --fail http://127.0.0.1:3000/v1/health
+docker compose --env-file .env -f infra/compose.yaml logs -f api
 ```
 
-This runs the NestJS process in a Linux container with PostgreSQL/Redis on the same Compose network, migrates the database and seeds fictional accounts idempotently. It avoids Windows/WSL loopback differences. Run Compose consistently from the same shell and Docker context: a native Ubuntu Docker daemon and Docker Desktop can have separate images, volumes and services. Both roles must use the one API URL from this stack.
+This runs the NestJS process in a Linux container with PostgreSQL/Redis on the same Compose network, migrates the database and seeds fictional accounts idempotently. It avoids Windows/WSL loopback differences. Keep this Ubuntu terminal open while testing; `logs -f` follows safe startup messages and keeps the WSL session alive. Some WSL setups stop a distro after the last client process exits even when systemd Docker was started; a sequence of separate short `wsl.exe` calls can therefore stop the stack. Use another terminal for tests. Run Compose consistently from the same shell and Docker context: a native Ubuntu Docker daemon and Docker Desktop can have separate images, volumes and services. Both roles must use the one API URL from this stack.
 
 For native Node development inside WSL, start only PostgreSQL/Redis in that same WSL Docker context, then run:
 

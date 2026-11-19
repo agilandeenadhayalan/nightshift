@@ -1,7 +1,7 @@
 # ADR-0001: One Android application and an isolated test-credit milestone
 
-Date: 20 November 2026  
-Status: Accepted for development by the owner's implementation request  
+Date: 20 November 2026
+Status: Accepted for development by the owner's implementation request
 Related issues: [#1](https://github.com/agilandeenadhayalan/nightshift/issues/1), [#4](https://github.com/agilandeenadhayalan/nightshift/issues/4), [#6](https://github.com/agilandeenadhayalan/nightshift/issues/6), [#7](https://github.com/agilandeenadhayalan/nightshift/issues/7), [#8](https://github.com/agilandeenadhayalan/nightshift/issues/8)
 
 ## Context
