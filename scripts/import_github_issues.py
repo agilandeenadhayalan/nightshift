@@ -21,7 +21,8 @@ class GhError(RuntimeError):
 class GitHub:
     def command(self, argv, payload=None):
         result = subprocess.run(['gh', *argv], input=None if payload is None else json.dumps(payload),
-                                text=True, capture_output=True, check=False)
+                                text=True, encoding='utf-8', errors='replace',
+                                capture_output=True, check=False)
         if result.returncode:
             raise GhError(result.stderr.strip()[:1500] or f'gh exited {result.returncode}')
         return result.stdout
