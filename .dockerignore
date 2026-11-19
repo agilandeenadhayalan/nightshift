@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+**/node_modules
+**/dist
+**/build
+**/.dart_tool
+**/.gradle
+**/*.sqlite*
+**/*.jks
+**/*.keystore
+**/*.pem
+artifacts
+apps/mobile
+audio
