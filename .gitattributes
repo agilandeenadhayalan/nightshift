@@ -3,6 +3,7 @@
 *.yml text eol=lf
 *.yaml text eol=lf
 *.sql text eol=lf
+*.json text eol=lf
 gradlew text eol=lf
 *.bat text eol=crlf
 *.png binary
