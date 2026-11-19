@@ -1,0 +1,2056 @@
+[
+  {
+    "id": "FA-001",
+    "phase": "P0",
+    "title": "Freeze adult audio MVP and decision register",
+    "area": "product",
+    "dependencies": [],
+    "size": "S",
+    "priority": "P1",
+    "goal": "Define one product with customer/listener roles, Tamil/English, Android first and a paid conversation service.",
+    "acceptance": [
+      "Core and deferred features match the master plan",
+      "Record unresolved owner, brand, budget, support hours and listener-supply decisions",
+      "Name an accountable owner for product, finance and safety even if one person fills several roles"
+    ],
+    "verification": [
+      "Review every transcript feature against core/deferred scope",
+      "Confirm no employer accounts, code or data are dependencies"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P0",
+      "area:product",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P0 — Decisions and foundation",
+    "body": "<!-- nightshift-id: FA-001 -->\n# FA-001 — Freeze adult audio MVP and decision register\n\nPhase: **P0** · Area: **product** · Size: **S** · Release: **android-audio-mvp**\n\n## Outcome\n\nDefine one product with customer/listener roles, Tamil/English, Android first and a paid conversation service.\n\n## Dependencies\n\nNone\n\n## Acceptance criteria\n\n- [ ] Core and deferred features match the master plan\n- [ ] Record unresolved owner, brand, budget, support hours and listener-supply decisions\n- [ ] Name an accountable owner for product, finance and safety even if one person fills several roles\n\n## Verification\n\n- [ ] Review every transcript feature against core/deferred scope\n- [ ] Confirm no employer accounts, code or data are dependencies\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-002",
+    "phase": "P0",
+    "title": "Confirm store, payments and launch-policy route",
+    "area": "policy",
+    "dependencies": [
+      "FA-001"
+    ],
+    "size": "M",
+    "priority": "P0",
+    "goal": "Decide the actual commercial and store billing route before integrating real-money purchases.",
+    "acceptance": [
+      "Record Play account type and closed-testing applicability",
+      "Document coin versus 1:1 service treatment and India alternative-billing conditions with source dates",
+      "Track CA/legal review of entity, GST/TDS, contracts, funds flow, privacy and minor protection as unresolved launch gates until completed"
+    ],
+    "verification": [
+      "Review a purchase/payout funds-flow diagram with the responsible specialists",
+      "Recheck current primary policies before release"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P0",
+      "area:policy",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P0 — Decisions and foundation",
+    "body": "<!-- nightshift-id: FA-002 -->\n# FA-002 — Confirm store, payments and launch-policy route\n\nPhase: **P0** · Area: **policy** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nDecide the actual commercial and store billing route before integrating real-money purchases.\n\n## Dependencies\n\nFA-001\n\n## Acceptance criteria\n\n- [ ] Record Play account type and closed-testing applicability\n- [ ] Document coin versus 1:1 service treatment and India alternative-billing conditions with source dates\n- [ ] Track CA/legal review of entity, GST/TDS, contracts, funds flow, privacy and minor protection as unresolved launch gates until completed\n\n## Verification\n\n- [ ] Review a purchase/payout funds-flow diagram with the responsible specialists\n- [ ] Recheck current primary policies before release\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-003",
+    "phase": "P0",
+    "title": "Approve economic assumptions and spending envelope",
+    "area": "product",
+    "dependencies": [
+      "FA-001",
+      "FA-002"
+    ],
+    "size": "S",
+    "priority": "P1",
+    "goal": "Make price, listener compensation, promo cost and unit contribution explicit.",
+    "acceptance": [
+      "Separate observed transcript values from model assumptions",
+      "Model audio/video participant-minutes, channel fees, tax assumption, host cost, OTP and fixed costs",
+      "Set proposed spend, trial, top-up and payout caps with an owner and revision date",
+      "Model ₹500 per paid connected hour at ₹12, ₹15 and ₹20 per minute and compare 15% and 30% channel fees."
+    ],
+    "verification": [
+      "Reproduce the ₹17/30-minute example without claiming competitor profit",
+      "Run low-price and high-fee cases and reject negative contribution unless a capped subsidy is authorized"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P0",
+      "area:product",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P0 — Decisions and foundation",
+    "body": "<!-- nightshift-id: FA-003 -->\n# FA-003 — Approve economic assumptions and spending envelope\n\nPhase: **P0** · Area: **product** · Size: **S** · Release: **android-audio-mvp**\n\n## Outcome\n\nMake price, listener compensation, promo cost and unit contribution explicit.\n\n## Dependencies\n\nFA-001, FA-002\n\n## Acceptance criteria\n\n- [ ] Separate observed transcript values from model assumptions\n- [ ] Model audio/video participant-minutes, channel fees, tax assumption, host cost, OTP and fixed costs\n- [ ] Set proposed spend, trial, top-up and payout caps with an owner and revision date\n\n- [ ] Model ₹500 per paid connected hour at ₹12, ₹15 and ₹20 per minute and compare 15% and 30% channel fees.\n\n## Verification\n\n- [ ] Reproduce the ₹17/30-minute example without claiming competitor profit\n- [ ] Run low-price and high-fee cases and reject negative contribution unless a capped subsidy is authorized\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-004",
+    "phase": "P0",
+    "title": "Create private monorepo and contributor conventions",
+    "area": "platform",
+    "dependencies": [
+      "FA-001"
+    ],
+    "size": "S",
+    "priority": "P1",
+    "goal": "Initialize the agreed repository layout with no app deployment or secrets.",
+    "acceptance": [
+      "Create mobile, web, admin, API, worker, contracts, migrations, infra and docs paths",
+      "Add README, ADR template, PR template, ignores and secure environment examples",
+      "Pin supported toolchain versions after compatibility checks"
+    ],
+    "verification": [
+      "Fresh checkout follows documented setup",
+      "Secret scan is clean and generated artifacts are ignored appropriately"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P0",
+      "area:platform",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P0 — Decisions and foundation",
+    "body": "<!-- nightshift-id: FA-004 -->\n# FA-004 — Create private monorepo and contributor conventions\n\nPhase: **P0** · Area: **platform** · Size: **S** · Release: **android-audio-mvp**\n\n## Outcome\n\nInitialize the agreed repository layout with no app deployment or secrets.\n\n## Dependencies\n\nFA-001\n\n## Acceptance criteria\n\n- [ ] Create mobile, web, admin, API, worker, contracts, migrations, infra and docs paths\n- [ ] Add README, ADR template, PR template, ignores and secure environment examples\n- [ ] Pin supported toolchain versions after compatibility checks\n\n## Verification\n\n- [ ] Fresh checkout follows documented setup\n- [ ] Secret scan is clean and generated artifacts are ignored appropriately\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-005",
+    "phase": "P0",
+    "title": "Set up CI and meaningful merge checks",
+    "area": "platform",
+    "dependencies": [
+      "FA-004"
+    ],
+    "size": "M",
+    "priority": "P1",
+    "goal": "Make code and contract quality reproducible before feature work.",
+    "acceptance": [
+      "CI runs TypeScript/Flutter static checks and relevant builds",
+      "Test jobs use isolated PostgreSQL/Redis and publish failures",
+      "Add secret/dependency scan and protected-branch guidance without assuming GitHub plan support"
+    ],
+    "verification": [
+      "Demonstrate one deliberate failing check blocks the validation gate",
+      "Restore green checks on the starter commit"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P0",
+      "area:platform",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P0 — Decisions and foundation",
+    "body": "<!-- nightshift-id: FA-005 -->\n# FA-005 — Set up CI and meaningful merge checks\n\nPhase: **P0** · Area: **platform** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nMake code and contract quality reproducible before feature work.\n\n## Dependencies\n\nFA-004\n\n## Acceptance criteria\n\n- [ ] CI runs TypeScript/Flutter static checks and relevant builds\n- [ ] Test jobs use isolated PostgreSQL/Redis and publish failures\n- [ ] Add secret/dependency scan and protected-branch guidance without assuming GitHub plan support\n\n## Verification\n\n- [ ] Demonstrate one deliberate failing check blocks the validation gate\n- [ ] Restore green checks on the starter commit\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-006",
+    "phase": "P0",
+    "title": "Prepare local stack and provider feasibility spike",
+    "area": "platform",
+    "dependencies": [
+      "FA-004"
+    ],
+    "size": "M",
+    "priority": "P1",
+    "goal": "Prove managed RTC and OTP integration feasibility on real devices while preparing isolated environments.",
+    "acceptance": [
+      "Docker Compose starts PostgreSQL/Redis and documented health checks",
+      "Use own test projects, secret injection and Firebase test numbers",
+      "Two phones join a throwaway server-token RTC channel and validate Android media cutoff API feasibility before full integration",
+      "Use fictional test identities locally and verify an approved branded OTP on real Indian SIMs in staging."
+    ],
+    "verification": [
+      "Record device/SDK/network versions and two-way audio result",
+      "Confirm token secrets stay server-side and test adapters cannot run in production"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P0",
+      "area:platform",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P0 — Decisions and foundation",
+    "body": "<!-- nightshift-id: FA-006 -->\n# FA-006 — Prepare local stack and provider feasibility spike\n\nPhase: **P0** · Area: **platform** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nProve managed RTC and OTP integration feasibility on real devices while preparing isolated environments.\n\n## Dependencies\n\nFA-004\n\n## Acceptance criteria\n\n- [ ] Docker Compose starts PostgreSQL/Redis and documented health checks\n- [ ] Use own test projects, secret injection and Firebase test numbers\n- [ ] Two phones join a throwaway server-token RTC channel and validate Android media cutoff API feasibility before full integration\n\n- [ ] Use fictional test identities locally and verify an approved branded OTP on real Indian SIMs in staging.\n\n## Verification\n\n- [ ] Record device/SDK/network versions and two-way audio result\n- [ ] Confirm token secrets stay server-side and test adapters cannot run in production\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-007",
+    "phase": "P0",
+    "title": "Define database constraints and versioned API contracts",
+    "area": "backend",
+    "dependencies": [
+      "FA-001",
+      "FA-004"
+    ],
+    "size": "M",
+    "priority": "P1",
+    "goal": "Create the durable data model and contracts used across Flutter, admin and backend.",
+    "acceptance": [
+      "Schema covers identity, listener review, calls, claims, ledger, purchases, payouts, reports and outbox",
+      "Specify state transitions, unique keys, UTC timestamps and fixed-point units",
+      "Publish OpenAPI/event schemas and generated-client workflow"
+    ],
+    "verification": [
+      "Apply migrations to empty and representative test databases",
+      "Contract checks reject an incompatible client/server change"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P0",
+      "area:backend",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P0 — Decisions and foundation",
+    "body": "<!-- nightshift-id: FA-007 -->\n# FA-007 — Define database constraints and versioned API contracts\n\nPhase: **P0** · Area: **backend** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nCreate the durable data model and contracts used across Flutter, admin and backend.\n\n## Dependencies\n\nFA-001, FA-004\n\n## Acceptance criteria\n\n- [ ] Schema covers identity, listener review, calls, claims, ledger, purchases, payouts, reports and outbox\n- [ ] Specify state transitions, unique keys, UTC timestamps and fixed-point units\n- [ ] Publish OpenAPI/event schemas and generated-client workflow\n\n## Verification\n\n- [ ] Apply migrations to empty and representative test databases\n- [ ] Contract checks reject an incompatible client/server change\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-008",
+    "phase": "P0",
+    "title": "Build Flutter navigation and accessible UI foundation",
+    "area": "mobile",
+    "dependencies": [
+      "FA-004",
+      "FA-007"
+    ],
+    "size": "M",
+    "priority": "P1",
+    "goal": "Implement Discover, Recents and Profile navigation with listener-mode placeholders and original design tokens.",
+    "acceptance": [
+      "Riverpod/GoRouter structure isolates feature state and API clients",
+      "Tamil/English strings, readable typography and accessible control labels work",
+      "Loading, empty, error and offline components are reusable with no fake production activity"
+    ],
+    "verification": [
+      "Widget tests verify navigation and restoration",
+      "Check large text and screen-reader order on a real phone"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P0",
+      "area:mobile",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P0 — Decisions and foundation",
+    "body": "<!-- nightshift-id: FA-008 -->\n# FA-008 — Build Flutter navigation and accessible UI foundation\n\nPhase: **P0** · Area: **mobile** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nImplement Discover, Recents and Profile navigation with listener-mode placeholders and original design tokens.\n\n## Dependencies\n\nFA-004, FA-007\n\n## Acceptance criteria\n\n- [ ] Riverpod/GoRouter structure isolates feature state and API clients\n- [ ] Tamil/English strings, readable typography and accessible control labels work\n- [ ] Loading, empty, error and offline components are reusable with no fake production activity\n\n## Verification\n\n- [ ] Widget tests verify navigation and restoration\n- [ ] Check large text and screen-reader order on a real phone\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-009",
+    "phase": "P1",
+    "title": "Implement phone authentication with abuse controls",
+    "area": "security",
+    "dependencies": [
+      "FA-006",
+      "FA-007",
+      "FA-008"
+    ],
+    "size": "M",
+    "priority": "P0",
+    "goal": "Authenticate through server-verified branded OTP and use Firebase ID tokens for API sessions.",
+    "acceptance": [
+      "Verify token issuer, audience, signature and expiry",
+      "OTP resend/rate/quota controls and error UX are explicit",
+      "Never log OTPs or full phone numbers and record provider consent",
+      "Verify MSG91 challenge on the server, bind the verified phone to one UID, exchange a Firebase custom token and reject reused OTPs."
+    ],
+    "verification": [
+      "Test expired/invalid tokens and wrong/expired OTP UX",
+      "Verify repeated requests respect limits and test bypass cannot enable production access"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P1",
+      "area:security",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P1 — Identity and listeners",
+    "body": "<!-- nightshift-id: FA-009 -->\n# FA-009 — Implement phone authentication with abuse controls\n\nPhase: **P1** · Area: **security** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nAuthenticate through server-verified branded OTP and use Firebase ID tokens for API sessions.\n\n## Dependencies\n\nFA-006, FA-007, FA-008\n\n## Acceptance criteria\n\n- [ ] Verify token issuer, audience, signature and expiry\n- [ ] OTP resend/rate/quota controls and error UX are explicit\n- [ ] Never log OTPs or full phone numbers and record provider consent\n\n- [ ] Verify MSG91 challenge on the server, bind the verified phone to one UID, exchange a Firebase custom token and reject reused OTPs.\n\n## Verification\n\n- [ ] Test expired/invalid tokens and wrong/expired OTP UX\n- [ ] Verify repeated requests respect limits and test bypass cannot enable production access\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-010",
+    "phase": "P1",
+    "title": "Implement sessions, devices and role authorization",
+    "area": "security",
+    "dependencies": [
+      "FA-009"
+    ],
+    "size": "M",
+    "priority": "P0",
+    "goal": "Enforce customer/listener/admin permissions and session lifecycle on every endpoint and socket action.",
+    "acceptance": [
+      "Backend maps provider identity to opaque user and device records",
+      "Logout/revocation and suspension invalidate sensitive actions",
+      "Admin access uses MFA and role permissions distinct from ordinary app users"
+    ],
+    "verification": [
+      "Attempt forged role claims and cross-user resource access",
+      "Test revoked socket and API session behavior"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P1",
+      "area:security",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P1 — Identity and listeners",
+    "body": "<!-- nightshift-id: FA-010 -->\n# FA-010 — Implement sessions, devices and role authorization\n\nPhase: **P1** · Area: **security** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nEnforce customer/listener/admin permissions and session lifecycle on every endpoint and socket action.\n\n## Dependencies\n\nFA-009\n\n## Acceptance criteria\n\n- [ ] Backend maps provider identity to opaque user and device records\n- [ ] Logout/revocation and suspension invalidate sensitive actions\n- [ ] Admin access uses MFA and role permissions distinct from ordinary app users\n\n## Verification\n\n- [ ] Attempt forged role claims and cross-user resource access\n- [ ] Test revoked socket and API session behavior\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-011",
+    "phase": "P1",
+    "title": "Implement adult profile and avatar onboarding",
+    "area": "mobile",
+    "dependencies": [
+      "FA-008",
+      "FA-010"
+    ],
+    "size": "M",
+    "priority": "P1",
+    "goal": "Collect only necessary onboarding data with a meaningful age gate and moderated public profile.",
+    "acceptance": [
+      "Underage users cannot enter the adult service",
+      "Nickname/avatar and optional preference fields validate safely",
+      "DOB and phone remain private and self-declared age is not labelled verified identity"
+    ],
+    "verification": [
+      "Test age boundaries and inconsistent DOB updates",
+      "Verify public APIs exclude sensitive fields"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P1",
+      "area:mobile",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P1 — Identity and listeners",
+    "body": "<!-- nightshift-id: FA-011 -->\n# FA-011 — Implement adult profile and avatar onboarding\n\nPhase: **P1** · Area: **mobile** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nCollect only necessary onboarding data with a meaningful age gate and moderated public profile.\n\n## Dependencies\n\nFA-008, FA-010\n\n## Acceptance criteria\n\n- [ ] Underage users cannot enter the adult service\n- [ ] Nickname/avatar and optional preference fields validate safely\n- [ ] DOB and phone remain private and self-declared age is not labelled verified identity\n\n## Verification\n\n- [ ] Test age boundaries and inconsistent DOB updates\n- [ ] Verify public APIs exclude sensitive fields\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-012",
+    "phase": "P1",
+    "title": "Implement language preferences and localization",
+    "area": "mobile",
+    "dependencies": [
+      "FA-011"
+    ],
+    "size": "S",
+    "priority": "P1",
+    "goal": "Separate interface language from conversation language filters.",
+    "acceptance": [
+      "Tamil and English UI resources exist with fallback behavior",
+      "Speaking languages are stored as controlled codes",
+      "Changing filter language updates discovery without changing identity"
+    ],
+    "verification": [
+      "Test long Tamil strings and persisted selections",
+      "Verify filtering never uses device location as an undisclosed language proxy"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P1",
+      "area:mobile",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P1 — Identity and listeners",
+    "body": "<!-- nightshift-id: FA-012 -->\n# FA-012 — Implement language preferences and localization\n\nPhase: **P1** · Area: **mobile** · Size: **S** · Release: **android-audio-mvp**\n\n## Outcome\n\nSeparate interface language from conversation language filters.\n\n## Dependencies\n\nFA-011\n\n## Acceptance criteria\n\n- [ ] Tamil and English UI resources exist with fallback behavior\n- [ ] Speaking languages are stored as controlled codes\n- [ ] Changing filter language updates discovery without changing identity\n\n## Verification\n\n- [ ] Test long Tamil strings and persisted selections\n- [ ] Verify filtering never uses device location as an undisclosed language proxy\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-013",
+    "phase": "P1",
+    "title": "Build private listener application flow",
+    "area": "mobile",
+    "dependencies": [
+      "FA-010",
+      "FA-011",
+      "FA-012"
+    ],
+    "size": "M",
+    "priority": "P1",
+    "goal": "Allow eligible adults to apply with bio, topics and consented review materials.",
+    "acceptance": [
+      "Application has draft/submitted/needs-information/rejected states",
+      "Uploads are private, size/type validated and time-limited",
+      "Voice sample is described as a review sample rather than proof of gender or age"
+    ],
+    "verification": [
+      "Attempt to read another applicant upload",
+      "Test interrupted upload and duplicate submission without duplicating applications"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P1",
+      "area:mobile",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P1 — Identity and listeners",
+    "body": "<!-- nightshift-id: FA-013 -->\n# FA-013 — Build private listener application flow\n\nPhase: **P1** · Area: **mobile** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nAllow eligible adults to apply with bio, topics and consented review materials.\n\n## Dependencies\n\nFA-010, FA-011, FA-012\n\n## Acceptance criteria\n\n- [ ] Application has draft/submitted/needs-information/rejected states\n- [ ] Uploads are private, size/type validated and time-limited\n- [ ] Voice sample is described as a review sample rather than proof of gender or age\n\n## Verification\n\n- [ ] Attempt to read another applicant upload\n- [ ] Test interrupted upload and duplicate submission without duplicating applications\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-014",
+    "phase": "P1",
+    "title": "Build listener review and approval console",
+    "area": "admin",
+    "dependencies": [
+      "FA-010",
+      "FA-013"
+    ],
+    "size": "M",
+    "priority": "P1",
+    "goal": "Enable a human reviewer to complete required checks before a listener becomes callable.",
+    "acceptance": [
+      "Review queue includes submitted evidence with minimum required access",
+      "Approval/rejection records reviewer, time, checks performed and reason",
+      "Approval triggers role entitlement and notification through durable events"
+    ],
+    "verification": [
+      "Unprivileged user cannot approve themselves",
+      "Duplicate approval event does not duplicate entitlement or notifications"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P1",
+      "area:admin",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P1 — Identity and listeners",
+    "body": "<!-- nightshift-id: FA-014 -->\n# FA-014 — Build listener review and approval console\n\nPhase: **P1** · Area: **admin** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nEnable a human reviewer to complete required checks before a listener becomes callable.\n\n## Dependencies\n\nFA-010, FA-013\n\n## Acceptance criteria\n\n- [ ] Review queue includes submitted evidence with minimum required access\n- [ ] Approval/rejection records reviewer, time, checks performed and reason\n- [ ] Approval triggers role entitlement and notification through durable events\n\n## Verification\n\n- [ ] Unprivileged user cannot approve themselves\n- [ ] Duplicate approval event does not duplicate entitlement or notifications\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-015",
+    "phase": "P1",
+    "title": "Implement role switching and listener availability intent",
+    "area": "mobile",
+    "dependencies": [
+      "FA-014"
+    ],
+    "size": "S",
+    "priority": "P1",
+    "goal": "Provide customer/listener modes while preserving one account and active-call constraints.",
+    "acceptance": [
+      "Only approved listeners see operational earning controls",
+      "Switching is blocked while reserved or in a call",
+      "Desired availability is separate from current reachability"
+    ],
+    "verification": [
+      "Try switching roles on two devices concurrently",
+      "Confirm unapproved listeners cannot enable availability through direct API calls"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P1",
+      "area:mobile",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P1 — Identity and listeners",
+    "body": "<!-- nightshift-id: FA-015 -->\n# FA-015 — Implement role switching and listener availability intent\n\nPhase: **P1** · Area: **mobile** · Size: **S** · Release: **android-audio-mvp**\n\n## Outcome\n\nProvide customer/listener modes while preserving one account and active-call constraints.\n\n## Dependencies\n\nFA-014\n\n## Acceptance criteria\n\n- [ ] Only approved listeners see operational earning controls\n- [ ] Switching is blocked while reserved or in a call\n- [ ] Desired availability is separate from current reachability\n\n## Verification\n\n- [ ] Try switching roles on two devices concurrently\n- [ ] Confirm unapproved listeners cannot enable availability through direct API calls\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-016",
+    "phase": "P1",
+    "title": "Implement consent history and deletion workflow foundation",
+    "area": "security",
+    "dependencies": [
+      "FA-010",
+      "FA-011"
+    ],
+    "size": "M",
+    "priority": "P0",
+    "goal": "Make privacy choices and account deletion executable, with lawful retention boundaries.",
+    "acceptance": [
+      "Versioned consent events identify purpose and notice version",
+      "Deletion request uses step-up authentication and published effect on credits/earnings",
+      "Workflow distinguishes removable profile data from restricted financial/dispute retention"
+    ],
+    "verification": [
+      "Verify deletion cannot target another account",
+      "Test retention hold and eventual deletion using synthetic records"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P1",
+      "area:security",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P1 — Identity and listeners",
+    "body": "<!-- nightshift-id: FA-016 -->\n# FA-016 — Implement consent history and deletion workflow foundation\n\nPhase: **P1** · Area: **security** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nMake privacy choices and account deletion executable, with lawful retention boundaries.\n\n## Dependencies\n\nFA-010, FA-011\n\n## Acceptance criteria\n\n- [ ] Versioned consent events identify purpose and notice version\n- [ ] Deletion request uses step-up authentication and published effect on credits/earnings\n- [ ] Workflow distinguishes removable profile data from restricted financial/dispute retention\n\n## Verification\n\n- [ ] Verify deletion cannot target another account\n- [ ] Test retention hold and eventual deletion using synthetic records\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-017",
+    "phase": "P2",
+    "title": "Implement presence heartbeat and stale-status expiry",
+    "area": "backend",
+    "dependencies": [
+      "FA-010",
+      "FA-015"
+    ],
+    "size": "M",
+    "priority": "P1",
+    "goal": "Track actual listener reachability without treating an app toggle as proof of availability.",
+    "acceptance": [
+      "Authenticated heartbeats refresh a proposed 45-second Redis TTL",
+      "Busy/approval/block state override apparent online status",
+      "Reconnect and multi-device policy have explicit server behavior"
+    ],
+    "verification": [
+      "Kill the process/remove network and measure offline propagation",
+      "Redis restart does not reopen a database-owned active call"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P2",
+      "area:backend",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P2 — Discovery and matching",
+    "body": "<!-- nightshift-id: FA-017 -->\n# FA-017 — Implement presence heartbeat and stale-status expiry\n\nPhase: **P2** · Area: **backend** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nTrack actual listener reachability without treating an app toggle as proof of availability.\n\n## Dependencies\n\nFA-010, FA-015\n\n## Acceptance criteria\n\n- [ ] Authenticated heartbeats refresh a proposed 45-second Redis TTL\n- [ ] Busy/approval/block state override apparent online status\n- [ ] Reconnect and multi-device policy have explicit server behavior\n\n## Verification\n\n- [ ] Kill the process/remove network and measure offline propagation\n- [ ] Redis restart does not reopen a database-owned active call\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-018",
+    "phase": "P2",
+    "title": "Implement language-filtered discovery API and cards",
+    "area": "mobile",
+    "dependencies": [
+      "FA-012",
+      "FA-017"
+    ],
+    "size": "M",
+    "priority": "P1",
+    "goal": "Show real eligible listeners with current availability and clear call affordances.",
+    "acceptance": [
+      "Available/busy/offline ordering follows the UI specification",
+      "Blocked, unapproved and ineligible accounts are excluded",
+      "Empty/no-language-supply states are useful and do not create fake profiles"
+    ],
+    "verification": [
+      "Test all eligibility combinations",
+      "Verify busy state immediately disables call while reordering is deferred"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P2",
+      "area:mobile",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P2 — Discovery and matching",
+    "body": "<!-- nightshift-id: FA-018 -->\n# FA-018 — Implement language-filtered discovery API and cards\n\nPhase: **P2** · Area: **mobile** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nShow real eligible listeners with current availability and clear call affordances.\n\n## Dependencies\n\nFA-012, FA-017\n\n## Acceptance criteria\n\n- [ ] Available/busy/offline ordering follows the UI specification\n- [ ] Blocked, unapproved and ineligible accounts are excluded\n- [ ] Empty/no-language-supply states are useful and do not create fake profiles\n\n## Verification\n\n- [ ] Test all eligibility combinations\n- [ ] Verify busy state immediately disables call while reordering is deferred\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-019",
+    "phase": "P2",
+    "title": "Implement stable cursor pagination and incremental updates",
+    "area": "backend",
+    "dependencies": [
+      "FA-018"
+    ],
+    "size": "M",
+    "priority": "P1",
+    "goal": "Keep directory scrolling stable as availability changes.",
+    "acceptance": [
+      "First page uses a 20-item limit and stable IDs/tie-breakers",
+      "Cursor/view epoch policy prevents uncontrolled duplicates and skips",
+      "Socket updates only affect relevant visible/subscribed directory slices"
+    ],
+    "verification": [
+      "Change listener states during pagination and compare unique IDs",
+      "Measure event fan-out with multiple language segments"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P2",
+      "area:backend",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P2 — Discovery and matching",
+    "body": "<!-- nightshift-id: FA-019 -->\n# FA-019 — Implement stable cursor pagination and incremental updates\n\nPhase: **P2** · Area: **backend** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nKeep directory scrolling stable as availability changes.\n\n## Dependencies\n\nFA-018\n\n## Acceptance criteria\n\n- [ ] First page uses a 20-item limit and stable IDs/tie-breakers\n- [ ] Cursor/view epoch policy prevents uncontrolled duplicates and skips\n- [ ] Socket updates only affect relevant visible/subscribed directory slices\n\n## Verification\n\n- [ ] Change listener states during pagination and compare unique IDs\n- [ ] Measure event fan-out with multiple language segments\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-020",
+    "phase": "P2",
+    "title": "Implement favorites and presence-aware recents hooks",
+    "area": "mobile",
+    "dependencies": [
+      "FA-018",
+      "FA-019"
+    ],
+    "size": "S",
+    "priority": "P1",
+    "goal": "Let a customer save preferred listeners without implying guaranteed availability.",
+    "acceptance": [
+      "Favorite add/remove is idempotent",
+      "Favorites respect blocks, deletion and listener approval",
+      "Current availability is separate from historical call status"
+    ],
+    "verification": [
+      "Retry favorite mutation and verify one record",
+      "Blocked listener never reappears as callable from favorites"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P2",
+      "area:mobile",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P2 — Discovery and matching",
+    "body": "<!-- nightshift-id: FA-020 -->\n# FA-020 — Implement favorites and presence-aware recents hooks\n\nPhase: **P2** · Area: **mobile** · Size: **S** · Release: **android-audio-mvp**\n\n## Outcome\n\nLet a customer save preferred listeners without implying guaranteed availability.\n\n## Dependencies\n\nFA-018, FA-019\n\n## Acceptance criteria\n\n- [ ] Favorite add/remove is idempotent\n- [ ] Favorites respect blocks, deletion and listener approval\n- [ ] Current availability is separate from historical call status\n\n## Verification\n\n- [ ] Retry favorite mutation and verify one record\n- [ ] Blocked listener never reappears as callable from favorites\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-021",
+    "phase": "P2",
+    "title": "Enforce pair eligibility and immediate blocking",
+    "area": "security",
+    "dependencies": [
+      "FA-010",
+      "FA-018"
+    ],
+    "size": "M",
+    "priority": "P0",
+    "goal": "Apply one eligibility function to discovery, direct calls, matching and reconnection.",
+    "acceptance": [
+      "Either-side block and suspension prevent new pair contact",
+      "Server revalidates approval, age gate, media type and language rules",
+      "Safety block ends an active encounter according to documented behavior"
+    ],
+    "verification": [
+      "Attempt direct API call to a hidden/blocked listener",
+      "Confirm a stale directory response cannot bypass the block"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P2",
+      "area:security",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P2 — Discovery and matching",
+    "body": "<!-- nightshift-id: FA-021 -->\n# FA-021 — Enforce pair eligibility and immediate blocking\n\nPhase: **P2** · Area: **security** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nApply one eligibility function to discovery, direct calls, matching and reconnection.\n\n## Dependencies\n\nFA-010, FA-018\n\n## Acceptance criteria\n\n- [ ] Either-side block and suspension prevent new pair contact\n- [ ] Server revalidates approval, age gate, media type and language rules\n- [ ] Safety block ends an active encounter according to documented behavior\n\n## Verification\n\n- [ ] Attempt direct API call to a hidden/blocked listener\n- [ ] Confirm a stale directory response cannot bypass the block\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-022",
+    "phase": "P2",
+    "title": "Implement atomic participant reservation",
+    "area": "calls",
+    "dependencies": [
+      "FA-007",
+      "FA-017",
+      "FA-021"
+    ],
+    "size": "L",
+    "priority": "P0",
+    "goal": "Prevent two callers or devices from acquiring the same participant simultaneously.",
+    "acceptance": [
+      "Unique active participant claims cover both roles and both parties",
+      "Transaction creates session, claims, quote snapshot and spend authorization atomically",
+      "Timeout release and cancellation use versioned compare-and-set with durable recovery"
+    ],
+    "verification": [
+      "Race 100 requests against one listener and prove only one valid claim",
+      "Inject transaction/process failure and verify no orphaned claim; real-money integration waits for FA-034/037"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P2",
+      "area:calls",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P2 — Discovery and matching",
+    "body": "<!-- nightshift-id: FA-022 -->\n# FA-022 — Implement atomic participant reservation\n\nPhase: **P2** · Area: **calls** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nPrevent two callers or devices from acquiring the same participant simultaneously.\n\n## Dependencies\n\nFA-007, FA-017, FA-021\n\n## Acceptance criteria\n\n- [ ] Unique active participant claims cover both roles and both parties\n- [ ] Transaction creates session, claims, quote snapshot and spend authorization atomically\n- [ ] Timeout release and cancellation use versioned compare-and-set with durable recovery\n\n## Verification\n\n- [ ] Race 100 requests against one listener and prove only one valid claim\n- [ ] Inject transaction/process failure and verify no orphaned claim; real-money integration waits for FA-034/037\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-023",
+    "phase": "P2",
+    "title": "Implement invitations, acceptance and expiration",
+    "area": "calls",
+    "dependencies": [
+      "FA-022"
+    ],
+    "size": "M",
+    "priority": "P0",
+    "goal": "Deliver scoped invitations through sockets and notifications and resolve acceptance races.",
+    "acceptance": [
+      "Only the addressed listener can accept an unexpired invitation",
+      "Decline/cancel/timeout release claims and reservation",
+      "Repeated invitation/accept events do not create a second session"
+    ],
+    "verification": [
+      "Test accept vs cancel and accept after timeout",
+      "Test notification delivery while foregrounded and resumed"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P2",
+      "area:calls",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P2 — Discovery and matching",
+    "body": "<!-- nightshift-id: FA-023 -->\n# FA-023 — Implement invitations, acceptance and expiration\n\nPhase: **P2** · Area: **calls** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nDeliver scoped invitations through sockets and notifications and resolve acceptance races.\n\n## Dependencies\n\nFA-022\n\n## Acceptance criteria\n\n- [ ] Only the addressed listener can accept an unexpired invitation\n- [ ] Decline/cancel/timeout release claims and reservation\n- [ ] Repeated invitation/accept events do not create a second session\n\n## Verification\n\n- [ ] Test accept vs cancel and accept after timeout\n- [ ] Test notification delivery while foregrounded and resumed\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-024",
+    "phase": "P2",
+    "title": "Implement bounded opt-in listener matching",
+    "area": "calls",
+    "dependencies": [
+      "FA-019",
+      "FA-021",
+      "FA-022",
+      "FA-023"
+    ],
+    "size": "M",
+    "priority": "P0",
+    "goal": "Select eligible listeners using language, availability, fairness and controlled random tie-breaking.",
+    "acceptance": [
+      "One active matching request per customer with explicit cancel",
+      "Try at most three candidates sequentially within a disclosed wait budget",
+      "Record selection reasons without leaking private scores or implying romantic compatibility"
+    ],
+    "verification": [
+      "No-supply and all-decline tests end without charge",
+      "Fairness simulation demonstrates that new eligible listeners can receive requests"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P2",
+      "area:calls",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P2 — Discovery and matching",
+    "body": "<!-- nightshift-id: FA-024 -->\n# FA-024 — Implement bounded opt-in listener matching\n\nPhase: **P2** · Area: **calls** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nSelect eligible listeners using language, availability, fairness and controlled random tie-breaking.\n\n## Dependencies\n\nFA-019, FA-021, FA-022, FA-023\n\n## Acceptance criteria\n\n- [ ] One active matching request per customer with explicit cancel\n- [ ] Try at most three candidates sequentially within a disclosed wait budget\n- [ ] Record selection reasons without leaking private scores or implying romantic compatibility\n\n## Verification\n\n- [ ] No-supply and all-decline tests end without charge\n- [ ] Fairness simulation demonstrates that new eligible listeners can receive requests\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-025",
+    "phase": "P3",
+    "title": "Implement scoped RTC token and provider adapter",
+    "area": "calls",
+    "dependencies": [
+      "FA-006",
+      "FA-010",
+      "FA-022"
+    ],
+    "size": "M",
+    "priority": "P0",
+    "goal": "Issue server-generated media credentials bound to the authorized call and participant.",
+    "acceptance": [
+      "Tokens bind channel, UID, permissions and short expiry",
+      "No token for unapproved, unrelated, ended or unfunded session",
+      "Provider adapter exposes join evidence, renewal and tested server-side termination capability"
+    ],
+    "verification": [
+      "Try cross-channel/UID token reuse and unauthorized renewal",
+      "Document SDK-specific enforcement limits and block real-money launch if cutoff is unproven"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P3",
+      "area:calls",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P3 — Audio reliability",
+    "body": "<!-- nightshift-id: FA-025 -->\n# FA-025 — Implement scoped RTC token and provider adapter\n\nPhase: **P3** · Area: **calls** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nIssue server-generated media credentials bound to the authorized call and participant.\n\n## Dependencies\n\nFA-006, FA-010, FA-022\n\n## Acceptance criteria\n\n- [ ] Tokens bind channel, UID, permissions and short expiry\n- [ ] No token for unapproved, unrelated, ended or unfunded session\n- [ ] Provider adapter exposes join evidence, renewal and tested server-side termination capability\n\n## Verification\n\n- [ ] Try cross-channel/UID token reuse and unauthorized renewal\n- [ ] Document SDK-specific enforcement limits and block real-money launch if cutoff is unproven\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-026",
+    "phase": "P3",
+    "title": "Integrate real two-person Flutter audio calling",
+    "area": "calls",
+    "dependencies": [
+      "FA-023",
+      "FA-025"
+    ],
+    "size": "L",
+    "priority": "P0",
+    "goal": "Connect accepted sessions through Agora and expose actual audio controls.",
+    "acceptance": [
+      "Two phones have working two-way audio and documented permissions",
+      "Join failure and denied permission return to a recoverable state",
+      "Microphone capture and channel connection stop on session end"
+    ],
+    "verification": [
+      "Run Wi-Fi/mobile real-device call and audio routing tests",
+      "Measure post-accept join time and distinguish it from ringing time"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P3",
+      "area:calls",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P3 — Audio reliability",
+    "body": "<!-- nightshift-id: FA-026 -->\n# FA-026 — Integrate real two-person Flutter audio calling\n\nPhase: **P3** · Area: **calls** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nConnect accepted sessions through Agora and expose actual audio controls.\n\n## Dependencies\n\nFA-023, FA-025\n\n## Acceptance criteria\n\n- [ ] Two phones have working two-way audio and documented permissions\n- [ ] Join failure and denied permission return to a recoverable state\n- [ ] Microphone capture and channel connection stop on session end\n\n## Verification\n\n- [ ] Run Wi-Fi/mobile real-device call and audio routing tests\n- [ ] Measure post-accept join time and distinguish it from ringing time\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-027",
+    "phase": "P3",
+    "title": "Implement durable call lifecycle and idempotent transitions",
+    "area": "calls",
+    "dependencies": [
+      "FA-023",
+      "FA-026"
+    ],
+    "size": "L",
+    "priority": "P0",
+    "goal": "Make every call state recoverable across client/server retries and restarts.",
+    "acceptance": [
+      "Requested through ended states follow an explicit allowed-transition table",
+      "Provider events are verified, deduplicated and timestamped",
+      "Terminal states cannot regress and history records a stable end reason"
+    ],
+    "verification": [
+      "Replay and reorder provider/client events",
+      "Restart API mid-call and verify one session and no duplicated terminal effect"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P3",
+      "area:calls",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P3 — Audio reliability",
+    "body": "<!-- nightshift-id: FA-027 -->\n# FA-027 — Implement durable call lifecycle and idempotent transitions\n\nPhase: **P3** · Area: **calls** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nMake every call state recoverable across client/server retries and restarts.\n\n## Dependencies\n\nFA-023, FA-026\n\n## Acceptance criteria\n\n- [ ] Requested through ended states follow an explicit allowed-transition table\n- [ ] Provider events are verified, deduplicated and timestamped\n- [ ] Terminal states cannot regress and history records a stable end reason\n\n## Verification\n\n- [ ] Replay and reorder provider/client events\n- [ ] Restart API mid-call and verify one session and no duplicated terminal effect\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-028",
+    "phase": "P3",
+    "title": "Implement reconnect, network loss and chargeable intervals",
+    "area": "calls",
+    "dependencies": [
+      "FA-027"
+    ],
+    "size": "L",
+    "priority": "P0",
+    "goal": "Determine healthy connected intervals conservatively and reconnect the same session.",
+    "acceptance": [
+      "Store server-owned connected intervals corroborated by provider/client evidence",
+      "Disconnect gaps and ringing are not billable",
+      "Bounded free reconnect grace ends with clear final reason"
+    ],
+    "verification": [
+      "Switch networks, kill one client and resume",
+      "Verify an offline client cannot forge elapsed time to change billable duration"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P3",
+      "area:calls",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P3 — Audio reliability",
+    "body": "<!-- nightshift-id: FA-028 -->\n# FA-028 — Implement reconnect, network loss and chargeable intervals\n\nPhase: **P3** · Area: **calls** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nDetermine healthy connected intervals conservatively and reconnect the same session.\n\n## Dependencies\n\nFA-027\n\n## Acceptance criteria\n\n- [ ] Store server-owned connected intervals corroborated by provider/client evidence\n- [ ] Disconnect gaps and ringing are not billable\n- [ ] Bounded free reconnect grace ends with clear final reason\n\n## Verification\n\n- [ ] Switch networks, kill one client and resume\n- [ ] Verify an offline client cannot forge elapsed time to change billable duration\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-029",
+    "phase": "P3",
+    "title": "Implement background call notifications and Android lifecycle",
+    "area": "mobile",
+    "dependencies": [
+      "FA-023",
+      "FA-026",
+      "FA-027"
+    ],
+    "size": "L",
+    "priority": "P1",
+    "goal": "Handle incoming and ongoing calls under actual Android background restrictions.",
+    "acceptance": [
+      "Foreground/background notification permission and ongoing-call behavior are explicit",
+      "Expired invitations cannot be answered from an old notification",
+      "Phone interruption, audio focus and process restoration do not leave phantom calls"
+    ],
+    "verification": [
+      "Test locked screen, denied notifications and battery restrictions on selected Android devices",
+      "Confirm user-visible foreground behavior follows current platform rules"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P3",
+      "area:mobile",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P3 — Audio reliability",
+    "body": "<!-- nightshift-id: FA-029 -->\n# FA-029 — Implement background call notifications and Android lifecycle\n\nPhase: **P3** · Area: **mobile** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nHandle incoming and ongoing calls under actual Android background restrictions.\n\n## Dependencies\n\nFA-023, FA-026, FA-027\n\n## Acceptance criteria\n\n- [ ] Foreground/background notification permission and ongoing-call behavior are explicit\n- [ ] Expired invitations cannot be answered from an old notification\n- [ ] Phone interruption, audio focus and process restoration do not leave phantom calls\n\n## Verification\n\n- [ ] Test locked screen, denied notifications and battery restrictions on selected Android devices\n- [ ] Confirm user-visible foreground behavior follows current platform rules\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-030",
+    "phase": "P3",
+    "title": "Build call controls and remaining-time display",
+    "area": "mobile",
+    "dependencies": [
+      "FA-026",
+      "FA-028",
+      "FA-029"
+    ],
+    "size": "M",
+    "priority": "P1",
+    "goal": "Provide clear mute/speaker/end controls and server-authoritative session display.",
+    "acceptance": [
+      "Elapsed billable time and displayed price derive from server state",
+      "Low-balance warning and disconnect grace copy are clear",
+      "Report/block accessible during call without obscure navigation"
+    ],
+    "verification": [
+      "Test screen reader/large text and headset changes",
+      "Client clock changes do not change monetary calculation"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P3",
+      "area:mobile",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P3 — Audio reliability",
+    "body": "<!-- nightshift-id: FA-030 -->\n# FA-030 — Build call controls and remaining-time display\n\nPhase: **P3** · Area: **mobile** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nProvide clear mute/speaker/end controls and server-authoritative session display.\n\n## Dependencies\n\nFA-026, FA-028, FA-029\n\n## Acceptance criteria\n\n- [ ] Elapsed billable time and displayed price derive from server state\n- [ ] Low-balance warning and disconnect grace copy are clear\n- [ ] Report/block accessible during call without obscure navigation\n\n## Verification\n\n- [ ] Test screen reader/large text and headset changes\n- [ ] Client clock changes do not change monetary calculation\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-031",
+    "phase": "P3",
+    "title": "Implement call history, details and reconnect-safe recents",
+    "area": "mobile",
+    "dependencies": [
+      "FA-020",
+      "FA-027"
+    ],
+    "size": "M",
+    "priority": "P1",
+    "goal": "Show consistent completed/missed calls and secure details.",
+    "acceptance": [
+      "History uses cursor pagination and stable session IDs",
+      "Today/yesterday grouping uses user locale/time zone",
+      "Failed calls show zero charge and history data belongs only to participants"
+    ],
+    "verification": [
+      "Test cross-midnight/time-zone cases",
+      "Attempt another user session ID and verify denial"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P3",
+      "area:mobile",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P3 — Audio reliability",
+    "body": "<!-- nightshift-id: FA-031 -->\n# FA-031 — Implement call history, details and reconnect-safe recents\n\nPhase: **P3** · Area: **mobile** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nShow consistent completed/missed calls and secure details.\n\n## Dependencies\n\nFA-020, FA-027\n\n## Acceptance criteria\n\n- [ ] History uses cursor pagination and stable session IDs\n- [ ] Today/yesterday grouping uses user locale/time zone\n- [ ] Failed calls show zero charge and history data belongs only to participants\n\n## Verification\n\n- [ ] Test cross-midnight/time-zone cases\n- [ ] Attempt another user session ID and verify denial\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-032",
+    "phase": "P3",
+    "title": "Instrument media quality and zero-charge failure evidence",
+    "area": "calls",
+    "dependencies": [
+      "FA-028",
+      "FA-031"
+    ],
+    "size": "M",
+    "priority": "P0",
+    "goal": "Record the evidence needed to distinguish technical failures, host declines and billing disputes.",
+    "acceptance": [
+      "Collect allowed QoS metrics and diagnostic IDs without recording conversations",
+      "Separate invitation acceptance from media join success",
+      "Report one-way audio and failed connection with actionable support context"
+    ],
+    "verification": [
+      "Simulate loss/jitter and join failure",
+      "Confirm logs contain no raw audio, private text, secrets or full phone numbers"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P3",
+      "area:calls",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P3 — Audio reliability",
+    "body": "<!-- nightshift-id: FA-032 -->\n# FA-032 — Instrument media quality and zero-charge failure evidence\n\nPhase: **P3** · Area: **calls** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nRecord the evidence needed to distinguish technical failures, host declines and billing disputes.\n\n## Dependencies\n\nFA-028, FA-031\n\n## Acceptance criteria\n\n- [ ] Collect allowed QoS metrics and diagnostic IDs without recording conversations\n- [ ] Separate invitation acceptance from media join success\n- [ ] Report one-way audio and failed connection with actionable support context\n\n## Verification\n\n- [ ] Simulate loss/jitter and join failure\n- [ ] Confirm logs contain no raw audio, private text, secrets or full phone numbers\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-033",
+    "phase": "P4",
+    "title": "Implement versioned rate and coin-pack catalogue",
+    "area": "money",
+    "dependencies": [
+      "FA-002",
+      "FA-003",
+      "FA-007"
+    ],
+    "size": "M",
+    "priority": "P0",
+    "goal": "Make rates transparent, channel-aware and immutable for an active session.",
+    "acceptance": [
+      "Audio/host rates, paid/promo units and catalogue versions are explicit",
+      "Pre-call quote shows coin/minute, affordable time and relevant currency explanation",
+      "Server ignores client price and honors only nonexpired approved quote"
+    ],
+    "verification": [
+      "Change catalogue during a call and preserve original rate",
+      "Test unavailable store SKU and manipulated price payload"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P4",
+      "area:money",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P4 — Money",
+    "body": "<!-- nightshift-id: FA-033 -->\n# FA-033 — Implement versioned rate and coin-pack catalogue\n\nPhase: **P4** · Area: **money** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nMake rates transparent, channel-aware and immutable for an active session.\n\n## Dependencies\n\nFA-002, FA-003, FA-007\n\n## Acceptance criteria\n\n- [ ] Audio/host rates, paid/promo units and catalogue versions are explicit\n- [ ] Pre-call quote shows coin/minute, affordable time and relevant currency explanation\n- [ ] Server ignores client price and honors only nonexpired approved quote\n\n## Verification\n\n- [ ] Change catalogue during a call and preserve original rate\n- [ ] Test unavailable store SKU and manipulated price payload\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-034",
+    "phase": "P4",
+    "title": "Implement append-only double-entry wallet journal",
+    "area": "money",
+    "dependencies": [
+      "FA-007",
+      "FA-033"
+    ],
+    "size": "L",
+    "priority": "P0",
+    "goal": "Build the financial source of truth with fixed-point units and reconciliation constraints.",
+    "acceptance": [
+      "Balanced journal separately accounts for INR and service-credit units",
+      "Paid/promo lots, allocations, holds and earnings accounts are distinct",
+      "All monetary events have deterministic idempotency keys and corrective reversal references"
+    ],
+    "verification": [
+      "Property tests prove conservation, no overspend and deterministic rounding",
+      "Concurrent real-database tests prove no negative spendable balance"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P4",
+      "area:money",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P4 — Money",
+    "body": "<!-- nightshift-id: FA-034 -->\n# FA-034 — Implement append-only double-entry wallet journal\n\nPhase: **P4** · Area: **money** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nBuild the financial source of truth with fixed-point units and reconciliation constraints.\n\n## Dependencies\n\nFA-007, FA-033\n\n## Acceptance criteria\n\n- [ ] Balanced journal separately accounts for INR and service-credit units\n- [ ] Paid/promo lots, allocations, holds and earnings accounts are distinct\n- [ ] All monetary events have deterministic idempotency keys and corrective reversal references\n\n## Verification\n\n- [ ] Property tests prove conservation, no overspend and deterministic rounding\n- [ ] Concurrent real-database tests prove no negative spendable balance\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-035",
+    "phase": "P4",
+    "title": "Implement verified store purchases and receipt lifecycle",
+    "area": "money",
+    "dependencies": [
+      "FA-002",
+      "FA-010",
+      "FA-033",
+      "FA-034"
+    ],
+    "size": "L",
+    "priority": "P0",
+    "goal": "Credit approved Android purchases only after authoritative provider verification.",
+    "acceptance": [
+      "Validate purchase owner/SKU/status/token and store transaction uniqueness",
+      "Handle pending/cancelled/acknowledgement or consumption lifecycle using current provider rules",
+      "Webhook verification and missed-event reconciliation are designed together"
+    ],
+    "verification": [
+      "Use store sandbox for success/pending/cancelled/replayed receipts",
+      "A copied token or client success callback cannot credit a second account"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P4",
+      "area:money",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P4 — Money",
+    "body": "<!-- nightshift-id: FA-035 -->\n# FA-035 — Implement verified store purchases and receipt lifecycle\n\nPhase: **P4** · Area: **money** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nCredit approved Android purchases only after authoritative provider verification.\n\n## Dependencies\n\nFA-002, FA-010, FA-033, FA-034\n\n## Acceptance criteria\n\n- [ ] Validate purchase owner/SKU/status/token and store transaction uniqueness\n- [ ] Handle pending/cancelled/acknowledgement or consumption lifecycle using current provider rules\n- [ ] Webhook verification and missed-event reconciliation are designed together\n\n## Verification\n\n- [ ] Use store sandbox for success/pending/cancelled/replayed receipts\n- [ ] A copied token or client success callback cannot credit a second account\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-036",
+    "phase": "P4",
+    "title": "Build wallet, purchase and pending-payment UX",
+    "area": "mobile",
+    "dependencies": [
+      "FA-030",
+      "FA-033",
+      "FA-035"
+    ],
+    "size": "M",
+    "priority": "P1",
+    "goal": "Show real balances and approved purchase options without hidden recurring payments.",
+    "acceptance": [
+      "Purchased/promo balances and pack totals are clear",
+      "Pending/failed/success states agree with backend verification",
+      "Top-up return resumes safely without a duplicate call or accidental purchase"
+    ],
+    "verification": [
+      "Interrupt app during purchase and restore state",
+      "Verify no production build exposes unapproved external payment steering"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P4",
+      "area:mobile",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P4 — Money",
+    "body": "<!-- nightshift-id: FA-036 -->\n# FA-036 — Build wallet, purchase and pending-payment UX\n\nPhase: **P4** · Area: **mobile** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nShow real balances and approved purchase options without hidden recurring payments.\n\n## Dependencies\n\nFA-030, FA-033, FA-035\n\n## Acceptance criteria\n\n- [ ] Purchased/promo balances and pack totals are clear\n- [ ] Pending/failed/success states agree with backend verification\n- [ ] Top-up return resumes safely without a duplicate call or accidental purchase\n\n## Verification\n\n- [ ] Interrupt app during purchase and restore state\n- [ ] Verify no production build exposes unapproved external payment steering\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-037",
+    "phase": "P4",
+    "title": "Implement reservations, per-second charging and media cutoff",
+    "area": "money",
+    "dependencies": [
+      "FA-022",
+      "FA-025",
+      "FA-028",
+      "FA-030",
+      "FA-034",
+      "FA-035"
+    ],
+    "size": "L",
+    "priority": "P0",
+    "goal": "Charge authorized connected intervals exactly once and stop media when credit ends.",
+    "acceptance": [
+      "Reserve next bounded interval atomically before authorizing it",
+      "Meter cumulative healthy seconds with fixed-point arithmetic and deterministic interval IDs",
+      "Release unused hold and enforce provider-side media stop despite client ignoring hang-up",
+      "Replaying reconnect and duplicate events preserves the same paid intervals and settlement."
+    ],
+    "verification": [
+      "Test 0/1/59/60/61 seconds, duplicate jobs and reconnection gaps",
+      "Exhaust balance, replay old tokens and prove no unauthorized paid continuation"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P4",
+      "area:money",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P4 — Money",
+    "body": "<!-- nightshift-id: FA-037 -->\n# FA-037 — Implement reservations, per-second charging and media cutoff\n\nPhase: **P4** · Area: **money** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nCharge authorized connected intervals exactly once and stop media when credit ends.\n\n## Dependencies\n\nFA-022, FA-025, FA-028, FA-030, FA-034, FA-035\n\n## Acceptance criteria\n\n- [ ] Reserve next bounded interval atomically before authorizing it\n- [ ] Meter cumulative healthy seconds with fixed-point arithmetic and deterministic interval IDs\n- [ ] Release unused hold and enforce provider-side media stop despite client ignoring hang-up\n\n- [ ] Replaying reconnect and duplicate events preserves the same paid intervals and settlement.\n\n## Verification\n\n- [ ] Test 0/1/59/60/61 seconds, duplicate jobs and reconnection gaps\n- [ ] Exhaust balance, replay old tokens and prove no unauthorized paid continuation\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-038",
+    "phase": "P4",
+    "title": "Implement refunds, reversals and chargeback handling",
+    "area": "money",
+    "dependencies": [
+      "FA-035",
+      "FA-037"
+    ],
+    "size": "L",
+    "priority": "P0",
+    "goal": "Correct failed/contested transactions without editing ledger history.",
+    "acceptance": [
+      "Refund references original purchase/consumption and preserves an audit trail",
+      "Define handling of spent credits and host earnings already released",
+      "Unknown provider outcome remains pending until reconciled"
+    ],
+    "verification": [
+      "Replay refund webhook and verify one reversal",
+      "Test partial refund, chargeback after spend and failure after an external refund request"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P4",
+      "area:money",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P4 — Money",
+    "body": "<!-- nightshift-id: FA-038 -->\n# FA-038 — Implement refunds, reversals and chargeback handling\n\nPhase: **P4** · Area: **money** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nCorrect failed/contested transactions without editing ledger history.\n\n## Dependencies\n\nFA-035, FA-037\n\n## Acceptance criteria\n\n- [ ] Refund references original purchase/consumption and preserves an audit trail\n- [ ] Define handling of spent credits and host earnings already released\n- [ ] Unknown provider outcome remains pending until reconciled\n\n## Verification\n\n- [ ] Replay refund webhook and verify one reversal\n- [ ] Test partial refund, chargeback after spend and failure after an external refund request\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-039",
+    "phase": "P4",
+    "title": "Implement secure transaction statements and receipts",
+    "area": "money",
+    "dependencies": [
+      "FA-031",
+      "FA-035",
+      "FA-037",
+      "FA-038"
+    ],
+    "size": "M",
+    "priority": "P0",
+    "goal": "Expose traceable payment/session history and the correct receipt document.",
+    "acceptance": [
+      "Order/session/refund records reconcile with ledger entries",
+      "Determine whether the store or company issues tax documentation before generating invoices",
+      "Downloads are owner-authorized, masked and include appropriate time zone/tax context"
+    ],
+    "verification": [
+      "Reconcile sample statements to source transactions",
+      "Expired link and cross-user download attempts fail"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P4",
+      "area:money",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P4 — Money",
+    "body": "<!-- nightshift-id: FA-039 -->\n# FA-039 — Implement secure transaction statements and receipts\n\nPhase: **P4** · Area: **money** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nExpose traceable payment/session history and the correct receipt document.\n\n## Dependencies\n\nFA-031, FA-035, FA-037, FA-038\n\n## Acceptance criteria\n\n- [ ] Order/session/refund records reconcile with ledger entries\n- [ ] Determine whether the store or company issues tax documentation before generating invoices\n- [ ] Downloads are owner-authorized, masked and include appropriate time zone/tax context\n\n## Verification\n\n- [ ] Reconcile sample statements to source transactions\n- [ ] Expired link and cross-user download attempts fail\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-040",
+    "phase": "P4",
+    "title": "Implement payment reconciliation and finance exception queue",
+    "area": "money",
+    "dependencies": [
+      "FA-035",
+      "FA-037",
+      "FA-038",
+      "FA-039"
+    ],
+    "size": "L",
+    "priority": "P0",
+    "goal": "Detect missed/duplicate/unknown transactions before balances or payouts drift.",
+    "acceptance": [
+      "Scheduled reconciler compares provider records, purchases and journal",
+      "Exceptions have severity, owner, age and resolution evidence",
+      "Repair commands append idempotent events and never directly overwrite balance"
+    ],
+    "verification": [
+      "Drop selected webhooks and prove eventual recovery",
+      "Rerun reconciliation and show unchanged settled totals"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P4",
+      "area:money",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P4 — Money",
+    "body": "<!-- nightshift-id: FA-040 -->\n# FA-040 — Implement payment reconciliation and finance exception queue\n\nPhase: **P4** · Area: **money** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nDetect missed/duplicate/unknown transactions before balances or payouts drift.\n\n## Dependencies\n\nFA-035, FA-037, FA-038, FA-039\n\n## Acceptance criteria\n\n- [ ] Scheduled reconciler compares provider records, purchases and journal\n- [ ] Exceptions have severity, owner, age and resolution evidence\n- [ ] Repair commands append idempotent events and never directly overwrite balance\n\n## Verification\n\n- [ ] Drop selected webhooks and prove eventual recovery\n- [ ] Rerun reconciliation and show unchanged settled totals\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-041",
+    "phase": "P5",
+    "title": "Implement listener earnings accrual and statement",
+    "area": "money",
+    "dependencies": [
+      "FA-014",
+      "FA-033",
+      "FA-034",
+      "FA-037"
+    ],
+    "size": "M",
+    "priority": "P0",
+    "goal": "Accrue listener compensation from validated delivered service using versioned rates.",
+    "acceptance": [
+      "Pending/available/held/paid balances remain separate",
+      "Promo-funded calls identify company subsidy liability",
+      "Statements expose rate, billable time, corrections and hold reasons",
+      "At the proposed rate, six paid minutes earn ₹50. Exclude idle and reconnect gaps and round once at settlement."
+    ],
+    "verification": [
+      "Recompute a call earning from source interval/rate",
+      "Refund/dispute adjustments preserve journal consistency"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P5",
+      "area:money",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P5 — Operations and safety",
+    "body": "<!-- nightshift-id: FA-041 -->\n# FA-041 — Implement listener earnings accrual and statement\n\nPhase: **P5** · Area: **money** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nAccrue listener compensation from validated delivered service using versioned rates.\n\n## Dependencies\n\nFA-014, FA-033, FA-034, FA-037\n\n## Acceptance criteria\n\n- [ ] Pending/available/held/paid balances remain separate\n- [ ] Promo-funded calls identify company subsidy liability\n- [ ] Statements expose rate, billable time, corrections and hold reasons\n\n- [ ] At the proposed rate, six paid minutes earn ₹50. Exclude idle and reconnect gaps and round once at settlement.\n\n## Verification\n\n- [ ] Recompute a call earning from source interval/rate\n- [ ] Refund/dispute adjustments preserve journal consistency\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-042",
+    "phase": "P5",
+    "title": "Implement approved payout identity and bank verification",
+    "area": "money",
+    "dependencies": [
+      "FA-002",
+      "FA-010",
+      "FA-014",
+      "FA-041"
+    ],
+    "size": "M",
+    "priority": "P0",
+    "goal": "Integrate the required provider KYC/bank flow without spreading identity documents across the system.",
+    "acceptance": [
+      "Required checks and tax fields follow provider/legal decision",
+      "Store masked references with restricted access rather than unnecessary raw documents",
+      "Bank changes require step-up authentication and fraud cooldown policy"
+    ],
+    "verification": [
+      "Test pending/rejected verification and account mismatch",
+      "Confirm ordinary support roles cannot view sensitive banking data"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P5",
+      "area:money",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P5 — Operations and safety",
+    "body": "<!-- nightshift-id: FA-042 -->\n# FA-042 — Implement approved payout identity and bank verification\n\nPhase: **P5** · Area: **money** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nIntegrate the required provider KYC/bank flow without spreading identity documents across the system.\n\n## Dependencies\n\nFA-002, FA-010, FA-014, FA-041\n\n## Acceptance criteria\n\n- [ ] Required checks and tax fields follow provider/legal decision\n- [ ] Store masked references with restricted access rather than unnecessary raw documents\n- [ ] Bank changes require step-up authentication and fraud cooldown policy\n\n## Verification\n\n- [ ] Test pending/rejected verification and account mismatch\n- [ ] Confirm ordinary support roles cannot view sensitive banking data\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-043",
+    "phase": "P5",
+    "title": "Implement payout requests, approval and reconciliation",
+    "area": "money",
+    "dependencies": [
+      "FA-040",
+      "FA-041",
+      "FA-042"
+    ],
+    "size": "L",
+    "priority": "P0",
+    "goal": "Pay only available approved earnings and safely handle uncertain external outcomes.",
+    "acceptance": [
+      "Request reserves payable INR atomically and uses one provider reference",
+      "Approval thresholds, deductions and processing states are disclosed",
+      "Unknown/failed/reversed payouts are reconciled before retry or fund release"
+    ],
+    "verification": [
+      "Replay requests/webhooks and prove exactly one payout effect",
+      "Simulate provider timeout after success and verify no blind second transfer"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P5",
+      "area:money",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P5 — Operations and safety",
+    "body": "<!-- nightshift-id: FA-043 -->\n# FA-043 — Implement payout requests, approval and reconciliation\n\nPhase: **P5** · Area: **money** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nPay only available approved earnings and safely handle uncertain external outcomes.\n\n## Dependencies\n\nFA-040, FA-041, FA-042\n\n## Acceptance criteria\n\n- [ ] Request reserves payable INR atomically and uses one provider reference\n- [ ] Approval thresholds, deductions and processing states are disclosed\n- [ ] Unknown/failed/reversed payouts are reconciled before retry or fund release\n\n## Verification\n\n- [ ] Replay requests/webhooks and prove exactly one payout effect\n- [ ] Simulate provider timeout after success and verify no blind second transfer\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-044",
+    "phase": "P5",
+    "title": "Implement trial, collusion and payment-abuse controls",
+    "area": "security",
+    "dependencies": [
+      "FA-003",
+      "FA-035",
+      "FA-037",
+      "FA-043"
+    ],
+    "size": "M",
+    "priority": "P0",
+    "goal": "Limit self-calls, circular calling, payment fraud and promo farming.",
+    "acceptance": [
+      "Block self-pairing across roles and cap trial-funded earning exposure",
+      "Risk rules combine relevant signals with data minimization and appeal",
+      "Payout holds and risk decisions are audited and never presented as confirmed guilt without review"
+    ],
+    "verification": [
+      "Exercise synthetic multi-account and replay scenarios",
+      "Check legitimate shared-network users are not automatically permanently banned"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P5",
+      "area:security",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P5 — Operations and safety",
+    "body": "<!-- nightshift-id: FA-044 -->\n# FA-044 — Implement trial, collusion and payment-abuse controls\n\nPhase: **P5** · Area: **security** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nLimit self-calls, circular calling, payment fraud and promo farming.\n\n## Dependencies\n\nFA-003, FA-035, FA-037, FA-043\n\n## Acceptance criteria\n\n- [ ] Block self-pairing across roles and cap trial-funded earning exposure\n- [ ] Risk rules combine relevant signals with data minimization and appeal\n- [ ] Payout holds and risk decisions are audited and never presented as confirmed guilt without review\n\n## Verification\n\n- [ ] Exercise synthetic multi-account and replay scenarios\n- [ ] Check legitimate shared-network users are not automatically permanently banned\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-045",
+    "phase": "P5",
+    "title": "Implement reports, safety triage and child-safety workflow",
+    "area": "security",
+    "dependencies": [
+      "FA-021",
+      "FA-030",
+      "FA-031"
+    ],
+    "size": "L",
+    "priority": "P0",
+    "goal": "Give users immediate protection and operators a workable response process.",
+    "acceptance": [
+      "Report and block are accessible in-call and from history",
+      "Triage supports severe harm/child-safety escalation and a named contact",
+      "Evidence access, retention, action reasons and appeals are restricted and auditable"
+    ],
+    "verification": [
+      "Report an active call and verify immediate pair exclusion",
+      "Run a tabletop escalation using synthetic data and documented staffed coverage"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P5",
+      "area:security",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P5 — Operations and safety",
+    "body": "<!-- nightshift-id: FA-045 -->\n# FA-045 — Implement reports, safety triage and child-safety workflow\n\nPhase: **P5** · Area: **security** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nGive users immediate protection and operators a workable response process.\n\n## Dependencies\n\nFA-021, FA-030, FA-031\n\n## Acceptance criteria\n\n- [ ] Report and block are accessible in-call and from history\n- [ ] Triage supports severe harm/child-safety escalation and a named contact\n- [ ] Evidence access, retention, action reasons and appeals are restricted and auditable\n\n## Verification\n\n- [ ] Report an active call and verify immediate pair exclusion\n- [ ] Run a tabletop escalation using synthetic data and documented staffed coverage\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-046",
+    "phase": "P5",
+    "title": "Build audited admin operations and configuration",
+    "area": "admin",
+    "dependencies": [
+      "FA-014",
+      "FA-040",
+      "FA-043",
+      "FA-045"
+    ],
+    "size": "L",
+    "priority": "P1",
+    "goal": "Unify operational controls without allowing unrestricted finance or identity access.",
+    "acceptance": [
+      "RBAC separates review, support, safety, finance and configuration",
+      "Rate changes, account actions and payout approvals require reasons and audit records",
+      "Provide feature/call/purchase kill switches with controlled rollout"
+    ],
+    "verification": [
+      "Test every admin role against allowed/denied actions",
+      "Audit search reconstructs a sample incident and money correction"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P5",
+      "area:admin",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P5 — Operations and safety",
+    "body": "<!-- nightshift-id: FA-046 -->\n# FA-046 — Build audited admin operations and configuration\n\nPhase: **P5** · Area: **admin** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nUnify operational controls without allowing unrestricted finance or identity access.\n\n## Dependencies\n\nFA-014, FA-040, FA-043, FA-045\n\n## Acceptance criteria\n\n- [ ] RBAC separates review, support, safety, finance and configuration\n- [ ] Rate changes, account actions and payout approvals require reasons and audit records\n- [ ] Provide feature/call/purchase kill switches with controlled rollout\n\n## Verification\n\n- [ ] Test every admin role against allowed/denied actions\n- [ ] Audit search reconstructs a sample incident and money correction\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-047",
+    "phase": "P5",
+    "title": "Implement support center and ticket lifecycle",
+    "area": "admin",
+    "dependencies": [
+      "FA-031",
+      "FA-039",
+      "FA-045"
+    ],
+    "size": "M",
+    "priority": "P1",
+    "goal": "Provide support that is tied to actual call/payment/payout records.",
+    "acceptance": [
+      "FAQs cover media, payment, listener, safety and account problems",
+      "Ticket attachments are validated/scanned and internal notes stay private",
+      "Ticket status, ownership, response expectations and reopen path are clear"
+    ],
+    "verification": [
+      "Submit/retry an interrupted ticket and prevent duplicates",
+      "Support can find a call via safe reference without accessing raw secrets"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P5",
+      "area:admin",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P5 — Operations and safety",
+    "body": "<!-- nightshift-id: FA-047 -->\n# FA-047 — Implement support center and ticket lifecycle\n\nPhase: **P5** · Area: **admin** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nProvide support that is tied to actual call/payment/payout records.\n\n## Dependencies\n\nFA-031, FA-039, FA-045\n\n## Acceptance criteria\n\n- [ ] FAQs cover media, payment, listener, safety and account problems\n- [ ] Ticket attachments are validated/scanned and internal notes stay private\n- [ ] Ticket status, ownership, response expectations and reopen path are clear\n\n## Verification\n\n- [ ] Submit/retry an interrupted ticket and prevent duplicates\n- [ ] Support can find a call via safe reference without accessing raw secrets\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-048",
+    "phase": "P5",
+    "title": "Build public website and reviewed policy pages",
+    "area": "web",
+    "dependencies": [
+      "FA-001",
+      "FA-002",
+      "FA-016",
+      "FA-045",
+      "FA-047"
+    ],
+    "size": "M",
+    "priority": "P1",
+    "goal": "Publish an original site explaining the service and providing required help and deletion entry points.",
+    "acceptance": [
+      "Home, how-it-works, listener info, contact and real download state exist",
+      "Privacy/terms/refund/community/child-safety/listener pages have reviewed content",
+      "External deletion request works and no false safety/earnings/user-count claims appear"
+    ],
+    "verification": [
+      "Check responsive accessibility and policy links",
+      "Submit a deletion request and trace it to authenticated processing"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P5",
+      "area:web",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P5 — Operations and safety",
+    "body": "<!-- nightshift-id: FA-048 -->\n# FA-048 — Build public website and reviewed policy pages\n\nPhase: **P5** · Area: **web** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nPublish an original site explaining the service and providing required help and deletion entry points.\n\n## Dependencies\n\nFA-001, FA-002, FA-016, FA-045, FA-047\n\n## Acceptance criteria\n\n- [ ] Home, how-it-works, listener info, contact and real download state exist\n- [ ] Privacy/terms/refund/community/child-safety/listener pages have reviewed content\n- [ ] External deletion request works and no false safety/earnings/user-count claims appear\n\n## Verification\n\n- [ ] Check responsive accessibility and policy links\n- [ ] Submit a deletion request and trace it to authenticated processing\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-049",
+    "phase": "P6",
+    "title": "Harden privacy, permissions and capture protections",
+    "area": "security",
+    "dependencies": [
+      "FA-016",
+      "FA-025",
+      "FA-035",
+      "FA-042",
+      "FA-045",
+      "FA-048"
+    ],
+    "size": "L",
+    "priority": "P0",
+    "goal": "Complete threat modelling and platform privacy controls before a paid launch.",
+    "acceptance": [
+      "Review data inventory, retention, vendor processing and log redaction",
+      "Apply FLAG_SECURE where needed and test native media surfaces",
+      "Validate upload isolation, secrets, TLS, authorization and child/minor controls; no 100% recording-prevention promise"
+    ],
+    "verification": [
+      "Security review attempts token, object-ID and upload abuse",
+      "Run on-device capture tests and document limits honestly"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P6",
+      "area:security",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P6 — Quality and Android launch",
+    "body": "<!-- nightshift-id: FA-049 -->\n# FA-049 — Harden privacy, permissions and capture protections\n\nPhase: **P6** · Area: **security** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nComplete threat modelling and platform privacy controls before a paid launch.\n\n## Dependencies\n\nFA-016, FA-025, FA-035, FA-042, FA-045, FA-048\n\n## Acceptance criteria\n\n- [ ] Review data inventory, retention, vendor processing and log redaction\n- [ ] Apply FLAG_SECURE where needed and test native media surfaces\n- [ ] Validate upload isolation, secrets, TLS, authorization and child/minor controls; no 100% recording-prevention promise\n\n## Verification\n\n- [ ] Security review attempts token, object-ID and upload abuse\n- [ ] Run on-device capture tests and document limits honestly\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-050",
+    "phase": "P6",
+    "title": "Verify financial concurrency and failure recovery",
+    "area": "money",
+    "dependencies": [
+      "FA-027",
+      "FA-034",
+      "FA-037",
+      "FA-038",
+      "FA-040",
+      "FA-043"
+    ],
+    "size": "L",
+    "priority": "P0",
+    "goal": "Establish release-blocking evidence for money and active-call invariants.",
+    "acceptance": [
+      "Automated suite covers duplicate/out-of-order events and accept/cancel races",
+      "DB/API/worker failures preserve claims and journal correctness",
+      "Every unexplained monetary discrepancy is a blocker with reproducible evidence"
+    ],
+    "verification": [
+      "Run real-database concurrency/property tests",
+      "Restore from injected partial failure and reconcile with provider sandbox"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P6",
+      "area:money",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P6 — Quality and Android launch",
+    "body": "<!-- nightshift-id: FA-050 -->\n# FA-050 — Verify financial concurrency and failure recovery\n\nPhase: **P6** · Area: **money** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nEstablish release-blocking evidence for money and active-call invariants.\n\n## Dependencies\n\nFA-027, FA-034, FA-037, FA-038, FA-040, FA-043\n\n## Acceptance criteria\n\n- [ ] Automated suite covers duplicate/out-of-order events and accept/cancel races\n- [ ] DB/API/worker failures preserve claims and journal correctness\n- [ ] Every unexplained monetary discrepancy is a blocker with reproducible evidence\n\n## Verification\n\n- [ ] Run real-database concurrency/property tests\n- [ ] Restore from injected partial failure and reconcile with provider sandbox\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-051",
+    "phase": "P6",
+    "title": "Complete two-device and network/device QA matrix",
+    "area": "mobile",
+    "dependencies": [
+      "FA-029",
+      "FA-030",
+      "FA-031",
+      "FA-036",
+      "FA-045",
+      "FA-049"
+    ],
+    "size": "L",
+    "priority": "P1",
+    "goal": "Exercise the complete customer and listener journey on realistic Android devices and networks.",
+    "acceptance": [
+      "Test onboarding through call, top-up, report, payout visibility and deletion",
+      "Cover low bandwidth, network switch, permissions, backgrounding and cellular interruptions",
+      "Tamil, large text, accessibility and empty/error states are verified"
+    ],
+    "verification": [
+      "Capture anonymized pass/fail evidence with build/device/network versions",
+      "Fix one-way audio, ghost calls and charge-after-disconnect before release"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P6",
+      "area:mobile",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P6 — Quality and Android launch",
+    "body": "<!-- nightshift-id: FA-051 -->\n# FA-051 — Complete two-device and network/device QA matrix\n\nPhase: **P6** · Area: **mobile** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nExercise the complete customer and listener journey on realistic Android devices and networks.\n\n## Dependencies\n\nFA-029, FA-030, FA-031, FA-036, FA-045, FA-049\n\n## Acceptance criteria\n\n- [ ] Test onboarding through call, top-up, report, payout visibility and deletion\n- [ ] Cover low bandwidth, network switch, permissions, backgrounding and cellular interruptions\n- [ ] Tamil, large text, accessibility and empty/error states are verified\n\n## Verification\n\n- [ ] Capture anonymized pass/fail evidence with build/device/network versions\n- [ ] Fix one-way audio, ghost calls and charge-after-disconnect before release\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-052",
+    "phase": "P6",
+    "title": "Run load, capacity and fairness verification",
+    "area": "platform",
+    "dependencies": [
+      "FA-019",
+      "FA-024",
+      "FA-032",
+      "FA-037",
+      "FA-050"
+    ],
+    "size": "M",
+    "priority": "P1",
+    "goal": "Measure control-plane capacity and establish honest rollout caps.",
+    "acceptance": [
+      "Target 1,000 sockets and 100 synthetic concurrent sessions with documented hardware",
+      "Measure heartbeat/fan-out, DB locks, queue lag and rate-limit behavior",
+      "Validate real RTC quota/media sample separately from bots"
+    ],
+    "verification": [
+      "Run a sustained load and spike with recovery",
+      "Publish observed limits and configure launch cap below proven safe capacity"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P6",
+      "area:platform",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P6 — Quality and Android launch",
+    "body": "<!-- nightshift-id: FA-052 -->\n# FA-052 — Run load, capacity and fairness verification\n\nPhase: **P6** · Area: **platform** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nMeasure control-plane capacity and establish honest rollout caps.\n\n## Dependencies\n\nFA-019, FA-024, FA-032, FA-037, FA-050\n\n## Acceptance criteria\n\n- [ ] Target 1,000 sockets and 100 synthetic concurrent sessions with documented hardware\n- [ ] Measure heartbeat/fan-out, DB locks, queue lag and rate-limit behavior\n- [ ] Validate real RTC quota/media sample separately from bots\n\n## Verification\n\n- [ ] Run a sustained load and spike with recovery\n- [ ] Publish observed limits and configure launch cap below proven safe capacity\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-053",
+    "phase": "P6",
+    "title": "Deploy observability, cost alarms and incident runbooks",
+    "area": "platform",
+    "dependencies": [
+      "FA-032",
+      "FA-040",
+      "FA-043",
+      "FA-046"
+    ],
+    "size": "M",
+    "priority": "P1",
+    "goal": "Make failed calls, money mismatches and runaway costs visible to a responsible operator.",
+    "acceptance": [
+      "Dashboards cover media joins, drops, presence, ledger exceptions, payouts, support and spend",
+      "Alerts have named owner, severity and realistic coverage hours",
+      "Runbooks include RTC, OTP, payment, DB, Redis and safety incidents"
+    ],
+    "verification": [
+      "Trigger synthetic alerts and confirm delivery to test destination",
+      "Verify logs redact credentials and metrics distinguish host absence from technical failure"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P6",
+      "area:platform",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P6 — Quality and Android launch",
+    "body": "<!-- nightshift-id: FA-053 -->\n# FA-053 — Deploy observability, cost alarms and incident runbooks\n\nPhase: **P6** · Area: **platform** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nMake failed calls, money mismatches and runaway costs visible to a responsible operator.\n\n## Dependencies\n\nFA-032, FA-040, FA-043, FA-046\n\n## Acceptance criteria\n\n- [ ] Dashboards cover media joins, drops, presence, ledger exceptions, payouts, support and spend\n- [ ] Alerts have named owner, severity and realistic coverage hours\n- [ ] Runbooks include RTC, OTP, payment, DB, Redis and safety incidents\n\n## Verification\n\n- [ ] Trigger synthetic alerts and confirm delivery to test destination\n- [ ] Verify logs redact credentials and metrics distinguish host absence from technical failure\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-054",
+    "phase": "P6",
+    "title": "Prepare production IaC, backups and deployment recovery",
+    "area": "platform",
+    "dependencies": [
+      "FA-005",
+      "FA-006",
+      "FA-049",
+      "FA-053"
+    ],
+    "size": "L",
+    "priority": "P1",
+    "goal": "Provision a reviewed environment only after current costs and scope are accepted.",
+    "acceptance": [
+      "Separate staging/prod secrets, data, provider projects and permissions",
+      "Use reviewed Terraform plan, migrations, health checks and canary-compatible rollout",
+      "Backups, point-in-time recovery where supported and non-destructive rollback are documented"
+    ],
+    "verification": [
+      "Restore a backup and measure RPO/RTO against targets",
+      "Roll an API version during test calls and reconcile in-flight money"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P6",
+      "area:platform",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P6 — Quality and Android launch",
+    "body": "<!-- nightshift-id: FA-054 -->\n# FA-054 — Prepare production IaC, backups and deployment recovery\n\nPhase: **P6** · Area: **platform** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nProvision a reviewed environment only after current costs and scope are accepted.\n\n## Dependencies\n\nFA-005, FA-006, FA-049, FA-053\n\n## Acceptance criteria\n\n- [ ] Separate staging/prod secrets, data, provider projects and permissions\n- [ ] Use reviewed Terraform plan, migrations, health checks and canary-compatible rollout\n- [ ] Backups, point-in-time recovery where supported and non-destructive rollback are documented\n\n## Verification\n\n- [ ] Restore a backup and measure RPO/RTO against targets\n- [ ] Roll an API version during test calls and reconcile in-flight money\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-055",
+    "phase": "P6",
+    "title": "Complete Google Play test track and submission evidence",
+    "area": "policy",
+    "dependencies": [
+      "FA-002",
+      "FA-048",
+      "FA-049",
+      "FA-051",
+      "FA-054"
+    ],
+    "size": "L",
+    "priority": "P0",
+    "goal": "Prepare truthful store metadata and satisfy account-specific testing and policy requirements.",
+    "acceptance": [
+      "Accurate listing, content rating, Data Safety, app-access review steps and child-safety declarations",
+      "Run required closed test with actual eligible testers and engagement evidence",
+      "Verify production billing configuration, current target requirements and deletion URL"
+    ],
+    "verification": [
+      "Use Play pre-launch report and sandbox purchase evidence",
+      "Record production-access/review status separately from build completion"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P6",
+      "area:policy",
+      "priority:P0",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P6 — Quality and Android launch",
+    "body": "<!-- nightshift-id: FA-055 -->\n# FA-055 — Complete Google Play test track and submission evidence\n\nPhase: **P6** · Area: **policy** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nPrepare truthful store metadata and satisfy account-specific testing and policy requirements.\n\n## Dependencies\n\nFA-002, FA-048, FA-049, FA-051, FA-054\n\n## Acceptance criteria\n\n- [ ] Accurate listing, content rating, Data Safety, app-access review steps and child-safety declarations\n- [ ] Run required closed test with actual eligible testers and engagement evidence\n- [ ] Verify production billing configuration, current target requirements and deletion URL\n\n## Verification\n\n- [ ] Use Play pre-launch report and sandbox purchase evidence\n- [ ] Record production-access/review status separately from build completion\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-056",
+    "phase": "P6",
+    "title": "Review paid launch readiness and record the release decision",
+    "area": "product",
+    "dependencies": [
+      "FA-044",
+      "FA-045",
+      "FA-046",
+      "FA-047",
+      "FA-050",
+      "FA-051",
+      "FA-052",
+      "FA-053",
+      "FA-054",
+      "FA-055"
+    ],
+    "size": "L",
+    "priority": "P1",
+    "goal": "Launch only the validated Android audio service to a controlled cohort.",
+    "acceptance": [
+      "All release blockers have evidence, named support and trained listener coverage",
+      "Configure invitation/concurrency/spend/payout limits and rollback switches",
+      "Review first 48-hour call, money, quality, fraud and support metrics before expansion",
+      "Record branded OTP delivery, repeat paid calls, listener occupancy and contribution against the approved launch budget."
+    ],
+    "verification": [
+      "Execute the full go/no-go checklist with actual provider approvals",
+      "Complete a small approved payment, call, refund and host payout reconciliation"
+    ],
+    "release": "android-audio-mvp",
+    "labels": [
+      "phase:P6",
+      "area:product",
+      "priority:P1",
+      "release:android-audio-mvp"
+    ],
+    "milestone": "P6 — Quality and Android launch",
+    "body": "<!-- nightshift-id: FA-056 -->\n# FA-056 — Review paid launch readiness and record the release decision\n\nPhase: **P6** · Area: **product** · Size: **L** · Release: **android-audio-mvp**\n\n## Outcome\n\nLaunch only the validated Android audio service to a controlled cohort.\n\n## Dependencies\n\nFA-044, FA-045, FA-046, FA-047, FA-050, FA-051, FA-052, FA-053, FA-054, FA-055\n\n## Acceptance criteria\n\n- [ ] All release blockers have evidence, named support and trained listener coverage\n- [ ] Configure invitation/concurrency/spend/payout limits and rollback switches\n- [ ] Review first 48-hour call, money, quality, fraud and support metrics before expansion\n\n- [ ] Record branded OTP delivery, repeat paid calls, listener occupancy and contribution against the approved launch budget.\n\n## Verification\n\n- [ ] Execute the full go/no-go checklist with actual provider approvals\n- [ ] Complete a small approved payment, call, refund and host payout reconciliation\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-057",
+    "phase": "P7",
+    "title": "Add opt-in one-to-one video calling",
+    "area": "calls",
+    "dependencies": [
+      "FA-026",
+      "FA-028",
+      "FA-037",
+      "FA-056"
+    ],
+    "size": "L",
+    "priority": "P2",
+    "goal": "Extend the same session and money model to camera-based communication after audio stability.",
+    "acceptance": [
+      "Separate video rate, explicit preview/consent and permissions",
+      "Quality adaptation and disclosed audio fallback do not silently change charging",
+      "Same claim, timeout, end and privacy invariants apply"
+    ],
+    "verification": [
+      "Test camera switching, denial, backgrounding and bandwidth degradation",
+      "Reconcile video participant-minute cost and delivered-session charges"
+    ],
+    "release": "expansion",
+    "labels": [
+      "phase:P7",
+      "area:calls",
+      "priority:P2",
+      "release:expansion"
+    ],
+    "milestone": "P7 — Expansion",
+    "body": "<!-- nightshift-id: FA-057 -->\n# FA-057 — Add opt-in one-to-one video calling\n\nPhase: **P7** · Area: **calls** · Size: **L** · Release: **expansion**\n\n## Outcome\n\nExtend the same session and money model to camera-based communication after audio stability.\n\n## Dependencies\n\nFA-026, FA-028, FA-037, FA-056\n\n## Acceptance criteria\n\n- [ ] Separate video rate, explicit preview/consent and permissions\n- [ ] Quality adaptation and disclosed audio fallback do not silently change charging\n- [ ] Same claim, timeout, end and privacy invariants apply\n\n## Verification\n\n- [ ] Test camera switching, denial, backgrounding and bandwidth degradation\n- [ ] Reconcile video participant-minute cost and delivered-session charges\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-058",
+    "phase": "P7",
+    "title": "Add video moderation and camera privacy safeguards",
+    "area": "security",
+    "dependencies": [
+      "FA-045",
+      "FA-049",
+      "FA-057"
+    ],
+    "size": "L",
+    "priority": "P2",
+    "goal": "Define a workable non-recording-default video safety model before public video rollout.",
+    "acceptance": [
+      "Document moderation techniques, consent, privacy and human response limits",
+      "No claim that face presence proves identity or prevents prohibited behavior",
+      "Test capture deterrence and immediate stop/report without covert recording"
+    ],
+    "verification": [
+      "Use synthetic benign test material to validate triggers and appeals",
+      "Run privacy/safety review; keep public video disabled until this gate passes"
+    ],
+    "release": "expansion",
+    "labels": [
+      "phase:P7",
+      "area:security",
+      "priority:P2",
+      "release:expansion"
+    ],
+    "milestone": "P7 — Expansion",
+    "body": "<!-- nightshift-id: FA-058 -->\n# FA-058 — Add video moderation and camera privacy safeguards\n\nPhase: **P7** · Area: **security** · Size: **L** · Release: **expansion**\n\n## Outcome\n\nDefine a workable non-recording-default video safety model before public video rollout.\n\n## Dependencies\n\nFA-045, FA-049, FA-057\n\n## Acceptance criteria\n\n- [ ] Document moderation techniques, consent, privacy and human response limits\n- [ ] No claim that face presence proves identity or prevents prohibited behavior\n- [ ] Test capture deterrence and immediate stop/report without covert recording\n\n## Verification\n\n- [ ] Use synthetic benign test material to validate triggers and appeals\n- [ ] Run privacy/safety review; keep public video disabled until this gate passes\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-059",
+    "phase": "P7",
+    "title": "Add consent-based one-to-one text messaging",
+    "area": "mobile",
+    "dependencies": [
+      "FA-021",
+      "FA-045",
+      "FA-056"
+    ],
+    "size": "L",
+    "priority": "P2",
+    "goal": "Support optional persistent text conversations without sending messages automatically.",
+    "acceptance": [
+      "Both-party permissions, block/report, retention and notification privacy apply",
+      "Rate limits, spam controls and content moderation are implemented",
+      "Message retries are idempotent and delivery state is accurate"
+    ],
+    "verification": [
+      "Test block races, deleted accounts and duplicate sends",
+      "Verify notifications hide private message content by user preference"
+    ],
+    "release": "expansion",
+    "labels": [
+      "phase:P7",
+      "area:mobile",
+      "priority:P2",
+      "release:expansion"
+    ],
+    "milestone": "P7 — Expansion",
+    "body": "<!-- nightshift-id: FA-059 -->\n# FA-059 — Add consent-based one-to-one text messaging\n\nPhase: **P7** · Area: **mobile** · Size: **L** · Release: **expansion**\n\n## Outcome\n\nSupport optional persistent text conversations without sending messages automatically.\n\n## Dependencies\n\nFA-021, FA-045, FA-056\n\n## Acceptance criteria\n\n- [ ] Both-party permissions, block/report, retention and notification privacy apply\n- [ ] Rate limits, spam controls and content moderation are implemented\n- [ ] Message retries are idempotent and delivery state is accurate\n\n## Verification\n\n- [ ] Test block races, deleted accounts and duplicate sends\n- [ ] Verify notifications hide private message content by user preference\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-060",
+    "phase": "P7",
+    "title": "Add transparent coupons and capped referrals",
+    "area": "money",
+    "dependencies": [
+      "FA-003",
+      "FA-035",
+      "FA-038",
+      "FA-044",
+      "FA-056"
+    ],
+    "size": "M",
+    "priority": "P2",
+    "goal": "Introduce acquisition offers only when full-price contribution and abuse controls are understood.",
+    "acceptance": [
+      "Show eligibility, expiry, actual final price and service minutes",
+      "Keep paid/promo accounting and company-funded host payout explicit",
+      "Referral awards require a defined verified event and cannot be farmed through self-referrals"
+    ],
+    "verification": [
+      "Test repeated redemption, expiry and refund after offer use",
+      "Check promotional spend never exceeds approved campaign budget"
+    ],
+    "release": "expansion",
+    "labels": [
+      "phase:P7",
+      "area:money",
+      "priority:P2",
+      "release:expansion"
+    ],
+    "milestone": "P7 — Expansion",
+    "body": "<!-- nightshift-id: FA-060 -->\n# FA-060 — Add transparent coupons and capped referrals\n\nPhase: **P7** · Area: **money** · Size: **M** · Release: **expansion**\n\n## Outcome\n\nIntroduce acquisition offers only when full-price contribution and abuse controls are understood.\n\n## Dependencies\n\nFA-003, FA-035, FA-038, FA-044, FA-056\n\n## Acceptance criteria\n\n- [ ] Show eligibility, expiry, actual final price and service minutes\n- [ ] Keep paid/promo accounting and company-funded host payout explicit\n- [ ] Referral awards require a defined verified event and cannot be farmed through self-referrals\n\n## Verification\n\n- [ ] Test repeated redemption, expiry and refund after offer use\n- [ ] Check promotional spend never exceeds approved campaign budget\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-061",
+    "phase": "P7",
+    "title": "Resolve iOS product review and implement approved iOS scope",
+    "area": "policy",
+    "dependencies": [
+      "FA-002",
+      "FA-049",
+      "FA-056"
+    ],
+    "size": "L",
+    "priority": "P2",
+    "goal": "Assess whether the real product model fits App Review before a costly iOS launch effort.",
+    "acceptance": [
+      "Document random/anonymous-chat risk and a genuinely compliant scope decision",
+      "If proceeding, implement native audio/call/permission and approved billing flows",
+      "Do not hide features for review; publish accurate privacy and purchase disclosures"
+    ],
+    "verification": [
+      "Run two-iPhone and Android/iPhone tests plus TestFlight",
+      "Track review decision as external dependency; stop release if product is rejected"
+    ],
+    "release": "expansion",
+    "labels": [
+      "phase:P7",
+      "area:policy",
+      "priority:P2",
+      "release:expansion"
+    ],
+    "milestone": "P7 — Expansion",
+    "body": "<!-- nightshift-id: FA-061 -->\n# FA-061 — Resolve iOS product review and implement approved iOS scope\n\nPhase: **P7** · Area: **policy** · Size: **L** · Release: **expansion**\n\n## Outcome\n\nAssess whether the real product model fits App Review before a costly iOS launch effort.\n\n## Dependencies\n\nFA-002, FA-049, FA-056\n\n## Acceptance criteria\n\n- [ ] Document random/anonymous-chat risk and a genuinely compliant scope decision\n- [ ] If proceeding, implement native audio/call/permission and approved billing flows\n- [ ] Do not hide features for review; publish accurate privacy and purchase disclosures\n\n## Verification\n\n- [ ] Run two-iPhone and Android/iPhone tests plus TestFlight\n- [ ] Track review decision as external dependency; stop release if product is rejected\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-062",
+    "phase": "P7",
+    "title": "Build privacy-aware product and financial analytics",
+    "area": "backend",
+    "dependencies": [
+      "FA-040",
+      "FA-041",
+      "FA-056"
+    ],
+    "size": "M",
+    "priority": "P2",
+    "goal": "Measure healthy marketplace performance rather than only recharge totals.",
+    "acceptance": [
+      "Metrics separate GMV, consumed value, earned revenue treatment, host liability and contribution",
+      "Funnels cover supply by language/hour, acceptance, technical join, retention and reports",
+      "Use minimized event payloads and controlled exports without private conversation content"
+    ],
+    "verification": [
+      "Reconcile dashboards with ledger and call records",
+      "Demonstrate opt-out/retention handling and no double-counted session events"
+    ],
+    "release": "expansion",
+    "labels": [
+      "phase:P7",
+      "area:backend",
+      "priority:P2",
+      "release:expansion"
+    ],
+    "milestone": "P7 — Expansion",
+    "body": "<!-- nightshift-id: FA-062 -->\n# FA-062 — Build privacy-aware product and financial analytics\n\nPhase: **P7** · Area: **backend** · Size: **M** · Release: **expansion**\n\n## Outcome\n\nMeasure healthy marketplace performance rather than only recharge totals.\n\n## Dependencies\n\nFA-040, FA-041, FA-056\n\n## Acceptance criteria\n\n- [ ] Metrics separate GMV, consumed value, earned revenue treatment, host liability and contribution\n- [ ] Funnels cover supply by language/hour, acceptance, technical join, retention and reports\n- [ ] Use minimized event payloads and controlled exports without private conversation content\n\n## Verification\n\n- [ ] Reconcile dashboards with ledger and call records\n- [ ] Demonstrate opt-out/retention handling and no double-counted session events\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-063",
+    "phase": "P7",
+    "title": "Plan service extraction and higher-scale capacity from evidence",
+    "area": "platform",
+    "dependencies": [
+      "FA-052",
+      "FA-053",
+      "FA-056",
+      "FA-062"
+    ],
+    "size": "L",
+    "priority": "P2",
+    "goal": "Evolve architecture only when measured bottlenecks justify it.",
+    "acceptance": [
+      "Capture current CPU/DB/queue/fan-out bottleneck and target demand",
+      "Assess regional presence, replica strategy, finance isolation and RTC volume contract",
+      "Provide migration, backfill, rollback and invariants before extracting services"
+    ],
+    "verification": [
+      "Load-test the proposed change against an existing baseline",
+      "Prove no cross-region double reservation or split financial authority"
+    ],
+    "release": "expansion",
+    "labels": [
+      "phase:P7",
+      "area:platform",
+      "priority:P2",
+      "release:expansion"
+    ],
+    "milestone": "P7 — Expansion",
+    "body": "<!-- nightshift-id: FA-063 -->\n# FA-063 — Plan service extraction and higher-scale capacity from evidence\n\nPhase: **P7** · Area: **platform** · Size: **L** · Release: **expansion**\n\n## Outcome\n\nEvolve architecture only when measured bottlenecks justify it.\n\n## Dependencies\n\nFA-052, FA-053, FA-056, FA-062\n\n## Acceptance criteria\n\n- [ ] Capture current CPU/DB/queue/fan-out bottleneck and target demand\n- [ ] Assess regional presence, replica strategy, finance isolation and RTC volume contract\n- [ ] Provide migration, backfill, rollback and invariants before extracting services\n\n## Verification\n\n- [ ] Load-test the proposed change against an existing baseline\n- [ ] Prove no cross-region double reservation or split financial authority\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  },
+  {
+    "id": "FA-064",
+    "phase": "P7",
+    "title": "Evaluate optional clearly labelled AI companion",
+    "area": "product",
+    "dependencies": [
+      "FA-045",
+      "FA-049",
+      "FA-056",
+      "FA-062"
+    ],
+    "size": "M",
+    "priority": "P2",
+    "goal": "Explore AI as a separate future experience only after the human service is stable.",
+    "acceptance": [
+      "AI is visibly distinguished from human listeners and never used to fake supply",
+      "Define consent, memory controls, deletion, cost caps, abuse handling and no professional-care promises",
+      "Write an evaluation plan before selecting a model or shipping personalized memory"
+    ],
+    "verification": [
+      "Test disclosure, safety escalation and sensitive-data handling with synthetic scenarios",
+      "Keep feature disabled until evaluation and privacy review pass"
+    ],
+    "release": "expansion",
+    "labels": [
+      "phase:P7",
+      "area:product",
+      "priority:P2",
+      "release:expansion"
+    ],
+    "milestone": "P7 — Expansion",
+    "body": "<!-- nightshift-id: FA-064 -->\n# FA-064 — Evaluate optional clearly labelled AI companion\n\nPhase: **P7** · Area: **product** · Size: **M** · Release: **expansion**\n\n## Outcome\n\nExplore AI as a separate future experience only after the human service is stable.\n\n## Dependencies\n\nFA-045, FA-049, FA-056, FA-062\n\n## Acceptance criteria\n\n- [ ] AI is visibly distinguished from human listeners and never used to fake supply\n- [ ] Define consent, memory controls, deletion, cost caps, abuse handling and no professional-care promises\n- [ ] Write an evaluation plan before selecting a model or shipping personalized memory\n\n## Verification\n\n- [ ] Test disclosure, safety escalation and sensitive-data handling with synthetic scenarios\n- [ ] Keep feature disabled until evaluation and privacy review pass\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+  }
+]
