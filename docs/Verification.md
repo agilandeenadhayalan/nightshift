@@ -32,6 +32,8 @@ Windows Docker Desktop and Ubuntu's native Docker daemon are distinct on this ma
 
 ## APK artifact
 
+Recommended for ARM64 phones: `apps/mobile/build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk`, 159,492,318 bytes (about 152 MiB), SHA256 `0e16a32ae87cc3e8f763755e8c79d3e4cba0c693a9c2ff8f63a4066e0cf7da2a`. Android `aapt` confirms the same `com.nightshift.app` package and only the ARM64 ABI. Flutter assigns split-APK version code 2001; the universal build has version code 1. Use one variant consistently, or allow debug downgrade explicitly when changing back to universal.
+
 Universal local output: `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`.
 
 - Size: 450,914,362 bytes (debug/native RTC libraries across ABIs).

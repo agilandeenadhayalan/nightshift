@@ -59,6 +59,8 @@ adb devices
 
 APK: `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`. Both phones install the same APK, with provisional application ID `com.nightshift.app`, and connect to the same backend. Production registration/signing remain owner decisions.
 
+For a smaller APK on ARM64 phones, build `flutter build apk --debug --split-per-abi --target-platform android-arm64` and install `build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk`. Check the phone with `adb -s DEVICE_SERIAL shell getprop ro.product.cpu.abi`; use the universal APK for other ABIs. The split APK uses version code 2001, so switching back to universal version code 1 requires `adb install -r -d` for an explicit debug downgrade. Both variants remain the same application and modes.
+
 The development sign-in screen accepts an API base URL, fictional account and the local `DEV_ACCESS_KEY` read privately from `.env`. Select `listener` on one phone, `customer` on the other. Enter the key at runtime; never compile it into an APK. `customer2` supports race testing.
 
 For each USB-attached phone:
