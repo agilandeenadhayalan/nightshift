@@ -16,7 +16,7 @@ Recorded 20 November 2026. This distinguishes executed automation from physical-
 | Flutter tests | 25/25 passed: navigation/restoration, Tamil and large text, roles, microphone denial, SDK-readiness boundary, token failure, background termination, immediate offline hang-up, stale response/version recovery, no rejoin after end, safety controls and history pagination/date grouping. RTC is fake only inside these tests. |
 | Android universal debug APK | Built successfully. Package `com.nightshift.app`, label NightShift, version 0.1.0+1, minimum SDK 23 and target SDK 35 confirmed with Android `aapt`. |
 | Economics | 10/10 Python tests passed, including historical example, 12 audio/video scenarios, OTP amortization, nonfinite input rejection and negative-contribution rejection. |
-| Checkout secret/file guard | Passed; its 2 tests include deliberately rejected synthetic key material. Local environments, credentials, databases and generated builds remain ignored. |
+| Checkout secret/file guard | Passed; 2 tests passed. A separate deliberate synthetic private-key-header file made the actual CLI exit 1; after removal the same CLI exited 0. Local environments, credentials, databases and generated builds remain ignored. |
 | npm dependency audit | 0 vulnerabilities reported for the locked dependency set during this run. |
 | Diff whitespace | Checked after cleanup of authored documentation. |
 
@@ -29,6 +29,8 @@ The final NestJS image was built and run with PostgreSQL 17.7 and Redis 7.4.7 in
 The API container was restarted. The smoke harness with `SMOKE_CALL_ID` then confirmed both participants could still retrieve that completed zero-charge call. This verifies persistence across an actual process/container restart.
 
 Windows Docker Desktop and Ubuntu's native Docker daemon are distinct on this machine. The initial mixed-context attempt collided on local ports, and detached WSL commands allowed the distro to stop. The verified route keeps one Ubuntu session active and runs the whole stack in one context; see [Local_Development.md](Local_Development.md). No unrelated containers or data were removed.
+
+After verification, only the NightShift test services and the temporary agent WSL keepalive were stopped. Database volumes were preserved. Start the stack with the runbook when installing the APK; no hidden persistent helper is required.
 
 ## APK artifact
 
