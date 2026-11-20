@@ -15,22 +15,38 @@ class CreateCallRequest {
   CreateCallRequest({
     required this.listenerId,
     required this.quoteId,
+    this.mediaType,
+    this.videoConsent,
   });
 
   String listenerId;
 
   CreateCallRequestQuoteIdEnum quoteId;
 
+  CreateCallRequestMediaTypeEnum? mediaType;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  bool? videoConsent;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is CreateCallRequest &&
     other.listenerId == listenerId &&
-    other.quoteId == quoteId;
+    other.quoteId == quoteId &&
+    other.mediaType == mediaType &&
+    other.videoConsent == videoConsent;
 
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
     (listenerId.hashCode) +
-    (quoteId.hashCode);
+    (quoteId.hashCode) +
+    (mediaType == null ? 0 : mediaType!.hashCode) +
+    (videoConsent == null ? 0 : videoConsent!.hashCode);
 
   @override
   // Never include tokens, access keys or private fields in diagnostics.
@@ -40,6 +56,12 @@ class CreateCallRequest {
     final json = <String, dynamic>{};
       json[r'listenerId'] = this.listenerId;
       json[r'quoteId'] = this.quoteId;
+    if (this.mediaType != null) {
+      json[r'mediaType'] = this.mediaType;
+    }
+    if (this.videoConsent != null) {
+      json[r'videoConsent'] = this.videoConsent;
+    }
     return json;
   }
 
@@ -66,10 +88,15 @@ class CreateCallRequest {
       if (json[r'quoteId'] == null) {
         throw const FormatException('Null CreateCallRequest.quoteId');
       }
+      if (json[r'videoConsent'] != null && json[r'videoConsent'] is! bool) {
+        throw const FormatException('Invalid CreateCallRequest.videoConsent boolean');
+      }
 
       return CreateCallRequest(
         listenerId: mapValueOfType<String>(json, r'listenerId')!,
         quoteId: CreateCallRequestQuoteIdEnum.fromJson(json[r'quoteId'])!,
+        mediaType: CreateCallRequestMediaTypeEnum.fromJson(json[r'mediaType']),
+        videoConsent: mapValueOfType<bool>(json, r'videoConsent'),
       );
     }
     return null;
@@ -124,6 +151,7 @@ class CreateCallRequest {
 
 enum CreateCallRequestQuoteIdEnum {
   testAudioV1._(r'test-audio-v1'),
+  testVideoV1._(r'test-video-v1'),
   ;
 
   /// Instantiate a new enum with the provided value.
@@ -182,6 +210,7 @@ class CreateCallRequestQuoteIdEnumTypeTransformer {
     if (data != null) {
       switch (data) {
         case r'test-audio-v1': return CreateCallRequestQuoteIdEnum.testAudioV1;
+        case r'test-video-v1': return CreateCallRequestQuoteIdEnum.testVideoV1;
         default:
           if (!allowNull) {
             throw const FormatException('Unknown enum value');
@@ -193,6 +222,83 @@ class CreateCallRequestQuoteIdEnumTypeTransformer {
 
   /// The singleton instance of this transformer.
   static CreateCallRequestQuoteIdEnumTypeTransformer? _instance;
+}
+
+
+
+enum CreateCallRequestMediaTypeEnum {
+  audio._(r'audio'),
+  video._(r'video'),
+  ;
+
+  /// Instantiate a new enum with the provided value.
+  const CreateCallRequestMediaTypeEnum._(this._value);
+
+  /// The underlying value of this enum member.
+  final String _value;
+
+  @override
+  String toString() => _value;
+
+  /// Encodes this enum as a value suitable for JSON.
+  String toJson() => _value;
+
+  /// Returns the instance of [CreateCallRequestMediaTypeEnum] that was successfully decoded
+  /// from the passed [value] on success, null otherwise.
+  static CreateCallRequestMediaTypeEnum? fromJson(dynamic value) => CreateCallRequestMediaTypeEnumTypeTransformer().decode(value);
+
+  /// Returns a [List] containing instances of [CreateCallRequestMediaTypeEnum]
+  /// that were successfully decoded from the passed [JSON][json].
+  static List<CreateCallRequestMediaTypeEnum> listFromJson(dynamic json, {bool growable = false,}) {
+    final result = <CreateCallRequestMediaTypeEnum>[];
+    if (json is List && json.isNotEmpty) {
+      for (final row in json) {
+        final value = CreateCallRequestMediaTypeEnum.fromJson(row);
+        if (value == null) throw const FormatException('Invalid enum list item');
+        result.add(value);
+      }
+    }
+    return result.toList(growable: growable);
+  }
+}
+
+/// Transformation class that can [encode] an instance of [CreateCallRequestMediaTypeEnum] to String,
+/// and [decode] dynamic data back to [CreateCallRequestMediaTypeEnum].
+class CreateCallRequestMediaTypeEnumTypeTransformer {
+  factory CreateCallRequestMediaTypeEnumTypeTransformer() => _instance ??= const CreateCallRequestMediaTypeEnumTypeTransformer._();
+
+  const CreateCallRequestMediaTypeEnumTypeTransformer._();
+
+  String encode(CreateCallRequestMediaTypeEnum data) => data._value;
+
+  /// Returns the instance of [CreateCallRequestMediaTypeEnum] that was successfully decoded
+  /// from the passed [data] value on success, null otherwise.
+  ///
+  /// If [allowNull] is true and the [dynamic value][data] cannot be decoded successfully,
+  /// then null is returned. However, if [allowNull] is false and the [dynamic value][data]
+  /// cannot be decoded successfully, then an [UnimplementedError] is thrown.
+  ///
+  /// The [allowNull] is very handy when an API changes and a new enum value is added or removed,
+  /// and users are still using an old app with the old code.
+  CreateCallRequestMediaTypeEnum? decode(dynamic data, {bool allowNull = false}) {
+    if (data is CreateCallRequestMediaTypeEnum) {
+      return data;
+    }
+    if (data != null) {
+      switch (data) {
+        case r'audio': return CreateCallRequestMediaTypeEnum.audio;
+        case r'video': return CreateCallRequestMediaTypeEnum.video;
+        default:
+          if (!allowNull) {
+            throw const FormatException('Unknown enum value');
+          }
+      }
+    }
+    return null;
+  }
+
+  /// The singleton instance of this transformer.
+  static CreateCallRequestMediaTypeEnumTypeTransformer? _instance;
 }
 
 

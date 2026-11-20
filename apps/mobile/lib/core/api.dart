@@ -95,6 +95,8 @@ class NightShiftApi {
     switch ('$method ${uri.path}') {
       case 'GET /health':
         return api.health();
+      case 'GET /rtc/config':
+        return api.getRtcConfig();
       case 'POST /auth/dev':
         return api.developmentSignIn(
             generated.DevelopmentSignInRequest.fromJson(data)!);
@@ -162,10 +164,10 @@ class NightShiftApi {
                 id, key(), generated.DeclineCallRequest.fromJson(data)!);
           case 'cancel':
             return api.cancelCall(
-                id, key(), generated.DeclineCallRequest.fromJson(data)!);
+                id, key(), generated.CancelCallRequest.fromJson(data)!);
           case 'end':
             return api.endCall(
-                id, key(), generated.DeclineCallRequest.fromJson(data)!);
+                id, key(), generated.CancelCallRequest.fromJson(data)!);
         }
       }
     }

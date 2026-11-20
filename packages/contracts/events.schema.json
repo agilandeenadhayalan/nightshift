@@ -49,7 +49,10 @@
       "type": "object",
       "properties": {
         "id": {
-          "const": "test-audio-v1",
+          "enum": [
+            "test-audio-v1",
+            "test-video-v1"
+          ],
           "type": "string"
         },
         "coinsPerMinute": {
@@ -149,6 +152,16 @@
         },
         "rate": {
           "$ref": "#/$defs/Rate"
+        },
+        "videoRate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Rate"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -244,6 +257,13 @@
         "testOnly": {
           "const": true,
           "type": "boolean"
+        },
+        "mediaType": {
+          "type": "string",
+          "enum": [
+            "audio",
+            "video"
+          ]
         }
       },
       "required": [
@@ -552,6 +572,13 @@
         "expiresAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "mediaType": {
+          "type": "string",
+          "enum": [
+            "audio",
+            "video"
+          ]
         }
       },
       "required": [
@@ -561,6 +588,30 @@
         "remoteUid",
         "token",
         "expiresAt"
+      ],
+      "additionalProperties": false
+    },
+    "RtcConfig": {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "videoEnabled": {
+          "type": "boolean"
+        },
+        "testOnly": {
+          "const": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "appId",
+        "videoEnabled",
+        "testOnly"
       ],
       "additionalProperties": false
     },

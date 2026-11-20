@@ -19,6 +19,7 @@ class RtcToken {
     required this.remoteUid,
     required this.token,
     required this.expiresAt,
+    this.mediaType,
   });
 
   String appId;
@@ -33,6 +34,8 @@ class RtcToken {
 
   DateTime expiresAt;
 
+  RtcTokenMediaTypeEnum? mediaType;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is RtcToken &&
     other.appId == appId &&
@@ -40,7 +43,8 @@ class RtcToken {
     other.uid == uid &&
     other.remoteUid == remoteUid &&
     other.token == token &&
-    other.expiresAt == expiresAt;
+    other.expiresAt == expiresAt &&
+    other.mediaType == mediaType;
 
   @override
   int get hashCode =>
@@ -50,7 +54,8 @@ class RtcToken {
     (uid.hashCode) +
     (remoteUid.hashCode) +
     (token.hashCode) +
-    (expiresAt.hashCode);
+    (expiresAt.hashCode) +
+    (mediaType == null ? 0 : mediaType!.hashCode);
 
   @override
   // Never include tokens, access keys or private fields in diagnostics.
@@ -64,6 +69,9 @@ class RtcToken {
       json[r'remoteUid'] = this.remoteUid;
       json[r'token'] = this.token;
       json[r'expiresAt'] = this.expiresAt.toUtc().toIso8601String();
+    if (this.mediaType != null) {
+      json[r'mediaType'] = this.mediaType;
+    }
     return json;
   }
 
@@ -131,6 +139,7 @@ class RtcToken {
         remoteUid: RtcTokenRemoteUidEnum.fromJson(json[r'remoteUid'])!,
         token: mapValueOfType<String>(json, r'token')!,
         expiresAt: mapDateTime(json, r'expiresAt', r'')!,
+        mediaType: RtcTokenMediaTypeEnum.fromJson(json[r'mediaType']),
       );
     }
     return null;
@@ -337,6 +346,83 @@ class RtcTokenRemoteUidEnumTypeTransformer {
 
   /// The singleton instance of this transformer.
   static RtcTokenRemoteUidEnumTypeTransformer? _instance;
+}
+
+
+
+enum RtcTokenMediaTypeEnum {
+  audio._(r'audio'),
+  video._(r'video'),
+  ;
+
+  /// Instantiate a new enum with the provided value.
+  const RtcTokenMediaTypeEnum._(this._value);
+
+  /// The underlying value of this enum member.
+  final String _value;
+
+  @override
+  String toString() => _value;
+
+  /// Encodes this enum as a value suitable for JSON.
+  String toJson() => _value;
+
+  /// Returns the instance of [RtcTokenMediaTypeEnum] that was successfully decoded
+  /// from the passed [value] on success, null otherwise.
+  static RtcTokenMediaTypeEnum? fromJson(dynamic value) => RtcTokenMediaTypeEnumTypeTransformer().decode(value);
+
+  /// Returns a [List] containing instances of [RtcTokenMediaTypeEnum]
+  /// that were successfully decoded from the passed [JSON][json].
+  static List<RtcTokenMediaTypeEnum> listFromJson(dynamic json, {bool growable = false,}) {
+    final result = <RtcTokenMediaTypeEnum>[];
+    if (json is List && json.isNotEmpty) {
+      for (final row in json) {
+        final value = RtcTokenMediaTypeEnum.fromJson(row);
+        if (value == null) throw const FormatException('Invalid enum list item');
+        result.add(value);
+      }
+    }
+    return result.toList(growable: growable);
+  }
+}
+
+/// Transformation class that can [encode] an instance of [RtcTokenMediaTypeEnum] to String,
+/// and [decode] dynamic data back to [RtcTokenMediaTypeEnum].
+class RtcTokenMediaTypeEnumTypeTransformer {
+  factory RtcTokenMediaTypeEnumTypeTransformer() => _instance ??= const RtcTokenMediaTypeEnumTypeTransformer._();
+
+  const RtcTokenMediaTypeEnumTypeTransformer._();
+
+  String encode(RtcTokenMediaTypeEnum data) => data._value;
+
+  /// Returns the instance of [RtcTokenMediaTypeEnum] that was successfully decoded
+  /// from the passed [data] value on success, null otherwise.
+  ///
+  /// If [allowNull] is true and the [dynamic value][data] cannot be decoded successfully,
+  /// then null is returned. However, if [allowNull] is false and the [dynamic value][data]
+  /// cannot be decoded successfully, then an [UnimplementedError] is thrown.
+  ///
+  /// The [allowNull] is very handy when an API changes and a new enum value is added or removed,
+  /// and users are still using an old app with the old code.
+  RtcTokenMediaTypeEnum? decode(dynamic data, {bool allowNull = false}) {
+    if (data is RtcTokenMediaTypeEnum) {
+      return data;
+    }
+    if (data != null) {
+      switch (data) {
+        case r'audio': return RtcTokenMediaTypeEnum.audio;
+        case r'video': return RtcTokenMediaTypeEnum.video;
+        default:
+          if (!allowNull) {
+            throw const FormatException('Unknown enum value');
+          }
+      }
+    }
+    return null;
+  }
+
+  /// The singleton instance of this transformer.
+  static RtcTokenMediaTypeEnumTypeTransformer? _instance;
 }
 
 

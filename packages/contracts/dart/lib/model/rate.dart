@@ -229,6 +229,7 @@ class Rate {
 
 enum RateIdEnum {
   testAudioV1._(r'test-audio-v1'),
+  testVideoV1._(r'test-video-v1'),
   ;
 
   /// Instantiate a new enum with the provided value.
@@ -287,6 +288,7 @@ class RateIdEnumTypeTransformer {
     if (data != null) {
       switch (data) {
         case r'test-audio-v1': return RateIdEnum.testAudioV1;
+        case r'test-video-v1': return RateIdEnum.testVideoV1;
         default:
           if (!allowNull) {
             throw const FormatException('Unknown enum value');

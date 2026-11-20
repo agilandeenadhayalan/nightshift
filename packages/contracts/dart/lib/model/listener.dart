@@ -22,6 +22,7 @@ class Listener {
     required this.favorite,
     required this.testOnly,
     required this.rate,
+    this.videoRate,
   });
 
   String id;
@@ -42,6 +43,8 @@ class Listener {
 
   Rate rate;
 
+  Rate? videoRate;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is Listener &&
     other.id == id &&
@@ -52,7 +55,8 @@ class Listener {
     other.busy == busy &&
     other.favorite == favorite &&
     other.testOnly == testOnly &&
-    other.rate == rate;
+    other.rate == rate &&
+    other.videoRate == videoRate;
 
   @override
   int get hashCode =>
@@ -65,7 +69,8 @@ class Listener {
     (busy.hashCode) +
     (favorite.hashCode) +
     (testOnly.hashCode) +
-    (rate.hashCode);
+    (rate.hashCode) +
+    (videoRate == null ? 0 : videoRate!.hashCode);
 
   @override
   // Never include tokens, access keys or private fields in diagnostics.
@@ -82,6 +87,11 @@ class Listener {
       json[r'favorite'] = this.favorite;
       json[r'testOnly'] = this.testOnly;
       json[r'rate'] = this.rate;
+    if (this.videoRate != null) {
+      json[r'videoRate'] = this.videoRate;
+    } else {
+      json[r'videoRate'] = null;
+    }
     return json;
   }
 
@@ -179,6 +189,7 @@ class Listener {
         favorite: mapValueOfType<bool>(json, r'favorite')!,
         testOnly: mapValueOfType<bool>(json, r'testOnly')!,
         rate: Rate.fromJson(json[r'rate'])!,
+        videoRate: Rate.fromJson(json[r'videoRate']),
       );
     }
     return null;

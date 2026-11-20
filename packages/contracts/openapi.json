@@ -1523,7 +1523,20 @@
                   },
                   "quoteId": {
                     "type": "string",
-                    "const": "test-audio-v1"
+                    "enum": [
+                      "test-audio-v1",
+                      "test-video-v1"
+                    ]
+                  },
+                  "mediaType": {
+                    "type": "string",
+                    "enum": [
+                      "audio",
+                      "video"
+                    ]
+                  },
+                  "videoConsent": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -1731,7 +1744,7 @@
             }
           }
         ],
-        "description": "Report only local/remote RTC readiness. No client duration or price. Heartbeat every two seconds; not provider proof.",
+        "description": "Report only local/remote RTC readiness. Video calls require videoReady and both audio and video readiness. No client duration or price. Heartbeat every two seconds; not provider proof.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1740,6 +1753,9 @@
                 "type": "object",
                 "properties": {
                   "ready": {
+                    "type": "boolean"
+                  },
+                  "videoReady": {
                     "type": "boolean"
                   }
                 },
@@ -1856,6 +1872,94 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RtcToken"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session is missing, expired or revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or participant access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource is missing or not visible to this participant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State, eligibility or idempotency conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency or RTC configuration unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/rtc/config": {
+      "get": {
+        "operationId": "getRtcConfig",
+        "description": "Authenticated private-video preview configuration. Contains a public app ID only when video is enabled; never a certificate or channel token.",
+        "responses": {
+          "200": {
+            "description": "Authoritative response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RtcConfig"
                 }
               }
             }
@@ -2627,6 +2731,9 @@
                 "properties": {
                   "expectedVersion": {
                     "type": "integer"
+                  },
+                  "videoConsent": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -3371,7 +3478,10 @@
         "type": "object",
         "properties": {
           "id": {
-            "const": "test-audio-v1",
+            "enum": [
+              "test-audio-v1",
+              "test-video-v1"
+            ],
             "type": "string"
           },
           "coinsPerMinute": {
@@ -3471,6 +3581,16 @@
           },
           "rate": {
             "$ref": "#/components/schemas/Rate"
+          },
+          "videoRate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Rate"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -3566,6 +3686,13 @@
           "testOnly": {
             "const": true,
             "type": "boolean"
+          },
+          "mediaType": {
+            "type": "string",
+            "enum": [
+              "audio",
+              "video"
+            ]
           }
         },
         "required": [
@@ -3874,6 +4001,13 @@
           "expiresAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "mediaType": {
+            "type": "string",
+            "enum": [
+              "audio",
+              "video"
+            ]
           }
         },
         "required": [
@@ -3883,6 +4017,30 @@
           "remoteUid",
           "token",
           "expiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "RtcConfig": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "videoEnabled": {
+            "type": "boolean"
+          },
+          "testOnly": {
+            "const": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "appId",
+          "videoEnabled",
+          "testOnly"
         ],
         "additionalProperties": false
       },

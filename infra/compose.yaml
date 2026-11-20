@@ -14,6 +14,7 @@ services:
       DEV_ACCESS_KEY: ${DEV_ACCESS_KEY:?Generate local .env first}
       AGORA_APP_ID: ${AGORA_APP_ID:-}
       AGORA_APP_CERTIFICATE: ${AGORA_APP_CERTIFICATE:-}
+      VIDEO_CALLS_ENABLED: ${VIDEO_CALLS_ENABLED:-false}
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:

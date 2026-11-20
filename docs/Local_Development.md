@@ -43,7 +43,23 @@ The npm scripts load the ignored root `.env`. PostgreSQL listens only on host lo
 
 Set `AGORA_APP_ID` and `AGORA_APP_CERTIFICATE` in the ignored root `.env` using your own token-enabled Agora **test** project. Recreate the API with `docker compose --env-file .env -f infra/compose.yaml --profile api up -d --force-recreate api`, or restart the native process. Keep credentials off Git, issues and logs. The certificate stays on NestJS. Flutter obtains short-lived participant/channel tokens after acceptance. Missing configuration returns a recoverable error, never simulated audio success.
 
-Unit/integration tests need no provider credentials. They check control-plane behavior, not audible media, provider connectivity or provider-side cutoff. Voice travels directly through Agora, not NestJS.
+Unit/integration tests need no provider credentials. They check control-plane behavior, not audible/visible media, provider connectivity or provider-side cutoff. Voice and video travel directly through Agora, not NestJS.
+
+### Private video testing
+
+`VIDEO_CALLS_ENABLED=false` is the default. To test video, set `VIDEO_CALLS_ENABLED=true` only in the ignored root `.env` for the private local stack, with the server-side Agora test configuration above. Do not change the committed default or copy credentials into Flutter. From that same checkout and WSL Docker context, build/recreate the updated API:
+
+```bash
+docker compose --env-file .env -f infra/compose.yaml --profile api up -d --build --wait api
+```
+
+Startup applies the additive video migration and seeds the separate rate without deleting audio histories. For native Node, rebuild, run `npm run db:migrate` and `npm run db:seed`, then restart the API. Build and install the updated same APK on both phones using the Windows instructions below. Returning the flag to `false` and recreating/restarting the API hides video and makes recovery end existing video sessions; it is not proof of immediate provider-side cutoff.
+
+Customer selects video and explicitly starts the local camera preview. Android camera permission and checked camera consent are required before sending the invitation; Listener reviews their own preview and consents before accepting. Grant microphone permission for the call when prompted. Opening an invitation or restoring a session does not automatically authorize camera publication. Both participants must be consenting adults using the fictional test accounts.
+
+The proposed engineering video fixture is **120 test coins/minute**, versus **60 for audio**. Both are free through 40 healthy seconds and have a 60-second minimum thereafter, so video needs at least 120 available test coins. These are not approved production prices. Camera off pauses healthy video metering and uses the bounded reconnect timeout. Audio fallback ends the video session; Customer then starts a new audio invitation at its displayed rate. Listener can end video and request an audio redial. The rate never changes within a call.
+
+Follow [Video_Calling.md](Video_Calling.md) for the controls, actual verification evidence and remaining two-phone checklist. Check preview isolation, received video and voice, camera switching/off/on, permissions, backgrounding, either-party End and histories on physical phones. Provider cost reconciliation, public privacy/moderation review and #57/#58 dependencies remain open; enabling this private flag does not authorize a public rollout.
 
 ## Windows build and two devices
 

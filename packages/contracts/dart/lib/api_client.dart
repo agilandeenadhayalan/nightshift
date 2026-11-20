@@ -191,6 +191,8 @@ class ApiClient {
           return Call.fromJson(value);
         case 'CallPage':
           return CallPage.fromJson(value);
+        case 'CancelCallRequest':
+          return CancelCallRequest.fromJson(value);
         case 'CreateCallRequest':
           return CreateCallRequest.fromJson(value);
         case 'CreateReport201Response':
@@ -241,6 +243,8 @@ class ApiClient {
           return Rate.fromJson(value);
         case 'ReportMediaReadyRequest':
           return ReportMediaReadyRequest.fromJson(value);
+        case 'RtcConfig':
+          return RtcConfig.fromJson(value);
         case 'RtcToken':
           return RtcToken.fromJson(value);
         case 'SetAvailabilityRequest':

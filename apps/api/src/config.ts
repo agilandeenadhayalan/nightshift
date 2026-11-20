@@ -1,6 +1,7 @@
 export interface Config {
   databaseUrl: string; redisUrl: string; port: number; devAccessKey: string;
   agoraAppId?: string; agoraAppCertificate?: string;
+  videoCallsEnabled?: boolean;
   phoneAuth?: {
     projectId: string; digestKey: string; consentVersion: string;
     msg91WidgetId: string; msg91AuthKey: string; dailySendLimit: number;
@@ -19,6 +20,9 @@ export function loadConfig(env = process.env): Config {
   if (!env.DATABASE_URL || !env.REDIS_URL) throw new Error('DATABASE_URL and REDIS_URL are required');
   const port = Number(env.PORT ?? 3000);
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('Invalid PORT');
+  if (env.VIDEO_CALLS_ENABLED !== undefined && !['true', 'false'].includes(env.VIDEO_CALLS_ENABLED)) {
+    throw new Error('VIDEO_CALLS_ENABLED must be true or false');
+  }
   let phoneAuth: Config['phoneAuth'];
   if (env.PHONE_AUTH_ENABLED !== undefined && !['true', 'false'].includes(env.PHONE_AUTH_ENABLED)) {
     throw new Error('PHONE_AUTH_ENABLED must be true or false');
@@ -40,5 +44,5 @@ export function loadConfig(env = process.env): Config {
   }
   return { databaseUrl: env.DATABASE_URL, redisUrl: env.REDIS_URL, port,
     devAccessKey: env.DEV_ACCESS_KEY!, agoraAppId: env.AGORA_APP_ID,
-    agoraAppCertificate: env.AGORA_APP_CERTIFICATE, phoneAuth };
+    agoraAppCertificate: env.AGORA_APP_CERTIFICATE, videoCallsEnabled: env.VIDEO_CALLS_ENABLED === 'true', phoneAuth };
 }

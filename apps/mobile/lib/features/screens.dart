@@ -6,6 +6,8 @@ import '../core/controller.dart';
 import '../core/models.dart';
 import 'message_copy.dart';
 import 'state_widgets.dart';
+import 'video_preflight.dart';
+import 'video_view.dart';
 
 class PageBody extends StatelessWidget {
   const PageBody({super.key, required this.children});
@@ -410,57 +412,95 @@ class HomeScreen extends ConsumerWidget {
                                 ? state.text('Availability unknown',
                                     'கிடைக்கும் நிலை தெரியவில்லை')
                                 : listener.available
-                                    ? state.text('● Available for audio',
-                                        '● ஆடியோவிற்கு கிடைக்கிறார்')
+                                    ? listener.videoRate != null &&
+                                            state.video != null
+                                        ? state.text(
+                                            '● Available for audio and video',
+                                            '● ஆடியோ மற்றும் வீடியோவிற்கு கிடைக்கிறார்')
+                                        : state.text('● Available for audio',
+                                            '● ஆடியோவிற்கு கிடைக்கிறார்')
                                     : state.text('Busy or offline',
                                         'பிஸியாக அல்லது ஆஃப்லைன்')),
                             Text(listener.languages
                                 .map((l) => l == 'ta' ? 'தமிழ்' : 'English')
                                 .join(' · ')),
                             const SizedBox(height: 8),
-                            Text(state.text('60 test coins / minute',
-                                'நிமிடத்திற்கு 60 சோதனை நாணயங்கள்')),
+                            Text(testRateLabel(state, listener.rate)),
                             const SizedBox(height: 16),
                             FilledButton.icon(
                                 onPressed: !listener.available ||
                                         state.busy ||
                                         state.offline
                                     ? null
-                                    : () =>
-                                        _confirmCall(context, state, listener),
+                                    : () => showAudioCallConfirmation(
+                                        context, state, listener),
                                 icon: const Icon(Icons.call_outlined),
                                 label: Text(state.text('Call', 'அழை'),
                                     semanticsLabel: state.text(
                                         'Call ${listener.name}',
                                         '${listener.name} அழைக்கவும்'))),
+                            if (listener.videoRate != null &&
+                                state.video != null) ...[
+                              const SizedBox(height: 12),
+                              Text(state.text(
+                                  'Video · ${testRateLabel(state, listener.videoRate!)}',
+                                  'வீடியோ · ${testRateLabel(state, listener.videoRate!)}')),
+                              OutlinedButton.icon(
+                                  onPressed: !listener.available ||
+                                          state.busy ||
+                                          state.offline
+                                      ? null
+                                      : () => _confirmVideoCall(
+                                          context, state, listener),
+                                  icon: const Icon(Icons.videocam_outlined),
+                                  label: Text(
+                                      state.text(
+                                          'Video call', 'வீடியோ அழைப்பு'),
+                                      semanticsLabel: state.text(
+                                          'Video call ${listener.name}',
+                                          '${listener.name} வீடியோ அழைப்பு'))),
+                            ],
                           ]))),
           ],
         ]));
   }
 
-  Future<void> _confirmCall(BuildContext context, AppController state,
+  Future<void> _confirmVideoCall(BuildContext context, AppController state,
       ListenerProfile listener) async {
-    final agreed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-              title: Text(state.text(
-                  'Call ${listener.name}', '${listener.name} அழைக்கவும்')),
-              content: SingleChildScrollView(
-                  child: Text(state.text(
-                      'Test credits only. Ringing is free. Up to 40 connected seconds is free; crossing 40 seconds charges 60 coins covering the first minute, then 1 coin per additional second. Reconnect gaps are free. Maximum 10 minutes, limited by your balance. Both phones must keep the app open.',
-                      'சோதனை நாணயங்கள் மட்டுமே. காத்திருப்பு இலவசம். 40 இணைப்பு விநாடிகள் வரை இலவசம்; அதைத் தாண்டினால் முதல் நிமிடத்திற்கு 60 நாணயங்கள், பின்னர் விநாடிக்கு 1 நாணயம். மீண்டும் இணைப்பு இடைவெளி இலவசம். இருப்புக்கு உட்பட்டு அதிகபட்சம் 10 நிமிடங்கள். இரு செயலிகளும் திறந்திருப்பது அவசியம்.'))),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: Text(state.text('Cancel', 'ரத்து'))),
-                FilledButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: Text(state.text(
-                        'Start audio call', 'ஆடியோ அழைப்பைத் தொடங்கு')))
-              ],
-            ));
-    if (agreed == true) await state.startCall(listener);
+    final rate = listener.videoRate;
+    if (rate == null) return;
+    final agreed = await showVideoPreflight(context, state,
+        rate: rate,
+        confirmLabel:
+            state.text('Start video call', 'வீடியோ அழைப்பைத் தொடங்கு'));
+    if (agreed && context.mounted) {
+      await state.startCall(listener, video: true, cameraConsent: true);
+    }
   }
+}
+
+Future<void> showAudioCallConfirmation(
+    BuildContext context, AppController state, ListenerProfile listener) async {
+  final agreed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+            title: Text(state.text(
+                'Call ${listener.name}', '${listener.name} அழைக்கவும்')),
+            content: SingleChildScrollView(
+                child: Text('${testRateLabel(state, listener.rate)}\n\n'
+                    '${testTariffDescription(state, listener.rate)}\n\n'
+                    '${state.text('Both phones must keep the app open.', 'இரு செயலிகளும் திறந்திருப்பது அவசியம்.')}')),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text(state.text('Cancel', 'ரத்து'))),
+              FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text(state.text(
+                      'Start audio call', 'ஆடியோ அழைப்பைத் தொடங்கு')))
+            ],
+          ));
+  if (agreed == true && context.mounted) await state.startCall(listener);
 }
 
 class CallScreen extends ConsumerWidget {
@@ -477,30 +517,73 @@ class CallScreen extends ConsumerWidget {
                       state.text('Loading call…', 'அழைப்பு ஏற்றப்படுகிறது…'))));
     }
     final incoming = call.listenerId == state.user?.id;
+    final listenerHourlyRate = (call.rate.listenerPaisePerHour / 100)
+        .toStringAsFixed(2)
+        .replaceFirst(RegExp(r'\.00$'), '');
     final title = state.endingLocally
-        ? state.text('Audio stopped · waiting for server',
-            'ஆடியோ நிறுத்தப்பட்டது · சேவையகத்திற்காக காத்திருக்கிறது')
+        ? call.isVideo
+            ? state.text('Camera and audio stopped · waiting for server',
+                'கேமராவும் ஆடியோவும் நிறுத்தப்பட்டன · சேவையகத்திற்காக காத்திருக்கிறது')
+            : state.text('Audio stopped · waiting for server',
+                'ஆடியோ நிறுத்தப்பட்டது · சேவையகத்திற்காக காத்திருக்கிறது')
         : switch (call.state) {
             'ringing' => incoming
-                ? state.text('Incoming audio call', 'வரும் ஆடியோ அழைப்பு')
+                ? call.isVideo
+                    ? state.text('Incoming video call', 'வரும் வீடியோ அழைப்பு')
+                    : state.text('Incoming audio call', 'வரும் ஆடியோ அழைப்பு')
                 : state.text('Calling…', 'அழைக்கிறது…'),
             'connected' => state.text('Connected', 'இணைக்கப்பட்டது'),
             'reconnecting' => state.text('Reconnecting · not charging',
                 'மீண்டும் இணைகிறது · கட்டணம் இல்லை'),
-            _ => state.text('Connecting audio · not charging',
-                'ஆடியோ இணைகிறது · கட்டணம் இல்லை'),
+            _ => call.isVideo
+                ? state.text('Connecting video · not charging',
+                    'வீடியோ இணைகிறது · கட்டணம் இல்லை')
+                : state.text('Connecting audio · not charging',
+                    'ஆடியோ இணைகிறது · கட்டணம் இல்லை'),
           };
     return PopScope(
         canPop: false,
         child: Scaffold(
             appBar: AppBar(
                 automaticallyImplyLeading: false,
-                title: Text(state.text('Audio call', 'ஆடியோ அழைப்பு'))),
+                title: Text(call.isVideo
+                    ? state.text('Video call', 'வீடியோ அழைப்பு')
+                    : state.text('Audio call', 'ஆடியோ அழைப்பு'))),
+            bottomNavigationBar: call.isVideo && !call.ringing
+                ? SafeArea(
+                    minimum: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      SizedBox(
+                          width: double.infinity,
+                          child: _endCallButton(context, state)),
+                      TextButton.icon(
+                          onPressed: state.busy
+                              ? null
+                              : () => showSafetyDialog(context, state, call),
+                          icon: const Icon(Icons.shield_outlined),
+                          label: Text(state.text(
+                              'Report or block', 'புகாரளி அல்லது தடு'))),
+                    ]))
+                : null,
             body: PageBody(children: [
               const ErrorNotice(),
-              const SizedBox(height: 24),
-              const CircleAvatar(
-                  radius: 48, child: Icon(Icons.person_outline, size: 48)),
+              if (call.isVideo &&
+                  !call.ringing &&
+                  !state.needsVideoConsent &&
+                  state.video != null)
+                VideoCallView(
+                    video: state.video!,
+                    remoteLabel: call.otherName(state.user!.id),
+                    localLabel: state.text('You', 'நீங்கள்'),
+                    waitingLabel: state.text(
+                        'Waiting for video', 'வீடியோவிற்காக காத்திருக்கிறது'),
+                    cameraOffLabel:
+                        state.text('Camera off', 'கேமரா நிறுத்தப்பட்டுள்ளது'))
+              else ...[
+                const SizedBox(height: 24),
+                const CircleAvatar(
+                    radius: 48, child: Icon(Icons.person_outline, size: 48)),
+              ],
               const SizedBox(height: 24),
               Text(call.otherName(state.user!.id),
                   textAlign: TextAlign.center,
@@ -512,6 +595,13 @@ class CallScreen extends ConsumerWidget {
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.titleMedium)),
               const SizedBox(height: 24),
+              if (call.isVideo) ...[
+                Text(
+                    state.text('Video · ${testRateLabel(state, call.rate)}',
+                        'வீடியோ · ${testRateLabel(state, call.rate)}'),
+                    textAlign: TextAlign.center),
+                const SizedBox(height: 12),
+              ],
               if (call.ringing) ...[
                 Text(
                     state.text(
@@ -521,18 +611,26 @@ class CallScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 if (incoming) ...[
                   Text(state.text(
-                      'Proposed rate: ₹500 / paid connected hour. Test estimate only.',
-                      'முன்மொழியப்பட்ட விகிதம்: கட்டண இணைப்பு மணிநேரத்திற்கு ₹500. சோதனை மதிப்பீடு மட்டுமே.')),
+                      'Proposed rate: ₹$listenerHourlyRate / paid connected hour. Test estimate only.',
+                      'முன்மொழியப்பட்ட விகிதம்: கட்டண இணைப்பு மணிநேரத்திற்கு ₹$listenerHourlyRate. சோதனை மதிப்பீடு மட்டுமே.')),
                   const SizedBox(height: 16),
                   FilledButton.icon(
-                      onPressed:
-                          state.busy ? null : () => state.transition('accept'),
-                      icon: const Icon(Icons.call),
-                      label: Text(state.text('Accept', 'ஏற்கவும்'))),
+                      onPressed: state.busy
+                          ? null
+                          : call.isVideo
+                              ? () => _reviewVideoCall(context, state, call,
+                                  accepting: true)
+                              : () => state.transition('accept'),
+                      icon: Icon(
+                          call.isVideo ? Icons.videocam_outlined : Icons.call),
+                      label: Text(call.isVideo
+                          ? state.text('Review video invitation',
+                              'வீடியோ அழைப்பை சரிபார்')
+                          : state.text('Accept', 'ஏற்கவும்'))),
                   const SizedBox(height: 12),
                 ],
                 OutlinedButton(
-                    onPressed: state.busy
+                    onPressed: state.endingLocally
                         ? null
                         : () =>
                             state.transition(incoming ? 'decline' : 'cancel'),
@@ -540,6 +638,29 @@ class CallScreen extends ConsumerWidget {
                         ? state.text('Decline', 'நிராகரி')
                         : state.text('Cancel call', 'அழைப்பை ரத்து செய்'))),
               ] else ...[
+                if (call.isVideo && state.needsVideoConsent)
+                  StatusCard(
+                      icon: Icons.videocam_off_outlined,
+                      title: state.text('Your camera is off',
+                          'உங்கள் கேமரா நிறுத்தப்பட்டுள்ளது'),
+                      message: state.text(
+                          'Review your camera and consent before joining this restored video call.',
+                          'மீட்டெடுக்கப்பட்ட வீடியோ அழைப்பில் சேருவதற்கு முன் கேமராவை சரிபார்த்து ஒப்புதல் அளிக்கவும்.'),
+                      action: FilledButton.icon(
+                          onPressed: state.busy || state.endingLocally
+                              ? null
+                              : () => _reviewVideoCall(context, state, call),
+                          icon: const Icon(Icons.videocam_outlined),
+                          label: Text(
+                              state.text('Review camera', 'கேமராவை சரிபார்')))),
+                if (call.isVideo && state.video?.lowBandwidth == true)
+                  StatusCard(
+                      icon: Icons.network_check,
+                      title: state.text('Reduced video quality',
+                          'வீடியோ தரம் குறைக்கப்பட்டுள்ளது'),
+                      message: state.text(
+                          'Video quality is reduced for this connection. The video rate stays ${call.rate.coinsPerMinute} test coins / minute. You can end video and choose a new audio call.',
+                          'இந்த இணைப்பிற்கு வீடியோ தரம் குறைக்கப்பட்டுள்ளது. வீடியோ விகிதம் நிமிடத்திற்கு ${call.rate.coinsPerMinute} சோதனை நாணயங்களாகவே இருக்கும். வீடியோவை முடித்து புதிய ஆடியோ அழைப்பை தேர்வு செய்யலாம்.')),
                 Text(durationLabel(call.connectedMs),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.displaySmall),
@@ -564,7 +685,9 @@ class CallScreen extends ConsumerWidget {
                     runSpacing: 12,
                     children: [
                       OutlinedButton.icon(
-                          onPressed: state.endingLocally || state.busy
+                          onPressed: state.endingLocally ||
+                                  state.busy ||
+                                  state.needsVideoConsent
                               ? null
                               : () => state.perform(state.audio.toggleMute),
                           icon: Icon(
@@ -573,7 +696,9 @@ class CallScreen extends ConsumerWidget {
                               ? state.text('Unmute', 'ஒலியை இயக்கு')
                               : state.text('Mute', 'ஒலியை நிறுத்து'))),
                       OutlinedButton.icon(
-                          onPressed: state.endingLocally || state.busy
+                          onPressed: state.endingLocally ||
+                                  state.busy ||
+                                  state.needsVideoConsent
                               ? null
                               : () => state.perform(state.audio.toggleSpeaker),
                           icon: Icon(state.audio.speaker
@@ -584,34 +709,161 @@ class CallScreen extends ConsumerWidget {
                                   'Speaker on', 'ஒலிபெருக்கி இயங்குகிறது')
                               : state.text('Earpiece', 'காதொலி'))),
                     ]),
+                if (call.isVideo &&
+                    !state.needsVideoConsent &&
+                    state.video != null) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        OutlinedButton.icon(
+                            onPressed: state.busy || state.endingLocally
+                                ? null
+                                : () => state.setCameraEnabled(
+                                    !state.video!.cameraEnabled),
+                            icon: Icon(state.video!.cameraEnabled
+                                ? Icons.videocam_off_outlined
+                                : Icons.videocam_outlined),
+                            label: Text(state.video!.cameraEnabled
+                                ? state.text(
+                                    'Turn camera off', 'கேமராவை நிறுத்து')
+                                : state.text(
+                                    'Turn camera on', 'கேமராவை இயக்கு'))),
+                        OutlinedButton.icon(
+                            onPressed: state.busy ||
+                                    state.endingLocally ||
+                                    !state.video!.cameraEnabled
+                                ? null
+                                : state.switchCamera,
+                            icon: const Icon(Icons.cameraswitch_outlined),
+                            label: Text(
+                                state.text('Switch camera', 'கேமராவை மாற்று'))),
+                      ]),
+                  if (!state.video!.cameraEnabled)
+                    Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Text(
+                            state.text(
+                                'Camera off. Healthy video time and test charging are paused.',
+                                'கேமரா நிறுத்தப்பட்டுள்ளது. வீடியோ இணைப்பு நேரமும் சோதனை கட்டணமும் நிறுத்தப்பட்டுள்ளன.'),
+                            textAlign: TextAlign.center)),
+                ],
+                if (call.isVideo) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                      onPressed: state.busy || state.endingLocally
+                          ? null
+                          : () => _confirmAudioFallback(context, state, call),
+                      icon: const Icon(Icons.call_outlined),
+                      label: Text(state.text('End video and use audio',
+                          'வீடியோவை முடித்து ஆடியோவை பயன்படுத்து'))),
+                ],
                 const SizedBox(height: 24),
-                FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.error),
-                    onPressed:
-                        state.busy ? null : () => state.transition('end'),
-                    icon: const Icon(Icons.call_end),
-                    label: Text(state.text('End call', 'அழைப்பை முடி'))),
+                if (!call.isVideo) _endCallButton(context, state),
                 const SizedBox(height: 16),
                 Text(
-                    state.text(
-                        'Leaving or locking the app ends this test call. No audio is recorded.',
-                        'செயலியிலிருந்து வெளியேறினால் அல்லது பூட்டினால் அழைப்பு முடியும். ஆடியோ பதிவு செய்யப்படுவதில்லை.'),
+                    call.isVideo
+                        ? state.text(
+                            'Leaving or locking the app ends this test call. No audio or video is recorded.',
+                            'செயலியிலிருந்து வெளியேறினால் அல்லது பூட்டினால் அழைப்பு முடியும். ஆடியோவும் வீடியோவும் பதிவு செய்யப்படாது.')
+                        : state.text(
+                            'Leaving or locking the app ends this test call. No audio is recorded.',
+                            'செயலியிலிருந்து வெளியேறினால் அல்லது பூட்டினால் அழைப்பு முடியும். ஆடியோ பதிவு செய்யப்படுவதில்லை.'),
                     textAlign: TextAlign.center),
               ],
               const SizedBox(height: 12),
-              TextButton.icon(
-                  onPressed: state.busy
-                      ? null
-                      : () => showSafetyDialog(context, state, call),
-                  icon: const Icon(Icons.shield_outlined),
-                  label: Text(
-                      state.text('Report or block', 'புகாரளி அல்லது தடு'))),
+              if (!call.isVideo || call.ringing)
+                TextButton.icon(
+                    onPressed: state.busy
+                        ? null
+                        : () => showSafetyDialog(context, state, call),
+                    icon: const Icon(Icons.shield_outlined),
+                    label: Text(
+                        state.text('Report or block', 'புகாரளி அல்லது தடு'))),
               const SizedBox(height: 24),
               SelectableText(
                   state.text('Call ID: ${call.id}', 'அழைப்பு எண்: ${call.id}'),
                   style: Theme.of(context).textTheme.bodySmall),
             ])));
+  }
+}
+
+Widget _endCallButton(BuildContext context, AppController state) =>
+    FilledButton.icon(
+        style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.error),
+        onPressed: state.endingLocally ? null : () => state.transition('end'),
+        icon: const Icon(Icons.call_end),
+        label: Text(state.text('End call', 'அழைப்பை முடி')));
+
+Future<void> _reviewVideoCall(
+    BuildContext context, AppController state, CallSession call,
+    {bool accepting = false}) async {
+  final consent = await showVideoPreflight(context, state,
+      rate: call.rate,
+      confirmLabel: accepting
+          ? state.text('Accept video call', 'வீடியோ அழைப்பை ஏற்கவும்')
+          : state.text('Join video call', 'வீடியோ அழைப்பில் சேர்'));
+  if (!consent || !context.mounted || state.activeCall?.id != call.id) return;
+  if (accepting) {
+    await state.transition('accept', cameraConsent: true);
+  } else {
+    await state.joinConsentedVideo();
+  }
+}
+
+Future<void> _confirmAudioFallback(
+    BuildContext context, AppController state, CallSession call) async {
+  final navigator = Navigator.of(context, rootNavigator: true);
+  final messenger = ScaffoldMessenger.of(context);
+  final agreed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+              scrollable: true,
+              title: Text(state.text(
+                  'End video first?', 'முதலில் வீடியோவை முடிக்கவா?')),
+              content: Text(state.text(
+                  'This ends and settles the video call at its existing video rate. An audio call is a new invitation with a separate audio-rate confirmation. Nothing is repriced or redialled automatically.',
+                  'தற்போதைய வீடியோ விகிதத்தில் இந்த அழைப்பு முடிக்கப்பட்டு கணக்கிடப்படும். ஆடியோ அழைப்பு தனி விகித ஒப்புதலுடன் புதிய அழைப்பாகும். விகிதம் தானாக மாறாது; தானாக மீண்டும் அழைக்கப்படாது.')),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text(state.text('Keep video', 'வீடியோ தொடரட்டும்'))),
+                FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: Text(state.text('End video', 'வீடியோவை முடி'))),
+              ]));
+  if (agreed != true || state.activeCall?.id != call.id) return;
+  final wasCustomer = call.customerId == state.user?.id;
+  await state.endVideoForAudio();
+  if (state.hasCall || state.error != null || !navigator.mounted) return;
+  if (wasCustomer) {
+    await state.refresh();
+    if (!navigator.mounted || state.user == null || state.hasCall) return;
+    final peers = state.listeners
+        .where(
+            (listener) => listener.id == call.listenerId && listener.available)
+        .toList();
+    if (peers.isNotEmpty && !state.offline && state.error == null) {
+      // Let the call-to-history redirect install its page before adding a
+      // dialog; otherwise the router can remove the new quote with CallScreen.
+      await WidgetsBinding.instance.endOfFrame;
+      if (!navigator.mounted || state.hasCall || state.user == null) return;
+      await showAudioCallConfirmation(navigator.context, state, peers.first);
+      return;
+    }
+  }
+  if (messenger.mounted) {
+    messenger.showSnackBar(SnackBar(
+        content: Text(wasCustomer
+            ? state.text(
+                'Video ended. Find the Listener in Discover to start a new audio call.',
+                'வீடியோ முடிந்தது. புதிய ஆடியோ அழைப்பிற்கு கண்டறியில் கேட்பவரை தேர்வு செய்யவும்.')
+            : state.text(
+                'Video ended. Ask the Customer to start a new audio call.',
+                'வீடியோ முடிந்தது. புதிய ஆடியோ அழைப்பை தொடங்க வாடிக்கையாளரிடம் கூறவும்.'))));
   }
 }
 
@@ -705,6 +957,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         children: [
                           Text(call.otherName(state.user!.id),
                               style: Theme.of(context).textTheme.titleLarge),
+                          Text(call.isVideo
+                              ? state.text('Video call', 'வீடியோ அழைப்பு')
+                              : state.text('Audio call', 'ஆடியோ அழைப்பு')),
                           const SizedBox(height: 8),
                           Text(
                               '${_localDate(call.createdAt)} · ${durationLabel(call.connectedMs)}'),

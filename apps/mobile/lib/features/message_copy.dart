@@ -89,6 +89,30 @@ String errorMessage(String? code, String locale) {
         'Allow microphone access in Android settings to make a call.',
         'அழைக்க Android அமைப்புகளில் மைக்ரோஃபோன் அனுமதியை வழங்கவும்.'
       ),
+    'CAMERA_DENIED' => (
+        'Allow camera access in Android settings, then preview your camera again. You can still choose an audio call.',
+        'Android அமைப்புகளில் கேமரா அனுமதியை வழங்கி மீண்டும் முன்னோட்டத்தை பார்க்கவும். ஆடியோ அழைப்பையும் தேர்வு செய்யலாம்.'
+      ),
+    'VIDEO_UNAVAILABLE' || 'VIDEO_DISABLED' => (
+        'Video calling is unavailable on this test server. You can choose an audio call.',
+        'இந்த சோதனை சேவையகத்தில் வீடியோ அழைப்பு கிடைக்கவில்லை. ஆடியோ அழைப்பை தேர்வு செய்யலாம்.'
+      ),
+    'VIDEO_CONSENT_REQUIRED' || 'VIDEO_PREVIEW_REQUIRED' => (
+        'Preview your camera and give consent before joining video.',
+        'வீடியோவில் சேருவதற்கு முன் கேமரா முன்னோட்டத்தை பார்த்து ஒப்புதல் அளிக்கவும்.'
+      ),
+    'CAMERA_FAILED' || 'RTC_CAMERA_FAILED' || 'VIDEO_FAILED' => (
+        'The camera could not continue. End the call or try camera preview again.',
+        'கேமராவை தொடர முடியவில்லை. அழைப்பை முடிக்கவும் அல்லது கேமரா முன்னோட்டத்தை மீண்டும் முயற்சிக்கவும்.'
+      ),
+    'VIDEO_NOT_READY' || 'VIDEO_READINESS_REQUIRED' => (
+        'Waiting for both cameras. Missing video time is not charged.',
+        'இரு கேமராக்களுக்காக காத்திருக்கிறது. வீடியோ இல்லாத நேரத்திற்கு கட்டணம் இல்லை.'
+      ),
+    'RTC_VIDEO_QUALITY_FAILED' => (
+        'Video could not adapt to this connection. End the video call and choose a new audio call if needed.',
+        'இந்த இணைப்பிற்கு வீடியோ தரத்தை மாற்ற முடியவில்லை. வீடியோ அழைப்பை முடித்து தேவைப்பட்டால் புதிய ஆடியோ அழைப்பை தேர்வு செய்யவும்.'
+      ),
     'RTC_UNAVAILABLE' => (
         'Audio calling is not configured on this test server yet.',
         'இந்த சோதனை சேவையகத்தில் ஆடியோ அழைப்பு இன்னும் அமைக்கப்படவில்லை.'
@@ -168,6 +192,7 @@ String endReasonLabel(String? reason, String locale) {
     'declined' => ('Declined', 'நிராகரிக்கப்பட்டது'),
     'cancelled' => ('Cancelled', 'ரத்து செய்யப்பட்டது'),
     'connection_timeout' => ('Connection timed out', 'இணைப்பு நேரம் முடிந்தது'),
+    'video_unavailable' => ('Video became unavailable', 'வீடியோ கிடைக்கவில்லை'),
     'test_credit_limit' => (
         'Test credit or call limit reached',
         'சோதனை நாணயம் அல்லது அழைப்பு வரம்பை எட்டியது'

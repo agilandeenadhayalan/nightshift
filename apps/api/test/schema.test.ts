@@ -77,7 +77,7 @@ async function event(provider = 'fixture-payout', kind = 'payout', eventDigest =
 test('empty migration is repeatable and commerce cannot bypass test-only boundaries', async () => {
   const migrations = await db.pool.query('SELECT name FROM schema_migrations ORDER BY name');
   assert.deepEqual(migrations.rows.map(row => row.name), [
-    '001_android_test_milestone.sql', '002_durable_event_sequence.sql', '003_identity_commerce_foundation.sql', '004_otp_challenges.sql',
+    '001_android_test_milestone.sql', '002_durable_event_sequence.sql', '003_identity_commerce_foundation.sql', '004_otp_challenges.sql', '005_video_calls.sql',
   ]);
   const id = await purchase();
   await assert.rejects(db.pool.query('UPDATE purchases SET test_only=false WHERE id=$1', [id]), code('23514'));
@@ -100,14 +100,14 @@ test('forward migration preserves representative users, review, history, journal
     const listener = ids.find(row => row.test_handle === 'listener')!.id;
     const callId = randomUUID(), eventId = randomUUID();
     await upgrade.pool.query(`INSERT INTO call_sessions(id,customer_id,listener_id,state,rate_id,rate_snapshot,max_duration_seconds,created_at,expires_at,ended_at,reason)
-      SELECT $1,$2,$3,'ended',id,policy,60,now(),now()+interval '45 seconds',now(),'cancelled' FROM rate_versions`, [callId, customer, listener]);
+      SELECT $1,$2,$3,'ended',id,policy,60,now(),now()+interval '45 seconds',now(),'cancelled' FROM rate_versions WHERE id='test-audio-v1'`, [callId, customer, listener]);
     await upgrade.pool.query(`INSERT INTO call_events(id,call_id,version,kind,payload,created_at) VALUES($1,$2,1,'call.state_changed','{}',now())`, [eventId, callId]);
     await upgrade.pool.query('INSERT INTO outbox_events(id,event_id,recipient_id) VALUES($1,$2,$3)', [randomUUID(), eventId, listener]);
     const snapshot = async () => {
       const tables = ['users', 'listener_reviews', 'call_sessions', 'call_events', 'outbox_events', 'wallet_accounts', 'journal_batches', 'journal_lines'];
       const values: Record<string, unknown> = {};
       for (const table of tables) {
-        values[table] = (await upgrade.pool.query(`SELECT to_jsonb(t) - 'application_id' AS record FROM ${table} t ORDER BY id`)).rows;
+        values[table] = (await upgrade.pool.query(`SELECT to_jsonb(t) - 'application_id' - 'media_type' - 'customer_video_consent_at' - 'listener_video_consent_at' AS record FROM ${table} t ORDER BY id`)).rows;
       }
       return values;
     };
@@ -119,6 +119,8 @@ test('forward migration preserves representative users, review, history, journal
     assert.deepEqual(await snapshot(), beforeRows);
     assert.deepEqual((await upgrade.pool.query('SELECT name,checksum FROM schema_migrations ORDER BY name LIMIT 2')).rows, beforeChecksums);
     assert.equal((await upgrade.pool.query('SELECT application_id FROM listener_reviews')).rows[0].application_id, null);
+    assert.deepEqual((await upgrade.pool.query('SELECT media_type,customer_video_consent_at,listener_video_consent_at FROM call_sessions WHERE id=$1', [callId])).rows[0],
+      {media_type: 'audio', customer_video_consent_at: null, listener_video_consent_at: null});
   } finally {
     await upgrade.close();
     assert.equal(path.dirname(path.resolve(temporaryDirectory)), path.resolve(os.tmpdir()));

@@ -11,7 +11,7 @@ Copyright OpenAPI Generator contributors. Local template changes are documented 
 
 Customizations:
 
-1. `native_class.mustache` replaces debug-only required-key assertions with runtime checks. Required nullability, list/object types, integer units, boolean types and date parsing reject malformed payloads. Model diagnostics contain only the model name and `[redacted]`, never property values. Lists reject invalid items instead of silently dropping them.
+1. `native_class.mustache` replaces debug-only required-key assertions with runtime checks. Required nullability, list/object types, integer units, boolean types and date parsing reject malformed payloads. Model diagnostics contain only the model name and `[redacted]`, never property values. Lists reject invalid items instead of silently dropping them. Serialization omits absent optional non-nullable fields, preserving legacy audio requests; nullable fields retain explicit nulls.
 2. `native_enum*.mustache` rejects unknown non-null values and invalid list members. Upstream renders OpenAPI boolean constants as quoted strings; the boolean branch emits a constant boolean expression, preserving `true`/`false` JSON types without weakening the canonical schema.
 3. `api_exception.mustache` exposes only the HTTP status in `toString`, excluding response bodies, credentials, nested exceptions and stack contents. The app facade maps structured server errors to its safe error model.
 4. `pubspec.mustache` pins dependencies compatible with Flutter 3.27.4/Dart 3.6.2, including `http` 1.5.0 required for generator abortable requests. `README.mustache` points contributors to the source workflow.

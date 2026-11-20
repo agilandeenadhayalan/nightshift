@@ -6,7 +6,6 @@ import { randomUUID } from 'node:crypto';
 import { Auth, Actor } from './auth';
 import { NightShiftService } from './service';
 import { ApiError } from './errors';
-import { TEST_RATE } from '@nightshift/backend-domain';
 import { Config } from './config';
 import { Database } from './db';
 import { Presence } from './presence';
@@ -70,8 +69,9 @@ class AppController {
   @Post('calls') create(@Req() req:AuthenticatedRequest,@Body() body:unknown){return this.service.createCall(req.actor,body,req.headers['idempotency-key']);}
   @Post('calls/:id/media') media(@Req() req:AuthenticatedRequest,@Param('id') id:string,@Body() body:unknown){return this.service.media(req.actor,id,body);}
   @Post('calls/:id/rtc-token') rtcToken(@Req() req:AuthenticatedRequest,@Param('id') id:string){return this.service.rtcToken(req.actor,id);}
+  @Get('rtc/config') rtcConfig(){return this.service.rtcConfig();}
   @Post('calls/:id/:action') action(@Req() req:AuthenticatedRequest,@Param('id') id:string,@Param('action') action:string,@Body() body:unknown){return this.service.action(req.actor,id,action,body,req.headers['idempotency-key']);}
-  @Get('rates') rates(){return {items:[TEST_RATE]};}
+  @Get('rates') rates(){return this.service.rates();}
   @Get('wallet') wallet(@Req() req:AuthenticatedRequest){return this.service.wallet(req.actor.id);}
   @Get('me/earnings') earnings(@Req() req:AuthenticatedRequest){return this.service.earnings(req.actor);}
   @Put('blocks/:id') block(@Req() req:AuthenticatedRequest,@Param('id') id:string){return this.service.block(req.actor,id);}

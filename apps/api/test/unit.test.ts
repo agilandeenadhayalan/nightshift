@@ -16,6 +16,15 @@ test('unknown client billing/role fields and invalid IDs are rejected',()=>{
 
 const localEnv = { NODE_ENV: 'test', DEV_AUTH_ENABLED: 'true', DEV_ACCESS_KEY: 'x'.repeat(32),
   DATABASE_URL: 'postgres://localhost/test', REDIS_URL: 'redis://localhost' };
+
+test('private video requires an explicit boolean flag and never bypasses production refusal', () => {
+  const videoFlag = (env: NodeJS.ProcessEnv) => (loadConfig(env) as unknown as {videoCallsEnabled: boolean}).videoCallsEnabled;
+  assert.equal(videoFlag(localEnv), false);
+  assert.equal(videoFlag({...localEnv, VIDEO_CALLS_ENABLED: 'false'}), false);
+  assert.equal(videoFlag({...localEnv, VIDEO_CALLS_ENABLED: 'true'}), true);
+  assert.throws(() => loadConfig({...localEnv, VIDEO_CALLS_ENABLED: 'yes'}), /VIDEO_CALLS_ENABLED/);
+  assert.throws(() => loadConfig({...localEnv, NODE_ENV: 'production', VIDEO_CALLS_ENABLED: 'true'}), /PRODUCTION_NOT_READY/);
+});
 const phoneEnv = { ...localEnv, PHONE_AUTH_ENABLED: 'true', FIREBASE_PROJECT_ID: 'nightshift-fixture',
   PHONE_AUTH_DIGEST_KEY: 'test-fixture-only-'.repeat(3), PHONE_AUTH_CONSENT_VERSION: 'signin-v1',
   MSG91_WIDGET_ID: 'fixture-widget', MSG91_AUTH_KEY: 'fixture-auth-key-only', PHONE_AUTH_DAILY_SEND_LIMIT: '10' };

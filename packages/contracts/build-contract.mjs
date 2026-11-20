@@ -4,9 +4,10 @@ const date={type:'string',format:'date-time'}, nullableDate={type:['string','nul
 const ref=name=>({$ref:`#/components/schemas/${name}`});
 const array=items=>({type:'array',items});
 const object=(properties,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
+const mediaType={type:'string',enum:['audio','video']};
 const schemas={
   User:object({id,displayName:str,languages:array({type:'string',enum:['ta','en']}),mode:{type:'string',enum:['customer','listener']},listenerApproved:bool,online:bool}),
-  Rate:object({id:{const:'test-audio-v1',type:'string'},coinsPerMinute:integer,microcreditsPerCoin:integer,microcreditsPerSecond:integer,freeThroughSeconds:integer,minimumChargedSeconds:integer,listenerPaisePerHour:integer,testOnly:{const:true,type:'boolean'}}),
+  Rate:object({id:{enum:['test-audio-v1','test-video-v1'],type:'string'},coinsPerMinute:integer,microcreditsPerCoin:integer,microcreditsPerSecond:integer,freeThroughSeconds:integer,minimumChargedSeconds:integer,listenerPaisePerHour:integer,testOnly:{const:true,type:'boolean'}}),
   Wallet:object({balanceMicrocredits:integer,heldMicrocredits:integer,availableMicrocredits:integer,testOnly:{const:true,type:'boolean'}}),
   Listener:object({id,displayName:str,languages:array({type:'string',enum:['ta','en']}),online:bool,available:bool,busy:bool,favorite:bool,testOnly:bool,rate:ref('Rate')}),
   Call:object({id,customerId:id,listenerId:id,customerName:str,listenerName:str,state:{type:'string',enum:['ringing','connecting','connected','reconnecting','ended']},version:integer,
@@ -22,9 +23,14 @@ const schemas={
   OtpProof:object({customToken:str,userId:id,needsOnboarding:bool}),
   PhoneIdentity:object({userId:id,needsOnboarding:bool}),
   RtcToken:object({appId:str,channel:str,uid:{type:'integer',enum:[1,2]},remoteUid:{type:'integer',enum:[1,2]},token:str,expiresAt:date}),
+  RtcConfig:object({appId:{type:['string','null']},videoEnabled:bool,testOnly:{const:true,type:'boolean'}}),
   Error:object({error:object({code:str,message:str,retryAfterSeconds:{type:'integer',minimum:1}},['code','message']),requestId:id}),
   Event:object({id,type:{type:'string',enum:['call.invited','call.state_changed']},entityId:id,version:integer,timestamp:date,data:ref('Call')})
 };
+// Additive optional fields preserve old durable event/idempotency payloads.
+schemas.Call.properties.mediaType=mediaType;
+schemas.RtcToken.properties.mediaType=mediaType;
+schemas.Listener.properties.videoRate={anyOf:[ref('Rate'),{type:'null'}]};
 const responses=schema=>({200:{description:'Authoritative response',content:{'application/json':{schema}}},400:{description:'Validation failed',content:{'application/json':{schema:ref('Error')}}},401:{description:'Session is missing, expired or revoked',content:{'application/json':{schema:ref('Error')}}},403:{description:'Role or participant access denied',content:{'application/json':{schema:ref('Error')}}},404:{description:'Resource is missing or not visible to this participant',content:{'application/json':{schema:ref('Error')}}},409:{description:'State, eligibility or idempotency conflict',content:{'application/json':{schema:ref('Error')}}},429:{description:'Request rate limit exceeded',content:{'application/json':{schema:ref('Error')}}},503:{description:'Dependency or RTC configuration unavailable',content:{'application/json':{schema:ref('Error')}}}});
 const pathId={name:'id',in:'path',required:true,schema:id};
 const idempotency={name:'Idempotency-Key',in:'header',required:true,schema:{type:'string',minLength:1,maxLength:128}};
@@ -46,11 +52,12 @@ const paths={
   '/v1/listeners':{get:{operationId:'listListeners',parameters:[{name:'language',in:'query',schema:{type:'string',enum:['ta','en']}},{name:'cursor',in:'query',schema:id}],responses:responses(ref('ListenerPage'))}},
   '/v1/calls':{
     get:{operationId:'listCalls',parameters:[{name:'cursor',in:'query',schema:id}],responses:responses(ref('CallPage'))},
-    post:{operationId:'createCall',parameters:[idempotency],requestBody:json(object({listenerId:id,quoteId:{type:'string',const:'test-audio-v1'}})),responses:responses(ref('Call'))}
+    post:{operationId:'createCall',parameters:[idempotency],requestBody:json(object({listenerId:id,quoteId:{type:'string',enum:['test-audio-v1','test-video-v1']},mediaType,videoConsent:bool},['listenerId','quoteId'])),responses:responses(ref('Call'))}
   },
   '/v1/calls/{id}':{get:{operationId:'getCall',parameters:[pathId],responses:responses(ref('Call'))}},
-  '/v1/calls/{id}/media':{post:{operationId:'reportMediaReady',parameters:[pathId],description:'Report only local/remote RTC readiness. No client duration or price. Heartbeat every two seconds; not provider proof.',requestBody:json(object({ready:bool})),responses:responses(ref('Call'))}},
+  '/v1/calls/{id}/media':{post:{operationId:'reportMediaReady',parameters:[pathId],description:'Report only local/remote RTC readiness. Video calls require videoReady and both audio and video readiness. No client duration or price. Heartbeat every two seconds; not provider proof.',requestBody:json(object({ready:bool,videoReady:bool},['ready'])),responses:responses(ref('Call'))}},
   '/v1/calls/{id}/rtc-token':{post:{operationId:'getRtcToken',parameters:[pathId],responses:responses(ref('RtcToken'))}},
+  '/v1/rtc/config':{get:{operationId:'getRtcConfig',description:'Authenticated private-video preview configuration. Contains a public app ID only when video is enabled; never a certificate or channel token.',responses:responses(ref('RtcConfig'))}},
   '/v1/rates':{get:{operationId:'getRates',responses:responses(object({items:array(ref('Rate'))}))}},
   '/v1/wallet':{get:{operationId:'getWallet',responses:responses(ref('Wallet'))}},
   '/v1/me/earnings':{get:{operationId:'getTestEarnings',responses:responses(object({illustrativePaise:integer,availablePaise:integer,paidPaise:integer,testOnly:bool,listenerPaisePerHour:integer}))}},
@@ -58,7 +65,7 @@ const paths={
   '/v1/blocks/{id}':{put:{operationId:'blockUser',parameters:[pathId],responses:responses(object({blocked:bool}))}},
   '/v1/events':{get:{operationId:'getEvents',parameters:[{name:'cursor',in:'query',schema:id}],responses:responses(object({items:array(ref('Event')),nextCursor:{type:['string','null'],format:'uuid'}}))}}
 };
-for(const action of ['accept','decline','cancel','end'])paths[`/v1/calls/{id}/${action}`]={post:{operationId:`${action}Call`,parameters:[pathId,idempotency],requestBody:json(object({expectedVersion:integer})),responses:responses(ref('Call'))}};
+for(const action of ['accept','decline','cancel','end'])paths[`/v1/calls/{id}/${action}`]={post:{operationId:`${action}Call`,parameters:[pathId,idempotency],requestBody:json(object(action==='accept'?{expectedVersion:integer,videoConsent:bool}:{expectedVersion:integer},['expectedVersion'])),responses:responses(ref('Call'))}};
 paths['/v1/favorites/{id}']={put:{operationId:'favoriteListener',parameters:[pathId],responses:responses(object({favorite:bool}))},delete:{operationId:'unfavoriteListener',parameters:[pathId],responses:responses(object({favorite:bool}))}};
 // Nest defaults POST to 201. Describe actual statuses so generated clients accept the response.
 for(const route of Object.values(paths))for(const [method,operation] of Object.entries(route))if(method==='post'&&operation.responses[200]){operation.responses[201]=operation.responses[200];delete operation.responses[200];}

@@ -131,14 +131,14 @@ class DefaultApi {
   ///
   /// * [String] idempotencyKey (required):
   ///
-  /// * [DeclineCallRequest] declineCallRequest (required):
-  Future<Response> cancelCallWithHttpInfo(String id, String idempotencyKey, DeclineCallRequest declineCallRequest, { Future<void>? abortTrigger, }) async {
+  /// * [CancelCallRequest] cancelCallRequest (required):
+  Future<Response> cancelCallWithHttpInfo(String id, String idempotencyKey, CancelCallRequest cancelCallRequest, { Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
     final path = r'/v1/calls/{id}/cancel'
       .replaceAll('{id}', id);
 
     // ignore: prefer_final_locals
-    Object? postBody = declineCallRequest;
+    Object? postBody = cancelCallRequest;
 
     final queryParams = <QueryParam>[];
     final headerParams = <String, String>{};
@@ -167,9 +167,9 @@ class DefaultApi {
   ///
   /// * [String] idempotencyKey (required):
   ///
-  /// * [DeclineCallRequest] declineCallRequest (required):
-  Future<Call?> cancelCall(String id, String idempotencyKey, DeclineCallRequest declineCallRequest, { Future<void>? abortTrigger, }) async {
-    final response = await cancelCallWithHttpInfo(id, idempotencyKey, declineCallRequest, abortTrigger: abortTrigger,);
+  /// * [CancelCallRequest] cancelCallRequest (required):
+  Future<Call?> cancelCall(String id, String idempotencyKey, CancelCallRequest cancelCallRequest, { Future<void>? abortTrigger, }) async {
+    final response = await cancelCallWithHttpInfo(id, idempotencyKey, cancelCallRequest, abortTrigger: abortTrigger,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -410,14 +410,14 @@ class DefaultApi {
   ///
   /// * [String] idempotencyKey (required):
   ///
-  /// * [DeclineCallRequest] declineCallRequest (required):
-  Future<Response> endCallWithHttpInfo(String id, String idempotencyKey, DeclineCallRequest declineCallRequest, { Future<void>? abortTrigger, }) async {
+  /// * [CancelCallRequest] cancelCallRequest (required):
+  Future<Response> endCallWithHttpInfo(String id, String idempotencyKey, CancelCallRequest cancelCallRequest, { Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
     final path = r'/v1/calls/{id}/end'
       .replaceAll('{id}', id);
 
     // ignore: prefer_final_locals
-    Object? postBody = declineCallRequest;
+    Object? postBody = cancelCallRequest;
 
     final queryParams = <QueryParam>[];
     final headerParams = <String, String>{};
@@ -446,9 +446,9 @@ class DefaultApi {
   ///
   /// * [String] idempotencyKey (required):
   ///
-  /// * [DeclineCallRequest] declineCallRequest (required):
-  Future<Call?> endCall(String id, String idempotencyKey, DeclineCallRequest declineCallRequest, { Future<void>? abortTrigger, }) async {
-    final response = await endCallWithHttpInfo(id, idempotencyKey, declineCallRequest, abortTrigger: abortTrigger,);
+  /// * [CancelCallRequest] cancelCallRequest (required):
+  Future<Call?> endCall(String id, String idempotencyKey, CancelCallRequest cancelCallRequest, { Future<void>? abortTrigger, }) async {
+    final response = await endCallWithHttpInfo(id, idempotencyKey, cancelCallRequest, abortTrigger: abortTrigger,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -691,6 +691,51 @@ class DefaultApi {
     // FormatException when trying to decode an empty string.
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
       return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'GetRates200Response',) as GetRates200Response;
+    
+    }
+    return null;
+  }
+
+  /// Authenticated private-video preview configuration. Contains a public app ID only when video is enabled; never a certificate or channel token.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  Future<Response> getRtcConfigWithHttpInfo({ Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/rtc/config';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Authenticated private-video preview configuration. Contains a public app ID only when video is enabled; never a certificate or channel token.
+  Future<RtcConfig?> getRtcConfig({ Future<void>? abortTrigger, }) async {
+    final response = await getRtcConfigWithHttpInfo(abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'RtcConfig',) as RtcConfig;
     
     }
     return null;
@@ -1076,7 +1121,7 @@ class DefaultApi {
     return null;
   }
 
-  /// Report only local/remote RTC readiness. No client duration or price. Heartbeat every two seconds; not provider proof.
+  /// Report only local/remote RTC readiness. Video calls require videoReady and both audio and video readiness. No client duration or price. Heartbeat every two seconds; not provider proof.
   ///
   /// Note: This method returns the HTTP [Response].
   ///
@@ -1112,7 +1157,7 @@ class DefaultApi {
     );
   }
 
-  /// Report only local/remote RTC readiness. No client duration or price. Heartbeat every two seconds; not provider proof.
+  /// Report only local/remote RTC readiness. Video calls require videoReady and both audio and video readiness. No client duration or price. Heartbeat every two seconds; not provider proof.
   ///
   /// Parameters:
   ///

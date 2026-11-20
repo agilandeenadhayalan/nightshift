@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { Database } from './db';
 import { loadConfig } from './config';
-import { TEST_RATE, MICRO } from '@nightshift/backend-domain';
+import { TEST_RATE, TEST_VIDEO_RATE, MICRO } from '@nightshift/backend-domain';
 
 export async function seed(db: Database) {
   await db.tx(async c => {
     await c.query('SELECT pg_advisory_xact_lock(981276)');
-    await c.query('INSERT INTO rate_versions(id,policy,test_only) VALUES($1,$2,true) ON CONFLICT DO NOTHING', [TEST_RATE.id, TEST_RATE]);
+    for (const rate of [TEST_RATE, TEST_VIDEO_RATE]) {
+      await c.query('INSERT INTO rate_versions(id,policy,test_only) VALUES($1,$2,true) ON CONFLICT DO NOTHING', [rate.id, rate]);
+    }
     await c.query("INSERT INTO wallet_accounts(id,unit,kind) VALUES ('platform:test','TEST_MICROCREDIT','platform_test'),('subsidy:test','TEST_PAISE','subsidy_test') ON CONFLICT DO NOTHING");
     for (const handle of ['customer', 'customer2', 'listener']) {
       const approved = handle === 'listener';

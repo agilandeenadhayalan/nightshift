@@ -14,18 +14,29 @@ class AcceptCallRequest {
   /// Returns a new [AcceptCallRequest] instance.
   AcceptCallRequest({
     required this.expectedVersion,
+    this.videoConsent,
   });
 
   int expectedVersion;
 
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  bool? videoConsent;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is AcceptCallRequest &&
-    other.expectedVersion == expectedVersion;
+    other.expectedVersion == expectedVersion &&
+    other.videoConsent == videoConsent;
 
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
-    (expectedVersion.hashCode);
+    (expectedVersion.hashCode) +
+    (videoConsent == null ? 0 : videoConsent!.hashCode);
 
   @override
   // Never include tokens, access keys or private fields in diagnostics.
@@ -34,6 +45,9 @@ class AcceptCallRequest {
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
       json[r'expectedVersion'] = this.expectedVersion;
+    if (this.videoConsent != null) {
+      json[r'videoConsent'] = this.videoConsent;
+    }
     return json;
   }
 
@@ -57,9 +71,13 @@ class AcceptCallRequest {
       if (json[r'expectedVersion'] != null && json[r'expectedVersion'] is! int) {
         throw const FormatException('Invalid AcceptCallRequest.expectedVersion integer');
       }
+      if (json[r'videoConsent'] != null && json[r'videoConsent'] is! bool) {
+        throw const FormatException('Invalid AcceptCallRequest.videoConsent boolean');
+      }
 
       return AcceptCallRequest(
         expectedVersion: mapValueOfType<int>(json, r'expectedVersion')!,
+        videoConsent: mapValueOfType<bool>(json, r'videoConsent'),
       );
     }
     return null;

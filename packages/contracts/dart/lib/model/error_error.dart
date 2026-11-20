@@ -54,8 +54,6 @@ class ErrorError {
       json[r'message'] = this.message;
     if (this.retryAfterSeconds != null) {
       json[r'retryAfterSeconds'] = this.retryAfterSeconds;
-    } else {
-      json[r'retryAfterSeconds'] = null;
     }
     return json;
   }

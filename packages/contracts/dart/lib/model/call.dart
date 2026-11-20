@@ -31,6 +31,7 @@ class Call {
     required this.rate,
     required this.maxDurationSeconds,
     required this.testOnly,
+    this.mediaType,
   });
 
   String id;
@@ -69,6 +70,8 @@ class Call {
 
   CallTestOnlyEnum testOnly;
 
+  CallMediaTypeEnum? mediaType;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is Call &&
     other.id == id &&
@@ -88,7 +91,8 @@ class Call {
     other.earningPaise == earningPaise &&
     other.rate == rate &&
     other.maxDurationSeconds == maxDurationSeconds &&
-    other.testOnly == testOnly;
+    other.testOnly == testOnly &&
+    other.mediaType == mediaType;
 
   @override
   int get hashCode =>
@@ -110,7 +114,8 @@ class Call {
     (earningPaise.hashCode) +
     (rate.hashCode) +
     (maxDurationSeconds.hashCode) +
-    (testOnly.hashCode);
+    (testOnly.hashCode) +
+    (mediaType == null ? 0 : mediaType!.hashCode);
 
   @override
   // Never include tokens, access keys or private fields in diagnostics.
@@ -148,6 +153,9 @@ class Call {
       json[r'rate'] = this.rate;
       json[r'maxDurationSeconds'] = this.maxDurationSeconds;
       json[r'testOnly'] = this.testOnly;
+    if (this.mediaType != null) {
+      json[r'mediaType'] = this.mediaType;
+    }
     return json;
   }
 
@@ -311,6 +319,7 @@ class Call {
         rate: Rate.fromJson(json[r'rate'])!,
         maxDurationSeconds: mapValueOfType<int>(json, r'maxDurationSeconds')!,
         testOnly: CallTestOnlyEnum.fromJson(json[r'testOnly'])!,
+        mediaType: CallMediaTypeEnum.fromJson(json[r'mediaType']),
       );
     }
     return null;
@@ -533,6 +542,83 @@ class CallTestOnlyEnumTypeTransformer {
 
   /// The singleton instance of this transformer.
   static CallTestOnlyEnumTypeTransformer? _instance;
+}
+
+
+
+enum CallMediaTypeEnum {
+  audio._(r'audio'),
+  video._(r'video'),
+  ;
+
+  /// Instantiate a new enum with the provided value.
+  const CallMediaTypeEnum._(this._value);
+
+  /// The underlying value of this enum member.
+  final String _value;
+
+  @override
+  String toString() => _value;
+
+  /// Encodes this enum as a value suitable for JSON.
+  String toJson() => _value;
+
+  /// Returns the instance of [CallMediaTypeEnum] that was successfully decoded
+  /// from the passed [value] on success, null otherwise.
+  static CallMediaTypeEnum? fromJson(dynamic value) => CallMediaTypeEnumTypeTransformer().decode(value);
+
+  /// Returns a [List] containing instances of [CallMediaTypeEnum]
+  /// that were successfully decoded from the passed [JSON][json].
+  static List<CallMediaTypeEnum> listFromJson(dynamic json, {bool growable = false,}) {
+    final result = <CallMediaTypeEnum>[];
+    if (json is List && json.isNotEmpty) {
+      for (final row in json) {
+        final value = CallMediaTypeEnum.fromJson(row);
+        if (value == null) throw const FormatException('Invalid enum list item');
+        result.add(value);
+      }
+    }
+    return result.toList(growable: growable);
+  }
+}
+
+/// Transformation class that can [encode] an instance of [CallMediaTypeEnum] to String,
+/// and [decode] dynamic data back to [CallMediaTypeEnum].
+class CallMediaTypeEnumTypeTransformer {
+  factory CallMediaTypeEnumTypeTransformer() => _instance ??= const CallMediaTypeEnumTypeTransformer._();
+
+  const CallMediaTypeEnumTypeTransformer._();
+
+  String encode(CallMediaTypeEnum data) => data._value;
+
+  /// Returns the instance of [CallMediaTypeEnum] that was successfully decoded
+  /// from the passed [data] value on success, null otherwise.
+  ///
+  /// If [allowNull] is true and the [dynamic value][data] cannot be decoded successfully,
+  /// then null is returned. However, if [allowNull] is false and the [dynamic value][data]
+  /// cannot be decoded successfully, then an [UnimplementedError] is thrown.
+  ///
+  /// The [allowNull] is very handy when an API changes and a new enum value is added or removed,
+  /// and users are still using an old app with the old code.
+  CallMediaTypeEnum? decode(dynamic data, {bool allowNull = false}) {
+    if (data is CallMediaTypeEnum) {
+      return data;
+    }
+    if (data != null) {
+      switch (data) {
+        case r'audio': return CallMediaTypeEnum.audio;
+        case r'video': return CallMediaTypeEnum.video;
+        default:
+          if (!allowNull) {
+            throw const FormatException('Unknown enum value');
+          }
+      }
+    }
+    return null;
+  }
+
+  /// The singleton instance of this transformer.
+  static CallMediaTypeEnumTypeTransformer? _instance;
 }
 
 

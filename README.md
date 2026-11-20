@@ -1,8 +1,10 @@
 # NightShift
 
-One Flutter Android application, one application ID, and exactly two user-facing modes: **Customer** and **Listener**. Both use one shared NestJS backend backed by PostgreSQL. Redis tracks short-lived presence; Agora carries voice. Staff tools remain separate.
+One Flutter Android application, one application ID, and exactly two user-facing modes: **Customer** and **Listener**. Both use one shared NestJS backend backed by PostgreSQL. Redis tracks short-lived presence; Agora carries voice and optional private test video. Staff tools remain separate.
 
 The first Android implementation uses fictional identities and test credits. The API refuses production startup. The [foreground two-phone milestone passed on 20 November 2026](docs/Device_Debug_2026-11-20.md), including audible speech, either-party hangup and durable histories. Reconnect stability, broader device coverage, provider-side cutoff, production sign-in, payments and launch approvals remain open. See [issue status](docs/Issue_Status.md) and the [decision register](docs/Decision_Register.md).
+
+[Private video calling](docs/Video_Calling.md) extends the same app and call lifecycle with camera preview/consent, camera controls and an explicit new audio call for fallback. `VIDEO_CALLS_ENABLED` is off by default; enable it only in the ignored environment for a private local test stack. Video uses a proposed engineering fixture of 120 test coins/minute, separate from 60 for audio; no production price is approved. #57 and #58 remain implemented subsets with device/provider evidence and dependency/public-release gates open. See the video document for the current verification evidence.
 
 ## Run the Android milestone
 

@@ -25,11 +25,12 @@ Related issue: [FA-001 / #1](https://github.com/agilandeenadhayalan/nightshift/i
 | D16 | Agora RTC project — Agilan | Private backend configuration enabled user-confirmed two-way audio on two phones; no credentials in Git or APK | Rotate the certificate exposed in chat and replace only the private environment value; confirm quota/budget and provider-side cutoff proof | Continued test media / paid media |
 | D17 | Identity providers — Agilan | Local fictional identities allowed; production plan MSG91 OTP + Firebase sessions + FCM | Owner projects, approved sender/template/chain, real Indian SIM delivery and abuse controls | Production sign-in |
 | D18 | Adult assurance and listener review — safety owner | Local test identities only; typed age is not strong assurance | Review process, storage/provider choice, consent, reviewer access and escalation | Public enrollment |
-| D19 | Call privacy and retention — safety/privacy owner | Do not record private call audio; logs use opaque IDs | Approved retention schedule, processor inventory, deletion exceptions and policy copy | Public launch |
+| D19 | Call privacy and retention — safety/privacy owner | Do not record private call audio or video; logs use opaque IDs | Approved retention schedule, processor inventory, deletion exceptions and policy copy | Public launch |
 | D20 | Background incoming calls — Agilan / engineering | Foreground two-phone proof first; full FCM/background behavior remains device-dependent | Notification configuration and Android screen-lock/background/device matrix | Reliable release |
 | D21 | App and infrastructure release — Agilan | Local debug development only; no production deployment approval inferred | Hosting ownership, budgets, production secrets, signed builds, staffed canary and rollback approval | Public deployment |
-| D22 | Expansion — Agilan | Video, chat, offers, iOS, analytics/scale and AI follow their dependency gates | Separate scope, economics, privacy, provider and store decisions | FA-057–064 |
+| D22 | Expansion — Agilan | Confirmed: implement private test video now; public video, chat, offers, iOS, analytics/scale and AI retain their dependency gates | Separate scope, economics, privacy, provider and store decisions; private video does not close #57/#58 | FA-057–064 |
 | D23 | Test tariff versus launch tariff — Agilan / finance owner | Browser reference has a 40-second free threshold, then a 60-coin minimum; master plan proposes cumulative per-second charging | Preserve browser behavior and tests; approve a versioned production tariff separately. Android development tariff must be stated in its contract and must not imply parity until verified | Pricing / production billing |
+| D24 | Private video fixture and safeguards — Agilan / finance and safety owners | Proposed engineering fixture: 120 test coins/minute, free through 40 healthy seconds, then a 60-second minimum; Listener illustration stays non-payable. Default-off flag, explicit camera preview/permission/consent and a separately quoted audio fallback are implemented; see [Video_Calling.md](Video_Calling.md) | Approve production video price, Listener pay, budget/caps, supported devices/quality and staffed privacy/moderation response; complete physical media and provider cost reconciliation evidence | #57 dependencies and #58 public video gate |
 
 ## Owner review requested after the development run
 
@@ -37,5 +38,6 @@ Related issue: [FA-001 / #1](https://github.com/agilandeenadhayalan/nightshift/i
 2. Confirm brand/entity and the permanent Android identifier before any store registration.
 3. Rotate the Agora certificate shared in chat and update only the private backend environment. Two-phone audio now passes; provider-side cutoff and quota/budget approval remain. Keep replacement credentials out of issues, PRs, chat and Git.
 4. Approve production pricing, budget/caps and payment route only after the documented specialist and store checks.
+5. Resolve the video pricing, device/quality and privacy/safety decisions in D24 before public video; the private engineering implementation does not satisfy #26/#28/#37/#56/#58 release gates.
 
 Until then, continue local engineering with fictional identities, test credits and explicit unmet gates. No issue is closed solely because an external dependency has been deferred.
