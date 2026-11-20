@@ -77,7 +77,7 @@ async function event(provider = 'fixture-payout', kind = 'payout', eventDigest =
 test('empty migration is repeatable and commerce cannot bypass test-only boundaries', async () => {
   const migrations = await db.pool.query('SELECT name FROM schema_migrations ORDER BY name');
   assert.deepEqual(migrations.rows.map(row => row.name), [
-    '001_android_test_milestone.sql', '002_durable_event_sequence.sql', '003_identity_commerce_foundation.sql',
+    '001_android_test_milestone.sql', '002_durable_event_sequence.sql', '003_identity_commerce_foundation.sql', '004_otp_challenges.sql',
   ]);
   const id = await purchase();
   await assert.rejects(db.pool.query('UPDATE purchases SET test_only=false WHERE id=$1', [id]), code('23514'));

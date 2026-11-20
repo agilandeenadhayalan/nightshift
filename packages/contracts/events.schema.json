@@ -379,6 +379,150 @@
       ],
       "additionalProperties": false
     },
+    "OtpRequest": {
+      "type": "object",
+      "properties": {
+        "phone": {
+          "type": "string",
+          "pattern": "^\\+91[6-9][0-9]{9}$"
+        },
+        "deviceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "consentVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        }
+      },
+      "required": [
+        "phone",
+        "deviceId",
+        "consentVersion"
+      ],
+      "additionalProperties": false
+    },
+    "OtpVerifyRequest": {
+      "type": "object",
+      "properties": {
+        "challengeId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "phone": {
+          "type": "string",
+          "pattern": "^\\+91[6-9][0-9]{9}$"
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[0-9]{6}$"
+        },
+        "deviceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "challengeId",
+        "phone",
+        "code",
+        "deviceId"
+      ],
+      "additionalProperties": false
+    },
+    "FirebaseVerifyRequest": {
+      "type": "object",
+      "properties": {
+        "idToken": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384
+        }
+      },
+      "required": [
+        "idToken"
+      ],
+      "additionalProperties": false
+    },
+    "OtpChallenge": {
+      "type": "object",
+      "properties": {
+        "challengeId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "sending",
+            "sent",
+            "verifying",
+            "consumed",
+            "expired",
+            "locked",
+            "send_unknown",
+            "verify_unknown",
+            "superseded"
+          ]
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "retryAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "challengeId",
+        "state",
+        "expiresAt",
+        "retryAt"
+      ],
+      "additionalProperties": false
+    },
+    "OtpProof": {
+      "type": "object",
+      "properties": {
+        "customToken": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "needsOnboarding": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "customToken",
+        "userId",
+        "needsOnboarding"
+      ],
+      "additionalProperties": false
+    },
+    "PhoneIdentity": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "needsOnboarding": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "userId",
+        "needsOnboarding"
+      ],
+      "additionalProperties": false
+    },
     "RtcToken": {
       "type": "object",
       "properties": {
@@ -431,6 +575,10 @@
             },
             "message": {
               "type": "string"
+            },
+            "retryAfterSeconds": {
+              "type": "integer",
+              "minimum": 1
             }
           },
           "required": [

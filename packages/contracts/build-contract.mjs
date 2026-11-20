@@ -15,17 +15,27 @@ const schemas={
   CallPage:object({items:array(ref('Call')),nextCursor:{type:['string','null'],format:'uuid'}}),
   ListenerPage:object({items:array(ref('Listener')),nextCursor:{type:['string','null'],format:'uuid'}}),
   Login:object({token:str,expiresAt:date,user:ref('User'),testOnly:{const:true,type:'boolean'}}),
+  OtpRequest:object({phone:{type:'string',pattern:'^\\+91[6-9][0-9]{9}$'},deviceId:{type:'string',minLength:1,maxLength:128},consentVersion:{type:'string',minLength:1,maxLength:80}}),
+  OtpVerifyRequest:object({challengeId:id,phone:{type:'string',pattern:'^\\+91[6-9][0-9]{9}$'},code:{type:'string',pattern:'^[0-9]{6}$'},deviceId:{type:'string',minLength:1,maxLength:128}}),
+  FirebaseVerifyRequest:object({idToken:{type:'string',minLength:1,maxLength:16384}}),
+  OtpChallenge:object({challengeId:id,state:{type:'string',enum:['sending','sent','verifying','consumed','expired','locked','send_unknown','verify_unknown','superseded']},expiresAt:date,retryAt:date}),
+  OtpProof:object({customToken:str,userId:id,needsOnboarding:bool}),
+  PhoneIdentity:object({userId:id,needsOnboarding:bool}),
   RtcToken:object({appId:str,channel:str,uid:{type:'integer',enum:[1,2]},remoteUid:{type:'integer',enum:[1,2]},token:str,expiresAt:date}),
-  Error:object({error:object({code:str,message:str}),requestId:id}),
+  Error:object({error:object({code:str,message:str,retryAfterSeconds:{type:'integer',minimum:1}},['code','message']),requestId:id}),
   Event:object({id,type:{type:'string',enum:['call.invited','call.state_changed']},entityId:id,version:integer,timestamp:date,data:ref('Call')})
 };
 const responses=schema=>({200:{description:'Authoritative response',content:{'application/json':{schema}}},400:{description:'Validation failed',content:{'application/json':{schema:ref('Error')}}},401:{description:'Session is missing, expired or revoked',content:{'application/json':{schema:ref('Error')}}},403:{description:'Role or participant access denied',content:{'application/json':{schema:ref('Error')}}},404:{description:'Resource is missing or not visible to this participant',content:{'application/json':{schema:ref('Error')}}},409:{description:'State, eligibility or idempotency conflict',content:{'application/json':{schema:ref('Error')}}},429:{description:'Request rate limit exceeded',content:{'application/json':{schema:ref('Error')}}},503:{description:'Dependency or RTC configuration unavailable',content:{'application/json':{schema:ref('Error')}}}});
 const pathId={name:'id',in:'path',required:true,schema:id};
 const idempotency={name:'Idempotency-Key',in:'header',required:true,schema:{type:'string',minLength:1,maxLength:128}};
 const json=schema=>({required:true,content:{'application/json':{schema}}});
+const identityResponses=schema=>({...responses(schema),410:{description:'OTP challenge expired',content:{'application/json':{schema:ref('Error')}}}});
 const paths={
   '/v1/health':{get:{operationId:'health',security:[],responses:responses(object({status:str,service:str,testOnly:bool}))}},
   '/v1/auth/dev':{post:{operationId:'developmentSignIn',security:[],description:'Development/test only. Server refuses production boot.',requestBody:json(object({handle:{type:'string',enum:['customer','customer2','listener']},accessKey:{type:'string',minLength:24},deviceId:str})),responses:responses(ref('Login'))}},
+  '/v1/auth/otp/request':{post:{operationId:'requestOtpChallenge',security:[],parameters:[idempotency],description:'Disabled by default. Requires server-configured provider validation. Explicit versioned consent; never an app session.',requestBody:json(ref('OtpRequest')),responses:identityResponses(ref('OtpChallenge'))}},
+  '/v1/auth/otp/verify':{post:{operationId:'verifyOtpChallenge',security:[],description:'Consumes one challenge and returns a Firebase custom token, which must be exchanged for an ID token in the Firebase client. No app permissions or adult approval are granted.',requestBody:json(ref('OtpVerifyRequest')),responses:identityResponses(ref('OtpProof'))}},
+  '/v1/auth/firebase/verify':{post:{operationId:'verifyPhoneIdentity',security:[],description:'Verifies a Firebase ID token including revocation and its existing MSG91 identity binding. Returns an identity receipt, not an app session; onboarding and session integration remain separate.',requestBody:json(ref('FirebaseVerifyRequest')),responses:identityResponses(ref('PhoneIdentity'))}},
   '/v1/auth/logout':{post:{operationId:'signOut',responses:responses(object({signedOut:bool}))}},
   '/v1/me':{get:{operationId:'getMe',responses:responses(ref('User'))}},
   '/v1/snapshot':{get:{operationId:'getSnapshot',parameters:[{name:'language',in:'query',schema:{type:'string',enum:['ta','en'],default:'ta'}}],responses:responses(ref('Snapshot'))}},
