@@ -15,22 +15,34 @@ class ErrorError {
   ErrorError({
     required this.code,
     required this.message,
+    this.retryAfterSeconds,
   });
 
   String code;
 
   String message;
 
+  /// Minimum value: 1
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  int? retryAfterSeconds;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is ErrorError &&
     other.code == code &&
-    other.message == message;
+    other.message == message &&
+    other.retryAfterSeconds == retryAfterSeconds;
 
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
     (code.hashCode) +
-    (message.hashCode);
+    (message.hashCode) +
+    (retryAfterSeconds == null ? 0 : retryAfterSeconds!.hashCode);
 
   @override
   // Never include tokens, access keys or private fields in diagnostics.
@@ -40,6 +52,11 @@ class ErrorError {
     final json = <String, dynamic>{};
       json[r'code'] = this.code;
       json[r'message'] = this.message;
+    if (this.retryAfterSeconds != null) {
+      json[r'retryAfterSeconds'] = this.retryAfterSeconds;
+    } else {
+      json[r'retryAfterSeconds'] = null;
+    }
     return json;
   }
 
@@ -66,10 +83,14 @@ class ErrorError {
       if (json[r'message'] == null) {
         throw const FormatException('Null ErrorError.message');
       }
+      if (json[r'retryAfterSeconds'] != null && json[r'retryAfterSeconds'] is! int) {
+        throw const FormatException('Invalid ErrorError.retryAfterSeconds integer');
+      }
 
       return ErrorError(
         code: mapValueOfType<String>(json, r'code')!,
         message: mapValueOfType<String>(json, r'message')!,
+        retryAfterSeconds: mapValueOfType<int>(json, r'retryAfterSeconds'),
       );
     }
     return null;

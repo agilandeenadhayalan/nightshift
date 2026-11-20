@@ -11,6 +11,7 @@ import { Config } from './config';
 import { Database } from './db';
 import { Presence } from './presence';
 import { Server } from 'socket.io';
+import { createPhoneAuthentication, PhoneAuthentication, PhoneAuthDependencies } from './identity/phone-auth';
 
 type AuthenticatedRequest=Request & {actor:Actor;requestId:string};
 @Injectable()
@@ -28,13 +29,21 @@ class ErrorFilter implements ExceptionFilter {
     const req=host.switchToHttp().getRequest<AuthenticatedRequest>(),res=host.switchToHttp().getResponse<Response>();
     const known=exception instanceof ApiError;
     const status=known?exception.status:exception instanceof HttpException?exception.getStatus():503;
+    const retry=known && 'retryAfterSeconds' in exception && typeof exception.retryAfterSeconds==='number'
+      && Number.isSafeInteger(exception.retryAfterSeconds) && exception.retryAfterSeconds>0 ? exception.retryAfterSeconds : undefined;
+    if(retry!==undefined)res.setHeader('Retry-After',String(retry));
     res.status(status).json({error:{code:known?exception.code:status===404?'NOT_FOUND':'SERVICE_UNAVAILABLE',
-      message:known?exception.message:status===404?'Endpoint not found':'Service is temporarily unavailable'},requestId:req.requestId??randomUUID()});
+      message:known?exception.message:status===404?'Endpoint not found':'Service is temporarily unavailable',
+      ...(retry===undefined?{}:{retryAfterSeconds:retry})},requestId:req.requestId??randomUUID()});
   }
 }
 @Controller('v1')
 class PublicController {
-  constructor(@Inject(Auth) private readonly auth:Auth,@Inject(NightShiftService) private readonly service:NightShiftService){}
+  constructor(@Inject(Auth) private readonly auth:Auth,@Inject(NightShiftService) private readonly service:NightShiftService,
+    @Inject(PhoneAuthentication) private readonly phone:PhoneAuthentication){}
+  @Post('auth/otp/request') requestOtp(@Body() body:unknown,@Req() req:Request){return this.phone.request(body,req.ip??'unknown',req.headers['idempotency-key']);}
+  @Post('auth/otp/verify') verifyOtp(@Body() body:unknown,@Req() req:Request){return this.phone.verify(body,req.ip??'unknown');}
+  @Post('auth/firebase/verify') verifyIdentity(@Body() body:unknown,@Req() req:Request){return this.phone.verifyIdentity(body,req.ip??'unknown');}
   @Post('auth/dev') async login(@Body() body:unknown,@Req() req:Request){
     const result=await this.auth.login(body,req.ip??'unknown');
     return {token:result.token,expiresAt:result.expiresAt,user:await this.service.user(result.userId),testOnly:true};
@@ -72,11 +81,14 @@ class AppController {
   @Get('events') events(@Req() req:AuthenticatedRequest,@Query('cursor') cursor?:string){return this.service.events(req.actor,cursor);}
 }
 
-export async function createApplication(config:Config,clock:()=>number=Date.now){
+export async function createApplication(config:Config,clock:()=>number=Date.now,identityTestAdapters?:PhoneAuthDependencies){
   const db=new Database(config.databaseUrl),presence=new Presence(config.redisUrl);
   await presence.connect();
+  let phone:PhoneAuthentication;
+  try{phone=await createPhoneAuthentication(db,presence,config,clock,identityTestAdapters);}
+  catch(error){await presence.close();await db.close();throw error;}
   const auth=new Auth(db,presence,config),service=new NightShiftService(db,presence,config,clock);
-  @Module({controllers:[PublicController,AppController],providers:[SessionGuard,{provide:Auth,useValue:auth},{provide:NightShiftService,useValue:service}]})
+  @Module({controllers:[PublicController,AppController],providers:[SessionGuard,{provide:Auth,useValue:auth},{provide:NightShiftService,useValue:service},{provide:PhoneAuthentication,useValue:phone}]})
   class AppModule{}
   const app=await NestFactory.create(AppModule,{logger:['error','warn'],bodyParser:true});
   app.use((req:AuthenticatedRequest,res:Response,next:()=>void)=>{
@@ -114,5 +126,5 @@ export async function createApplication(config:Config,clock:()=>number=Date.now)
     }finally{running=false;}
   })(),1000);timer.unref();
   await app.init();
-  return {app,db,presence,auth,service,async close(){clearInterval(timer);await io.close();await app.close();await presence.close();await db.close();}};
+  return {app,db,presence,auth,service,phone,async close(){clearInterval(timer);await io.close();await app.close();await phone.close();await presence.close();await db.close();}};
 }

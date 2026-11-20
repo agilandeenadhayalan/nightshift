@@ -1,6 +1,10 @@
 export interface Config {
   databaseUrl: string; redisUrl: string; port: number; devAccessKey: string;
   agoraAppId?: string; agoraAppCertificate?: string;
+  phoneAuth?: {
+    projectId: string; digestKey: string; consentVersion: string;
+    msg91WidgetId: string; msg91AuthKey: string; dailySendLimit: number;
+  };
 }
 
 export function loadConfig(env = process.env): Config {
@@ -15,7 +19,26 @@ export function loadConfig(env = process.env): Config {
   if (!env.DATABASE_URL || !env.REDIS_URL) throw new Error('DATABASE_URL and REDIS_URL are required');
   const port = Number(env.PORT ?? 3000);
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('Invalid PORT');
+  let phoneAuth: Config['phoneAuth'];
+  if (env.PHONE_AUTH_ENABLED !== undefined && !['true', 'false'].includes(env.PHONE_AUTH_ENABLED)) {
+    throw new Error('PHONE_AUTH_ENABLED must be true or false');
+  }
+  if (env.PHONE_AUTH_ENABLED === 'true') {
+    if (env.FIREBASE_AUTH_EMULATOR_HOST !== undefined) throw new Error('Phone identity validation cannot use the Firebase emulator');
+    const dailySendLimit = Number(env.PHONE_AUTH_DAILY_SEND_LIMIT);
+    if (!/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(env.FIREBASE_PROJECT_ID ?? '') ||
+        (env.PHONE_AUTH_DIGEST_KEY?.length ?? 0) < 32 ||
+        (env.PHONE_AUTH_DIGEST_KEY?.length ?? 0) > 256 ||
+        !/^[A-Za-z0-9._-]{1,80}$/.test(env.PHONE_AUTH_CONSENT_VERSION ?? '') ||
+        !/^[A-Za-z0-9_-]{8,128}$/.test(env.MSG91_WIDGET_ID ?? '') ||
+        !/^[!-~]{16,512}$/.test(env.MSG91_AUTH_KEY ?? '') ||
+        !Number.isSafeInteger(dailySendLimit) || dailySendLimit < 1 || dailySendLimit > 1000) {
+      throw new Error('Phone identity validation requires valid FIREBASE_PROJECT_ID, PHONE_AUTH_DIGEST_KEY, PHONE_AUTH_CONSENT_VERSION, MSG91_WIDGET_ID, MSG91_AUTH_KEY and PHONE_AUTH_DAILY_SEND_LIMIT');
+    }
+    phoneAuth = { projectId: env.FIREBASE_PROJECT_ID!, digestKey: env.PHONE_AUTH_DIGEST_KEY!,
+      consentVersion: env.PHONE_AUTH_CONSENT_VERSION!, msg91WidgetId: env.MSG91_WIDGET_ID!, msg91AuthKey: env.MSG91_AUTH_KEY!, dailySendLimit };
+  }
   return { databaseUrl: env.DATABASE_URL, redisUrl: env.REDIS_URL, port,
     devAccessKey: env.DEV_ACCESS_KEY!, agoraAppId: env.AGORA_APP_ID,
-    agoraAppCertificate: env.AGORA_APP_CERTIFICATE };
+    agoraAppCertificate: env.AGORA_APP_CERTIFICATE, phoneAuth };
 }

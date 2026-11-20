@@ -49,6 +49,57 @@ void main() {
     api.close();
   });
 
+  test('structured failure preserves a bounded positive integer retry hint',
+      () async {
+    final api = NightShiftApi(
+        client: MockClient((_) async => http.Response(
+            '{"error":{"code":"OTP_COOLDOWN","message":"Wait","retryAfterSeconds":60},"requestId":"retry-reference"}',
+            429)));
+    addTearDown(api.close);
+    await expectLater(
+        api.request('GET', '/snapshot'),
+        throwsA(isA<ApiFailure>()
+            .having((e) => e.code, 'code', 'OTP_COOLDOWN')
+            .having((e) => e.status, 'status', 429)
+            .having((e) => e.requestId, 'requestId', 'retry-reference')
+            .having((e) => e.retryAfterSeconds, 'retry seconds', 60)));
+  });
+
+  test('malformed retry metadata does not replace the underlying failure',
+      () async {
+    for (final value in [null, 0, -1, 1.5, '60', true, 86401, 1e30]) {
+      final api = NightShiftApi(
+          client: MockClient((_) async => http.Response(
+              jsonEncode({
+                'error': {
+                  'code': 'OTP_RATE_LIMITED',
+                  'message': 'Wait',
+                  'retryAfterSeconds': value,
+                }
+              }),
+              429)));
+      try {
+        await expectLater(
+            api.request('GET', '/snapshot'),
+            throwsA(isA<ApiFailure>()
+                .having((e) => e.code, 'code', 'OTP_RATE_LIMITED')
+                .having((e) => e.status, 'status', 429)
+                .having((e) => e.retryAfterSeconds, 'retry seconds', isNull)));
+      } finally {
+        api.close();
+      }
+    }
+  });
+
+  test('failure diagnostics do not expose server prose or request identifiers',
+      () {
+    const failure = ApiFailure(
+        'UNTRUSTED_CODE', 'private-phone-code-token-message',
+        requestId: 'private-reference', retryAfterSeconds: 30);
+    expect(failure.toString(), 'ApiFailure[redacted]');
+    expect(failure.message, 'private-phone-code-token-message');
+  });
+
   test(
       'generated response contract rejects missing fields instead of zero defaults',
       () async {

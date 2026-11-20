@@ -1134,6 +1134,65 @@ class DefaultApi {
     return null;
   }
 
+  /// Disabled by default. Requires server-configured provider validation. Explicit versioned consent; never an app session.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [String] idempotencyKey (required):
+  ///
+  /// * [OtpRequest] otpRequest (required):
+  Future<Response> requestOtpChallengeWithHttpInfo(String idempotencyKey, OtpRequest otpRequest, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/auth/otp/request';
+
+    // ignore: prefer_final_locals
+    Object? postBody = otpRequest;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    headerParams[r'Idempotency-Key'] = parameterToString(idempotencyKey);
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Disabled by default. Requires server-configured provider validation. Explicit versioned consent; never an app session.
+  ///
+  /// Parameters:
+  ///
+  /// * [String] idempotencyKey (required):
+  ///
+  /// * [OtpRequest] otpRequest (required):
+  Future<OtpChallenge?> requestOtpChallenge(String idempotencyKey, OtpRequest otpRequest, { Future<void>? abortTrigger, }) async {
+    final response = await requestOtpChallengeWithHttpInfo(idempotencyKey, otpRequest, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'OtpChallenge',) as OtpChallenge;
+    
+    }
+    return null;
+  }
+
   /// Performs an HTTP 'PUT /v1/me/availability' operation and returns the [Response].
   /// Parameters:
   ///
@@ -1364,6 +1423,112 @@ class DefaultApi {
     // FormatException when trying to decode an empty string.
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
       return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'FavoriteListener200Response',) as FavoriteListener200Response;
+    
+    }
+    return null;
+  }
+
+  /// Consumes one challenge and returns a Firebase custom token, which must be exchanged for an ID token in the Firebase client. No app permissions or adult approval are granted.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [OtpVerifyRequest] otpVerifyRequest (required):
+  Future<Response> verifyOtpChallengeWithHttpInfo(OtpVerifyRequest otpVerifyRequest, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/auth/otp/verify';
+
+    // ignore: prefer_final_locals
+    Object? postBody = otpVerifyRequest;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Consumes one challenge and returns a Firebase custom token, which must be exchanged for an ID token in the Firebase client. No app permissions or adult approval are granted.
+  ///
+  /// Parameters:
+  ///
+  /// * [OtpVerifyRequest] otpVerifyRequest (required):
+  Future<OtpProof?> verifyOtpChallenge(OtpVerifyRequest otpVerifyRequest, { Future<void>? abortTrigger, }) async {
+    final response = await verifyOtpChallengeWithHttpInfo(otpVerifyRequest, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'OtpProof',) as OtpProof;
+    
+    }
+    return null;
+  }
+
+  /// Verifies a Firebase ID token including revocation and its existing MSG91 identity binding. Returns an identity receipt, not an app session; onboarding and session integration remain separate.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [FirebaseVerifyRequest] firebaseVerifyRequest (required):
+  Future<Response> verifyPhoneIdentityWithHttpInfo(FirebaseVerifyRequest firebaseVerifyRequest, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/auth/firebase/verify';
+
+    // ignore: prefer_final_locals
+    Object? postBody = firebaseVerifyRequest;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Verifies a Firebase ID token including revocation and its existing MSG91 identity binding. Returns an identity receipt, not an app session; onboarding and session integration remain separate.
+  ///
+  /// Parameters:
+  ///
+  /// * [FirebaseVerifyRequest] firebaseVerifyRequest (required):
+  Future<PhoneIdentity?> verifyPhoneIdentity(FirebaseVerifyRequest firebaseVerifyRequest, { Future<void>? abortTrigger, }) async {
+    final response = await verifyPhoneIdentityWithHttpInfo(firebaseVerifyRequest, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'PhoneIdentity',) as PhoneIdentity;
     
     }
     return null;

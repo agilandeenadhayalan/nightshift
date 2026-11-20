@@ -7,12 +7,14 @@ import 'package:nightshift_api/api.dart' as generated;
 import 'models.dart';
 
 class ApiFailure implements Exception {
-  const ApiFailure(this.code, this.message, {this.status = 0, this.requestId});
+  const ApiFailure(this.code, this.message,
+      {this.status = 0, this.requestId, this.retryAfterSeconds});
   final String code, message;
   final int status;
   final String? requestId;
+  final int? retryAfterSeconds;
   @override
-  String toString() => message;
+  String toString() => 'ApiFailure[redacted]';
 }
 
 String newId() {
@@ -23,10 +25,13 @@ String newId() {
 
 class NightShiftApi {
   NightShiftApi(
-      {http.Client? client, this.requestTimeout = const Duration(seconds: 8)})
+      {http.Client? client,
+      this.requestTimeout = const Duration(seconds: 8),
+      this.identityRequestTimeout = const Duration(seconds: 20)})
       : _client = client ?? http.Client();
   final http.Client _client;
   final Duration requestTimeout;
+  final Duration identityRequestTimeout;
   String baseUrl = const String.fromEnvironment('API_BASE_URL',
       defaultValue: 'http://10.0.2.2:3000');
   String? token;
@@ -39,10 +44,15 @@ class NightShiftApi {
     final api = generated.DefaultApi(transport);
     try {
       // Generated operations own paths, request models and response decoding.
-      // The facade preserves existing presentation state and one total deadline.
-      final response =
-          await _dispatch(api, method, Uri.parse(path), body, idempotencyKey)
-              .timeout(requestTimeout, onTimeout: () {
+      // Phone verification includes chained provider verification/token signing.
+      // Both budgets include the complete response body and send an abort signal.
+      final uri = Uri.parse(path);
+      final deadline = method == 'POST' &&
+              ['/auth/otp/verify', '/auth/firebase/verify'].contains(uri.path)
+          ? identityRequestTimeout
+          : requestTimeout;
+      final response = await _dispatch(api, method, uri, body, idempotencyKey)
+          .timeout(deadline, onTimeout: () {
         abort.complete();
         throw const ApiFailure(
             'OFFLINE', 'The server did not respond. Check your connection.');
@@ -88,6 +98,15 @@ class NightShiftApi {
       case 'POST /auth/dev':
         return api.developmentSignIn(
             generated.DevelopmentSignInRequest.fromJson(data)!);
+      case 'POST /auth/otp/request':
+        return api.requestOtpChallenge(
+            key(), generated.OtpRequest.fromJson(data)!);
+      case 'POST /auth/otp/verify':
+        return api
+            .verifyOtpChallenge(generated.OtpVerifyRequest.fromJson(data)!);
+      case 'POST /auth/firebase/verify':
+        return api.verifyPhoneIdentity(
+            generated.FirebaseVerifyRequest.fromJson(data)!);
       case 'POST /auth/logout':
         return api.signOut();
       case 'GET /me':
@@ -199,9 +218,16 @@ class _SafeApiClient extends generated.ApiClient {
       }
       final error =
           json['error'] is Json ? json['error'] as Json : <String, dynamic>{};
+      final retry = error['retryAfterSeconds'];
+      // Only bounded, positive integer hints can drive a future retry timer.
+      // Malformed optional metadata must not hide the underlying safe failure.
+      final retryAfterSeconds =
+          retry is int && retry > 0 && retry <= 86400 ? retry : null;
       throw ApiFailure(error['code'] as String? ?? 'REQUEST_FAILED',
           error['message'] as String? ?? 'The request could not be completed.',
-          status: response.statusCode, requestId: json['requestId'] as String?);
+          status: response.statusCode,
+          requestId: json['requestId'] as String?,
+          retryAfterSeconds: retryAfterSeconds);
     }
     return response;
   }

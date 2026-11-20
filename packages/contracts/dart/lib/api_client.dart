@@ -209,6 +209,8 @@ class ApiClient {
           return Event.fromJson(value);
         case 'FavoriteListener200Response':
           return FavoriteListener200Response.fromJson(value);
+        case 'FirebaseVerifyRequest':
+          return FirebaseVerifyRequest.fromJson(value);
         case 'GetEvents200Response':
           return GetEvents200Response.fromJson(value);
         case 'GetRates200Response':
@@ -225,6 +227,16 @@ class ApiClient {
           return ListenerPage.fromJson(value);
         case 'Login':
           return Login.fromJson(value);
+        case 'OtpChallenge':
+          return OtpChallenge.fromJson(value);
+        case 'OtpProof':
+          return OtpProof.fromJson(value);
+        case 'OtpRequest':
+          return OtpRequest.fromJson(value);
+        case 'OtpVerifyRequest':
+          return OtpVerifyRequest.fromJson(value);
+        case 'PhoneIdentity':
+          return PhoneIdentity.fromJson(value);
         case 'Rate':
           return Rate.fromJson(value);
         case 'ReportMediaReadyRequest':
