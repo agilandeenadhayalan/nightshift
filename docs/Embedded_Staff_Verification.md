@@ -60,4 +60,16 @@ The initial configured APK is `artifacts/nightshift-firebase-staff-arm64.apk`,16
 
 The local HTTPS check accepted the trusted certificate, rejected an untrusted CA and a wrong hostname, and returned421 for a wrong Host. The listener was confirmed bound to loopback and stopped after that check. No real staff grant or phone-runtime migration was used for those checks.
 
+## Verified private device upgrade
+
+[PR #77 validation](https://github.com/agilandeenadhayalan/nightshift/actions/runs/44800979699) passed all three jobs on exact commit `2db1eb91a65b0f572987f2e5831e48704a16acfd`. The backend integration suite passed 233/233. Android passed 317 Flutter tests, clean analysis, 74 generated-contract files, 6 bounded audio-reader checks and 14 native cookie checks. Its account journey used synthetic Firebase fixtures (`realSms:false`); it is not a new live SMS result.
+
+The corrected configured APK is `artifacts/nightshift-firebase-staff-logout-arm64.apk`, 162893173 bytes, SHA256 `6553f29d52bab9a9032337a906f468b115d5394d597a94f740a2bcaa1da1058e`. Its separate build record matches the exact commit, all 173 source inputs, the private client configuration and public debug CA overlay. It retains the existing application ID and signing certificate, versionCode 4002, ARM64, minSDK 23/target 35.
+
+On 21 November (India time), the private phone runtime was rebuilt from that exact Git archive with byte-checked dependencies and restricted private configuration. A PostgreSQL backup was actually restored into a fresh isolated test database and removed after verification. With the old API stopped and no active calls, participant claims, spend holds or other database clients, a second snapshot was restored and all 42 public-table counts matched the quiescent source. No restore was performed against the live database.
+
+Migrations 011–013 then applied successfully. Both existing users and adult onboardings, both Listener application records, and zero approved Listeners were preserved. Staff principals, grants and sessions remained zero. Only the five reviewed staff configuration keys were added; existing phone/provider/admission settings were unchanged. The archived API and production staff HTTPS server now run on loopback. Health and configured-status checks passed; the active HTTPS endpoint again rejected an untrusted CA, wrong hostname and wrong Host.
+
+The corrected APK was installed in place on both the Redmi and Motorola, preserving app data. Both report versionCode 4002 and reach the upgraded API through USB forwarding. Both also reached the staff HTTPS endpoint using normal certificate validation. This verifies installation and connectivity; it does not establish a successful embedded staff session. The owner has been asked to create the authenticated access request from the selected Redmi account. No staff permission has yet been provisioned, no Listener approved, and no new SMS sent by these upgrade steps. The private snapshots, source/runtime manifests, install evidence and TLS checks remain outside Git.
+
 The authenticated Redmi access-request reference, explicit provisioning, actual embedded-phone session/revocation checks and review criteria remain acceptance gates. A successful synthetic test or compiled APK does not establish those outcomes. See [staff review plan](Staff_Review_Plan.md) for the separate #14 work.

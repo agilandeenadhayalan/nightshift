@@ -1092,6 +1092,571 @@
         },
         "description": "Revokes every session for this staff principal and clears the presented cookie. Customer authentication and modes remain separate."
       }
+    },
+    "/v1/admin/listener-applications": {
+      "get": {
+        "operationId": "getStaffReviewQueue",
+        "parameters": [
+          {
+            "name": "language",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ta",
+                "en"
+              ]
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]+\\.[a-f0-9]{64}$",
+              "maxLength": 2048
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Submitted material only. No decisions or entitlements are changed.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store, private"
+                }
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string",
+                  "const": "Cookie"
+                }
+              },
+              "X-Content-Type-Options": {
+                "schema": {
+                  "type": "string",
+                  "const": "nosniff"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffReviewQueue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fields or owner/filter-bound cursor",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Staff or source app authority is revoked or expired",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Required read/evidence permission denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Application or sample is unavailable, restricted or known self",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Review material changed; reload detail",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Queue cursor expired; refresh queue",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Staff provider or private sample storage is unavailable or busy",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires listener.review.read. Twenty submitted applications ordered by exact submitted timestamp and ID. Signed cursor binds staff session, language and five-minute cutoff; later removal may produce short pages. Known self and editable needs_information applications are excluded."
+      }
+    },
+    "/v1/admin/listener-applications/{id}": {
+      "get": {
+        "operationId": "getStaffReviewDetail",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Submitted material only. No decisions or entitlements are changed.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store, private"
+                }
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string",
+                  "const": "Cookie"
+                }
+              },
+              "X-Content-Type-Options": {
+                "schema": {
+                  "type": "string",
+                  "const": "nosniff"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffReviewDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fields or owner/filter-bound cursor",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Staff or source app authority is revoked or expired",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Required read/evidence permission denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Application or sample is unavailable, restricted or known self",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Review material changed; reload detail",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Queue cursor expired; refresh queue",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Staff provider or private sample storage is unavailable or busy",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires both listener.review.read and listener.review.evidence.read. No query fields accepted. Only current submitted private material and self-declared adult status; no DOB, phone, provider identity or financial fields."
+      }
+    },
+    "/v1/admin/listener-applications/{id}/voice-sample": {
+      "get": {
+        "operationId": "getStaffReviewSample",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete WAV at most2MiB. Range is ignored; no partial responses. Material version is a consistency value, never an authorization credential.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store, private"
+                }
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string",
+                  "const": "Cookie"
+                }
+              },
+              "X-Content-Type-Options": {
+                "schema": {
+                  "type": "string",
+                  "const": "nosniff"
+                }
+              },
+              "Content-Length": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 44,
+                  "maximum": 2097152
+                }
+              },
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string",
+                  "const": "inline; filename=\"review-sample.wav\""
+                }
+              },
+              "X-Review-Material-Version": {
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            },
+            "content": {
+              "audio/wav": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fields or owner/filter-bound cursor",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Staff or source app authority is revoked or expired",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Required read/evidence permission denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Application or sample is unavailable, restricted or known self",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Review material changed; reload detail",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Queue cursor expired; refresh queue",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Staff provider or private sample storage is unavailable or busy",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires both listener.review.read and listener.review.evidence.read. Reads private storage outside locks, then rechecks provider identity, local staff/app authority, applicant state/consent and byte integrity. One targeted access event records successful authorized access."
+      }
     }
   },
   "components": {
@@ -1269,6 +1834,199 @@
         "type": "object",
         "properties": {},
         "required": [],
+        "additionalProperties": false
+      },
+      "StaffReviewQueue": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "alias": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "state": {
+                  "type": "string",
+                  "const": "submitted"
+                },
+                "languages": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "ta",
+                      "en"
+                    ]
+                  },
+                  "minItems": 1,
+                  "maxItems": 2,
+                  "uniqueItems": true
+                },
+                "submittedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "voiceSampleAvailable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "alias",
+                "state",
+                "languages",
+                "submittedAt",
+                "voiceSampleAvailable"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]+\\.[a-f0-9]{64}$",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "decisionsEnabled": {
+            "type": "boolean",
+            "const": false
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "decisionsEnabled"
+        ],
+        "additionalProperties": false
+      },
+      "StaffReviewDetail": {
+        "type": "object",
+        "properties": {
+          "application": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "alias": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "state": {
+                "type": "string",
+                "const": "submitted"
+              },
+              "languages": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "ta",
+                    "en"
+                  ]
+                },
+                "minItems": 1,
+                "maxItems": 2,
+                "uniqueItems": true
+              },
+              "submittedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "bio": {
+                "type": "string",
+                "maxLength": 1000
+              },
+              "topics": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "everyday",
+                    "work",
+                    "study",
+                    "hobbies",
+                    "language-practice"
+                  ]
+                },
+                "maxItems": 5,
+                "uniqueItems": true
+              },
+              "materialVersion": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "adultStatus": {
+                "type": "string",
+                "const": "self_declared"
+              },
+              "voiceSample": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "contentType": {
+                        "type": "string",
+                        "const": "audio/wav"
+                      },
+                      "byteLength": {
+                        "type": "integer",
+                        "minimum": 44,
+                        "maximum": 2097152
+                      }
+                    },
+                    "required": [
+                      "contentType",
+                      "byteLength"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "alias",
+              "state",
+              "languages",
+              "submittedAt",
+              "bio",
+              "topics",
+              "materialVersion",
+              "adultStatus",
+              "voiceSample"
+            ],
+            "additionalProperties": false
+          },
+          "decisionsEnabled": {
+            "type": "boolean",
+            "const": false
+          }
+        },
+        "required": [
+          "application",
+          "decisionsEnabled"
+        ],
         "additionalProperties": false
       },
       "StaffError": {

@@ -5,7 +5,7 @@ import { ApiError, fields, object, requireThat } from '../errors';
 import { StaffAuthority } from './authority';
 
 export const STAFF_COOKIE='__Host-nightshift_staff',STAFF_CHALLENGE_COOKIE='__Host-nightshift_staff_challenge';
-function readCookie(req:Request,name:string){
+export function readStaffCookie(req:Request,name:string){
   const matches=(req.headers.cookie??'').split(';').map(v=>v.trim()).filter(v=>v.startsWith(`${name}=`));
   requireThat(matches.length<=1,401,'STAFF_UNAUTHENTICATED','Sign in to staff access again.');
   return matches[0]?.slice(name.length+1);
@@ -42,7 +42,7 @@ export class StaffController{
   @Post('auth/exchange') @HttpCode(200)
   async exchange(@Req()req:Request,@Body()body:unknown,@Res({passthrough:true})res:Response){
     headers(res);this.authority.origin(req.headers.origin);json(req,body);
-    const result=await this.authority.exchange(body,req.headers.origin,readCookie(req,STAFF_CHALLENGE_COOKIE),req.headers['x-csrf-token'],bearer(req));
+    const result=await this.authority.exchange(body,req.headers.origin,readStaffCookie(req,STAFF_CHALLENGE_COOKIE),req.headers['x-csrf-token'],bearer(req));
     res.setHeader('Set-Cookie',[cookie(STAFF_COOKIE,result.cookie,result.maxAgeSeconds),cookie(STAFF_CHALLENGE_COOKIE,'',0)]);
     return result.view;
   }
@@ -55,12 +55,12 @@ export class StaffController{
     headers(res);this.authority.origin(req.headers.origin);return this.authority.accessRequest(bearer(req),false);
   }
   @Get('session') async session(@Req()req:Request,@Res({passthrough:true})res:Response){
-    headers(res);this.authority.origin(req.headers.origin,false);return this.authority.session(readCookie(req,STAFF_COOKIE),req.headers.origin);
+    headers(res);this.authority.origin(req.headers.origin,false);return this.authority.session(readStaffCookie(req,STAFF_COOKIE),req.headers.origin);
   }
   @Post('auth/logout') @HttpCode(200)
   async logout(@Req()req:Request,@Body()body:unknown,@Res({passthrough:true})res:Response){
     headers(res);this.authority.origin(req.headers.origin);fields(json(req,body),[]);
-    const result=await this.authority.logout(readCookie(req,STAFF_COOKIE),req.headers['x-csrf-token'],req.headers.origin);
+    const result=await this.authority.logout(readStaffCookie(req,STAFF_COOKIE),req.headers['x-csrf-token'],req.headers.origin);
     res.setHeader('Set-Cookie',[cookie(STAFF_COOKIE,'',0),cookie(STAFF_CHALLENGE_COOKIE,'',0)]);return result;
   }
 }
