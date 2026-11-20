@@ -2,7 +2,7 @@
 
 One Flutter Android application, one application ID, and exactly two user-facing modes: **Customer** and **Listener**. Both use one shared NestJS backend backed by PostgreSQL. Redis tracks short-lived presence; Agora carries voice. Staff tools remain separate.
 
-The first Android implementation uses fictional identities and test credits. The API refuses production startup. Real-device audio, provider-side cutoff, production sign-in, payments and launch approvals remain evidence gates. See [issue status](docs/Issue_Status.md) and the [decision register](docs/Decision_Register.md).
+The first Android implementation uses fictional identities and test credits. The API refuses production startup. The [foreground two-phone milestone passed on 20 November 2026](docs/Device_Debug_2026-11-20.md), including audible speech, either-party hangup and durable histories. Reconnect stability, broader device coverage, provider-side cutoff, production sign-in, payments and launch approvals remain open. See [issue status](docs/Issue_Status.md) and the [decision register](docs/Decision_Register.md).
 
 ## Run the Android milestone
 

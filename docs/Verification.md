@@ -45,9 +45,11 @@ Universal local output: `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk
 
 The subsequent workspace/task-graph refactor was revalidated separately; see [Monorepo_Verification.md](Monorepo_Verification.md) for its 73 tests, packaged API smoke run and APK rebuild. The latest schema/generated-client continuation is recorded in [FA007_Verification.md](FA007_Verification.md), including 94 passing tests, a real Dart SDK HTTP journey and the newer ARM64 APK hash. The artifact hashes above belong to the earlier milestone build.
 
-## Evidence still required
+## Subsequent physical verification and remaining evidence
 
-The first Android milestone is **not yet verified complete**: no physical phones were connected and no owner-controlled Agora test credentials were supplied. The SDK integration compiles, but audible voice, provider/network behavior, audio routing, microphone/capture shutdown on actual hardware, and the two-phone histories must be tested with [Two_Phone_Test.md](Two_Phone_Test.md).
+The later [20 November two-phone run](Device_Debug_2026-11-20.md) **passed the first foreground test-credit milestone** on Redmi and Motorola phones with one APK and backend. The tester confirmed audible speech both ways, speaker/earpiece routing and both mute controls. Each participant ended a connected call; native microphone access stopped, both histories matched and survived app/API restarts. Read-only database audits verified balanced unique settlements and released claims/holds. These results supplement the earlier automation and APK evidence above; use the dated report for the installed QA APK hash and exact call IDs.
+
+Brief reconnect transitions occurred and their cause is unresolved. Controlled network interruption, Wi-Fi/mobile crossover, headset/Bluetooth, permission-denial recovery and physical accessibility checks remain open in [Two_Phone_Test.md](Two_Phone_Test.md).
 
 The prototype intentionally ends calls and withdraws availability when backgrounded. Full FCM/background/lock-screen calling is #29. Provider callbacks and immediate server-enforced media cutoff against a modified client remain #25/#27/#37. Short-lived tokens and a cooperative client leaving are not cutoff proof.
 
