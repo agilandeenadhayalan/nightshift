@@ -14,6 +14,72 @@ Map<String, dynamic> profile() => {
       'dateOfBirth': null
     };
 void main() {
+  test(
+      'Firebase admission uses generated request and exchange carries admission only in body',
+      () async {
+    var step = 0;
+    final api = NightShiftApi(client: MockClient((request) async {
+      expect(request.followRedirects, false);
+      expect(request.url.query, isEmpty);
+      if (step++ == 0) {
+        expect(request.url.path, '/v1/auth/firebase/admissions');
+        expect(request.headers['Idempotency-Key'], 'stable-admission-key');
+        expect(jsonDecode(request.body), {
+          'phone': '+919876543210',
+          'deviceId': 'device',
+          'consentVersion': 'phone-signin-v1'
+        });
+        return http.Response(
+            jsonEncode({
+              'attemptId': 'private-admission',
+              'expiresAt': '2026-11-20T10:05:00Z',
+              'retryAt': '2026-11-20T10:01:00Z'
+            }),
+            200);
+      }
+      expect(request.url.path, '/v1/auth/exchange');
+      expect(jsonDecode(request.body), {
+        'idToken': 'fixture-id',
+        'deviceId': 'device',
+        'attemptId': 'private-admission'
+      });
+      return http.Response(
+          jsonEncode({
+            'token': 'fixture-id',
+            'expiresAt': '2026-11-20T11:00:00Z',
+            'user': userJson(),
+            'needsOnboarding': true,
+            'testOnly': true
+          }),
+          200);
+    }));
+    addTearDown(api.close);
+    await api.request('POST', '/auth/firebase/admissions',
+        idempotencyKey: 'stable-admission-key',
+        body: {
+          'phone': '+919876543210',
+          'deviceId': 'device',
+          'consentVersion': 'phone-signin-v1'
+        });
+    await api.request('POST', '/auth/exchange', body: {
+      'idToken': 'fixture-id',
+      'deviceId': 'device',
+      'attemptId': 'private-admission'
+    });
+    final valid = {
+      'attemptId': 'private-admission',
+      'expiresAt': '2026-11-20T10:05:00Z',
+      'retryAt': '2026-11-20T10:01:00Z'
+    };
+    for (final key in valid.keys) {
+      expect(() => sdk.FirebasePhoneAdmission.fromJson({...valid}..remove(key)),
+          throwsFormatException);
+      expect(() => sdk.FirebasePhoneAdmission.fromJson({...valid, key: null}),
+          throwsFormatException);
+    }
+    expect(sdk.FirebasePhoneAdmission.fromJson(valid).toString(),
+        isNot(contains('private-admission')));
+  });
   test('deletion capability is body-only, never diagnostic or URL data',
       () async {
     final token = 'c' * 64;

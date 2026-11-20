@@ -59,6 +59,7 @@ class PublicController {
   @Post('auth/otp/request') requestOtp(@Body() body:unknown,@Req() req:Request){return this.phone.request(body,req.ip??'unknown',req.headers['idempotency-key']);}
   @Post('auth/otp/verify') verifyOtp(@Body() body:unknown,@Req() req:Request){return this.phone.verify(body,req.ip??'unknown');}
   @Post('auth/firebase/verify') verifyIdentity(@Body() body:unknown,@Req() req:Request){return this.phone.verifyIdentity(body,req.ip??'unknown');}
+  @Post('auth/firebase/admissions') admitFirebasePhone(@Body() body:unknown,@Req() req:Request){return this.phone.admit(body,req.ip??'unknown',req.headers['idempotency-key']);}
   @Post('auth/exchange') async exchange(@Body() body:unknown,@Req() req:Request){
     const result=await this.auth.exchange(body,req.ip??'unknown');
     return {token:result.token,expiresAt:result.expiresAt,user:await this.service.user(result.userId),needsOnboarding:result.needsOnboarding,testOnly:true};

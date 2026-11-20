@@ -119,8 +119,11 @@ export class AccountLifecycle {
         await c.query('DELETE FROM auth_sessions WHERE user_id=$1', [actor.id]);
         await c.query('DELETE FROM devices WHERE user_id=$1', [actor.id]);
         await c.query(`DELETE FROM otp_challenges WHERE user_id=$1 OR EXISTS
-          (SELECT 1 FROM auth_identities i WHERE i.user_id=$1 AND i.provider='phone:msg91'
+          (SELECT 1 FROM auth_identities i WHERE i.user_id=$1 AND i.provider IN ('phone:msg91','phone:firebase')
             AND i.issuer=otp_challenges.issuer AND i.subject_digest=otp_challenges.phone_digest)`, [actor.id]);
+        await c.query(`DELETE FROM firebase_phone_admissions a WHERE a.user_id=$1 OR EXISTS
+          (SELECT 1 FROM auth_identities i WHERE i.user_id=$1 AND i.provider IN ('phone:msg91','phone:firebase')
+            AND i.issuer=a.issuer AND i.subject_digest=a.phone_digest)`,[actor.id]);
         await c.query('DELETE FROM favorites WHERE actor_id=$1 OR target_id=$1', [actor.id]);
         // Only the explicitly scoped name can be held. Never copy a whole
         // profile or a minor's profile; DOB is erased in every accepted request.

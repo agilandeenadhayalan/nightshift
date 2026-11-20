@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'api.dart';
 import 'firebase_identity_client.dart';
 import 'models.dart';
+import 'native_firebase_identity.dart';
 
 /// Ephemeral OTP state. Phone numbers, OTPs and one-use proofs are never stored.
 class PhoneSignIn extends ChangeNotifier {
@@ -29,6 +31,16 @@ class PhoneSignIn extends ChangeNotifier {
   DateTime? expiresAt, retryAt;
   bool busy = false, consent = false, _disposed = false;
   int _generation = 0;
+  String? _attemptId;
+  int? _resendToken;
+  bool autoRetrievalEnded = false, _completing = false;
+  bool get nativePhone => firebase is PhoneIdentityClient;
+  int get attemptRevision => _generation;
+  bool isCurrentAttempt(int revision) =>
+      !_disposed &&
+      revision == _generation &&
+      consent &&
+      api.baseUrl == backendUrl;
   bool get configured => firebase.configured;
   bool get safeBackend {
     final uri = Uri.tryParse(backendUrl);
@@ -59,6 +71,9 @@ class PhoneSignIn extends ChangeNotifier {
     if (phone == _phone) return;
     _phone = phone;
     _generation++;
+    _attemptId = null;
+    _resendToken = null;
+    autoRetrievalEnded = _completing = false;
     busy = false;
     challengeId = null;
     expiresAt = null;
@@ -72,6 +87,9 @@ class PhoneSignIn extends ChangeNotifier {
   void setConsent(bool value) {
     if (!value && consent) {
       _generation++;
+      _attemptId = null;
+      _resendToken = null;
+      _completing = false;
       busy = false;
       challengeId = null;
       expiresAt = null;
@@ -81,9 +99,19 @@ class PhoneSignIn extends ChangeNotifier {
     _notify();
   }
 
-  void tick() => _notify();
+  void tick() {
+    if (nativePhone && expired && busy && !_completing) {
+      busy = false;
+      errorCode = 'PHONE_ADMISSION_EXPIRED';
+    }
+    _notify();
+  }
+
   void reset({bool notify = true}) {
     _generation++;
+    _attemptId = null;
+    _resendToken = null;
+    autoRetrievalEnded = _completing = false;
     _phone = '';
     challengeId = null;
     expiresAt = retryAt = null;
@@ -123,6 +151,10 @@ class PhoneSignIn extends ChangeNotifier {
     if (retrySeconds > 0) {
       errorCode = 'OTP_COOLDOWN';
       _notify();
+      return;
+    }
+    if (firebase is PhoneIdentityClient) {
+      await _requestNative(firebase as PhoneIdentityClient);
       return;
     }
     final generation = _generation;
@@ -169,13 +201,22 @@ class PhoneSignIn extends ChangeNotifier {
       return;
     }
     if (expired) {
-      errorCode = 'OTP_EXPIRED';
+      errorCode = nativePhone ? 'PHONE_ADMISSION_EXPIRED' : 'OTP_EXPIRED';
       _notify();
       return;
     }
     if (challengeId == null || !RegExp(r'^\d{6}$').hasMatch(code)) {
       errorCode = 'OTP_INVALID_INPUT';
       _notify();
+      return;
+    }
+    if (firebase is PhoneIdentityClient) {
+      final identity = firebase as PhoneIdentityClient;
+      final generation = _generation, phone = _phone, id = challengeId!;
+      await _completeNative(
+          generation,
+          () => identity.verifyPhoneCode(
+              id, code, phone, () => _nativeCurrent(generation)));
       return;
     }
     final generation = _generation;
@@ -221,6 +262,132 @@ class PhoneSignIn extends ChangeNotifier {
       }
     } finally {
       if (generation == _generation) {
+        busy = false;
+        _notify();
+      }
+    }
+  }
+
+  bool _nativeCurrent(int generation) =>
+      !_disposed &&
+      generation == _generation &&
+      consent &&
+      api.baseUrl == backendUrl &&
+      !expired;
+
+  Future<void> _requestNative(PhoneIdentityClient identity) async {
+    final generation = ++_generation;
+    final phone = _phone, resend = _resendToken;
+    busy = true;
+    _completing = false;
+    errorCode = challengeId = _attemptId = null;
+    autoRetrievalEnded = false;
+    expiresAt = null;
+    _notify();
+    if (_requestKey.isEmpty) _requestKey = newId();
+    try {
+      final admission = await api.request('POST', '/auth/firebase/admissions',
+          body: {
+            'phone': phone,
+            'deviceId': deviceId(),
+            'consentVersion': consentVersion
+          },
+          idempotencyKey: _requestKey);
+      if (!_nativeCurrent(generation)) return;
+      _attemptId = admission['attemptId'] as String;
+      expiresAt = DateTime.parse(admission['expiresAt'] as String);
+      retryAt = DateTime.parse(admission['retryAt'] as String);
+      _requestKey = '';
+      // Start a fresh SDK sign-in lineage. The admission is not an SMS receipt.
+      await identity.signOut();
+      if (!_nativeCurrent(generation)) return;
+      await identity.requestPhone(phone,
+          isCurrent: () => _nativeCurrent(generation),
+          resendToken: resend,
+          codeSent: (id, token) {
+            if (!_nativeCurrent(generation) || _completing) return;
+            challengeId = id;
+            _resendToken = token;
+            busy = false;
+            _notify();
+          },
+          automaticallyVerified: (credential) {
+            if (!_nativeCurrent(generation) || _completing) return;
+            unawaited(_completeNative(
+                generation,
+                () => identity.verifyAutomatic(
+                    credential, phone, () => _nativeCurrent(generation))));
+          },
+          failed: (code) {
+            if (!_nativeCurrent(generation) || _completing) return;
+            errorCode = code;
+            busy = false;
+            _notify();
+          },
+          autoRetrievalEnded: () {
+            if (!_nativeCurrent(generation)) return;
+            // This only ends Android auto-retrieval. It does not expire the code.
+            autoRetrievalEnded = true;
+            _notify();
+          });
+    } catch (e) {
+      if (!_nativeCurrent(generation)) return;
+      _failure(e);
+      busy = false;
+      _notify();
+    }
+  }
+
+  Future<void> _completeNative(
+      int generation, Future<FirebaseTokens> Function() prove) async {
+    if (!_nativeCurrent(generation) || _completing || _attemptId == null) {
+      return;
+    }
+    _completing = true;
+    busy = true;
+    errorCode = null;
+    _notify();
+    var signedIn = false, accepted = false;
+    FirebaseTokens? proofTokens;
+    final identity = firebase as PhoneIdentityClient;
+    try {
+      final tokens = await prove();
+      proofTokens = tokens;
+      signedIn = true;
+      if (!_nativeCurrent(generation)) return;
+      final result = await api.request('POST', '/auth/exchange', body: {
+        'idToken': tokens.idToken,
+        'deviceId': deviceId(),
+        'attemptId': _attemptId
+      });
+      if (!_nativeCurrent(generation)) return;
+      // Navigation may dispose this route once the accepted session is installed.
+      accepted = true;
+      await onAuthenticated(tokens, result);
+      if (generation != _generation) return;
+      challengeId = _attemptId = null;
+      _phone = '';
+      consent = false;
+      expiresAt = retryAt = null;
+    } catch (e) {
+      if (generation != _generation || _disposed) return;
+      _failure(e);
+      if (signedIn ||
+          ['OTP_EXPIRED', 'SESSION_REVOKED', 'PHONE_ADMISSION_EXPIRED']
+              .contains(errorCode)) {
+        challengeId = _attemptId = null;
+      }
+    } finally {
+      if (signedIn && !accepted && proofTokens != null) {
+        try {
+          await identity.discard(proofTokens);
+        } catch (_) {
+          // Cleanup remains fenced inside the identity adapter. A caller timeout
+          // must not keep this UI busy or escape an automatic callback.
+        }
+      }
+      if (generation == _generation) {
+        _completing = false;
         busy = false;
         _notify();
       }

@@ -179,7 +179,7 @@ export class OtpChallenges {
       const verifiedAt = new Date(this.clock());
       await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`identity:${this.issuer}:${phoneDigest}`]);
       const identity = await c.query(`SELECT i.user_id,i.state,u.suspended,u.adult_confirmed FROM auth_identities i JOIN users u ON u.id=i.user_id
-        WHERE i.provider='phone:msg91' AND i.issuer=$1 AND i.subject_digest=$2 FOR UPDATE OF i,u`, [this.issuer, phoneDigest]);
+        WHERE i.provider IN ('phone:msg91','phone:firebase') AND i.issuer=$1 AND i.subject_digest=$2 FOR UPDATE OF i,u`, [this.issuer, phoneDigest]);
       let userId: string, restricted = false, needsOnboarding = true;
       if (identity.rowCount) {
         userId = identity.rows[0].user_id;

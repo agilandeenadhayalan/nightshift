@@ -32,10 +32,10 @@
 
 **Interfaces:** POST /v1/auth/exchange accepts idToken/deviceId and returns token/expiresAt/user/needsOnboarding/testOnly. GET and PUT /v1/me/onboarding use OnboardingState. Profile fields: displayName, avatarCode (moon/star/leaf/wave), interfaceLanguage (ta/en), speaking languages (ta/en), dateOfBirth (YYYY-MM-DD or null in response). Completion additionally requires consentVersion adult-onboarding-v1.
 
-- [ ] Add failing authorization, date-boundary, device and revocation regressions.
-- [ ] Implement hash-only phone sessions with live Firebase verification, restricted onboarding access and durable device policy.
-- [ ] Implement atomic immutable DOB/18+ gate, built-in avatars, private pending nickname, versioned development consent and language preferences.
-- [ ] Run real isolated PostgreSQL/Redis integration tests and TypeScript checks.
+- [x] Add failing authorization, date-boundary, device and revocation regressions.
+- [x] Implement hash-only phone sessions with live Firebase verification, restricted onboarding access and durable device policy.
+- [x] Implement atomic immutable DOB/18+ gate, built-in avatars, private pending nickname, versioned development consent and language preferences.
+- [x] Run real isolated PostgreSQL/Redis integration tests and TypeScript checks.
 
 ### Task 2: Versioned generated contract
 
@@ -43,27 +43,27 @@
 
 **Interfaces:** exchangePhoneSession, getOnboarding, completeOnboarding; existing User stays unchanged.
 
-- [ ] Add bounded strict request/response schemas and document restricted onboarding authorization.
-- [ ] Generate the official Dart SDK and run exact regeneration drift checks.
-- [ ] Validate backend HTTP responses and malformed generated-response regressions.
+- [x] Add bounded strict request/response schemas and document restricted onboarding authorization.
+- [x] Generate the official Dart SDK and run exact regeneration drift checks.
+- [x] Validate backend HTTP responses and malformed generated-response regressions.
 
 ### Task 3: Flutter phone identity and onboarding
 
 **Files:** apps/mobile/lib/core identity/session/controller/api modules; features phone/onboarding screens; app routing; targeted tests.
 
-**Interfaces:** OTP request/verify existing operations feed a Firebase client exchange; its ID token registers through exchangePhoneSession. Secure storage holds refresh credentials; a coalesced refresh updates server binding before expiry without replaying a mutation.
+**Interfaces:** The original custom-token checkpoint used OTP request/verify and secure application refresh-credential storage. The owner's provider change now uses native Firebase phone verification and SDK-managed credentials, with a secure backend-accepted identity marker. Both register through exchangePhoneSession; coalesced refresh updates server binding without replaying a mutation. Native changes receive their own review in Task 7.
 
-- [ ] Add failing OTP, expired-token, stale-response, restart and age-error UI regressions.
-- [ ] Implement explicit phone consent, OTP cooldown/recovery and provider configuration unavailable state.
-- [ ] Implement secure token exchange/refresh/logout and restricted onboarding routes.
-- [ ] Implement localized adult profile and separate interface/speaking-language choices.
-- [ ] Run Flutter analysis, tests and ARM64 debug build.
+- [x] Add failing OTP, expired-token, stale-response, restart and age-error UI regressions.
+- [x] Implement explicit phone consent, OTP cooldown/recovery and provider configuration unavailable state.
+- [x] Implement secure token exchange/refresh/logout and restricted onboarding routes.
+- [x] Implement localized adult profile and separate interface/speaking-language choices.
+- [x] Run Flutter analysis, tests and ARM64 debug build.
 
 ### Task 4: Review and evidence
 
-- [ ] Review backend and mobile boundaries independently; resolve security and correctness findings.
-- [ ] Run repository gates, full unit/integration/economics suites, exact client regeneration and Android build.
-- [ ] Record actual evidence and remaining provider/device/owner gates without closing incomplete issues.
+- [x] Review backend and mobile boundaries independently; resolve security and correctness findings.
+- [x] Run repository gates, full unit/integration/economics suites, exact client regeneration and Android build.
+- [x] Record actual evidence and remaining provider/device/owner gates without closing incomplete issues.
 - [ ] Commit a reviewable change and open a stacked PR; monitor required CI to completion.
 
 ## Execution decisions
@@ -83,7 +83,7 @@
 - [x] Implement immediate access withdrawal, private-profile erasure, narrowly scoped evidence holds, immutable journal preservation and internal recovery.
 - [x] Run 18 isolated database/HTTP tests including stale/fake step-up, ownership, capability recovery, financial and scoped evidence holds, underage privacy and storage retry.
 - [x] Implement localized mobile consent history, explicit deletion confirmation, secure pre-submit receipt persistence and login recovery without repeating the deletion command.
-- [ ] Complete independent cross-module review, combined suites and build.
+- [x] Complete independent cross-module review, combined suites and build for the account checkpoint.
 
 ### Task 6: Private listener applications (#13)
 
@@ -91,7 +91,20 @@
 
 **Interfaces:** create/update/get draft, owner-bound five-minute upload lease, raw PCM WAV upload/read, idempotent submit/withdraw. WAV files are 2–60 seconds and at most 2 MiB in an explicitly configured private local directory. Bio/topics/review consent are private; a sample never proves age, gender or identity. No app user gains approval from submission.
 
-- [ ] Implement bounded file/signature/duration checks, capabilities, ownership and consent state transitions.
-- [ ] Implement and test actual private file selection/upload, draft recovery, submission and withdrawal in Flutter.
-- [ ] Verify interrupted uploads, cross-owner access, expired leases, duplicate submission, deletion cleanup and safe HTTP error envelopes.
-- [ ] Complete independent review and combined verification; record remaining staff/storage/provider gates.
+- [x] Implement bounded file/signature/duration checks, capabilities, ownership and consent state transitions.
+- [x] Implement and test private file selection/upload, draft recovery, submission and withdrawal in Flutter; physical document-provider testing remains separate.
+- [x] Verify interrupted uploads, cross-owner access, expired leases, duplicate submission, deletion cleanup and safe HTTP error envelopes.
+- [x] Complete independent review and combined verification; record remaining staff/storage/provider gates.
+
+### Task 7: Owner-selected native Firebase paid SMS
+
+- [x] Replace the selected mobile flow with native Firebase Phone Authentication for India, preserving the Customer/Listener product shape.
+- [x] Add consented application admissions and exact phone-proof/opaque UID mapping, canonical legacy-account convergence, revocation and deletion restrictions.
+- [x] Generate the admissions/exchange SDK and pass the real generated-client journey without live provider traffic.
+- [x] Register the debug signing fingerprints. After explicit owner approval, enable Phone/Play Integrity and save the India-only SMS allowlist.
+- [x] Run 140 database/HTTP/schema checks, 43 API unit checks and exact 69-file SDK drift verification; build the initial native ARM64 APK.
+- [x] Finish mobile cancellation/partial-storage-failure and stalled-SDK review regressions; all 235 Flutter tests and analyzer pass, final APK rebuilt, independent focused review passed 21 tests.
+- [ ] Complete the original Task 4 evidence/PR/CI package.
+- [ ] Configure billing and private Admin permissions and complete consented real-SIM tests after the billing account and monthly budget are supplied. The owner approved 1,000 SMS/day as an operating limit; no hard provider cap is implied.
+
+The earlier account checkpoint is committed as `9e853bb`; its preserved APK and 213 Flutter tests are historical evidence. Current native-flow evidence is recorded in Account_Application_Verification.md. No product issue is closed solely because its local engineering subset passes.

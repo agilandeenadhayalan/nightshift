@@ -93,8 +93,8 @@ audible media, device routing, vendor cutoff, or background notification deliver
   and native-surface behavior still require physical-device verification.
 - Sessions are stored with Android encrypted secure storage; the developer access
   key is never persisted. The login checkbox is a development consent gate, not
-  production age assurance. The separate phone sign-in flow uses server MSG91
-  verification followed by Firebase custom-token exchange and backend verification.
+  production age assurance. Phone sign-in uses Firebase Phone Authentication
+  for Indian numbers, followed by backend ID-token verification and admission.
 - Test reports persist to the backend and blocks end/exclude a pair. Staffing,
   escalation, retention, appeals and production safety controls remain launch gates.
 
@@ -103,8 +103,9 @@ Pinned SDK: [agora_rtc_engine 6.5.3](https://pub.dev/packages/agora_rtc_engine/v
 
 ## Private phone sign-in and onboarding
 
-The phone entry point stays unavailable without an explicitly configured
-`FIREBASE_WEB_API_KEY`. Configure `PHONE_API_BASE_URL` at build time for the
+The phone entry point stays unavailable without explicitly configured
+`FIREBASE_WEB_API_KEY`, `FIREBASE_ANDROID_APP_ID`, `FIREBASE_MESSAGING_SENDER_ID`
+and `FIREBASE_PROJECT_ID=nightshift-c3e1a`. Configure `PHONE_API_BASE_URL` at build time for the
 intended backend, and `PHONE_AUTH_CONSENT_VERSION` to match its approved notice
 version (development default `phone-signin-v1`). The Firebase Web API key is a
 public project identifier; never substitute a service-account credential. No
@@ -117,13 +118,39 @@ address field. HTTPS is required except explicit debug loopback/emulator hosts
 procedure. General LAN HTTP is rejected for phone credentials. All API and
 Firebase requests refuse redirects.
 
-The official [Firebase Auth REST protocol](https://firebase.google.com/docs/reference/rest/auth)
-exchanges the one-use custom token for ID/refresh tokens. Refresh credentials and
-the backend token are stored using Android secure storage, not preferences.
-Renewal is coalesced before expiry and exchanges the new ID token with the backend;
-old request failures cannot erase a renewed session. Logout clears both stored
-credentials, and a late renewal cannot restore them. No failed mutation is
-automatically replayed. Phone numbers, OTPs and custom tokens remain ephemeral.
+The official [Firebase Flutter phone SDK](https://firebase.google.com/docs/auth/flutter/phone-auth)
+handles SMS and Android app verification. Pinned `firebase_auth 6.5.7` and
+`firebase_core 4.13.0` preserve Flutter 3.27.4/Dart 3.6.2 and Android minSdk 23.
+Before invoking the SDK, the app obtains a five-minute backend admission tied to
+the phone, device and consent. An admission does not mean an SMS was sent, and
+server admission limits are not a Firebase billing cap. Automatic completion is
+accepted only for the active consented attempt; the 60-second auto-retrieval
+timeout still permits manual code entry. Resending requires an explicit action.
+
+[Firebase's native authentication persistence](https://firebase.google.com/docs/auth/flutter/start#persisting_authentication_state)
+is SDK-managed and cannot be disabled through Flutter's web persistence setting.
+Native refresh tokens are not exported by FlutterFire. The app separately stores
+the accepted provider UID, backend origin and backend ID token using Android
+secure storage; an SDK session without that acceptance marker is signed out.
+SDK-owned state is not described as encrypted by the app. Android backup and
+device-transfer rules exclude application files, databases and preferences,
+including the Firebase SDK's private authentication state.
+
+Renewal is coalesced using `getIdTokenResult(true)` before expiry and exchanges
+the resulting ID token with the backend. Owner and origin checks run after
+renewal and before protected requests dispatch. Old request failures cannot erase
+a renewed session. Logout signs out the SDK and clears the accepted-session
+marker and token; a late credential completion is discarded before another
+sign-in can run. No failed mutation is automatically replayed. SMS codes and
+verification identifiers remain ephemeral, and Firebase UID is never used as
+the public application user ID. The former REST custom-token adapter remains
+only for isolated legacy fixtures; the app's default phone entry uses Firebase SMS.
+
+Android setup requires SHA-256 for Play Integrity and SHA-1 for the reCAPTCHA
+fallback used by sideloaded debug APKs, plus the correct API-key/auth-domain
+configuration. Enable the phone provider and the India SMS region policy in the
+explicit project before live testing. These are external configuration checks;
+automated tests never send SMS or disable app verification.
 
 New phone identities are routed to private adult onboarding. The backend owns the
 18+ decision and immutable birth-date rule. Public APIs use an assigned alias

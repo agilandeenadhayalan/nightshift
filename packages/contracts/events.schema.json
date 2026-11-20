@@ -555,11 +555,38 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 128
+        },
+        "attemptId": {
+          "type": "string",
+          "format": "uuid"
         }
       },
       "required": [
         "idToken",
         "deviceId"
+      ],
+      "additionalProperties": false
+    },
+    "FirebasePhoneAdmission": {
+      "type": "object",
+      "properties": {
+        "attemptId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "retryAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "attemptId",
+        "expiresAt",
+        "retryAt"
       ],
       "additionalProperties": false
     },

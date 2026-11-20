@@ -83,18 +83,54 @@ class _Smoke {
     final bearer = sdk.HttpBearerAuth();
     client = sdk.ApiClient(basePath: uri.toString(), authentication: bearer);
     final api = sdk.DefaultApi(client);
+    final admissionInput = sdk.OtpRequest(
+        phone: env['ACCOUNT_SMOKE_PHONE']!,
+        deviceId: 'generated-account-smoke',
+        consentVersion: 'phone-signin-v1');
+    final admissionKey = _key();
+    final admission = await request(
+        'firebase_admission',
+        (abort) => api.requestFirebasePhoneAdmission(
+            admissionKey, admissionInput,
+            abortTrigger: abort));
+    final sameAdmission = await request(
+        'firebase_admission_retry',
+        (abort) => api.requestFirebasePhoneAdmission(
+            admissionKey, admissionInput,
+            abortTrigger: abort));
+    _check(
+        admission.attemptId == sameAdmission.attemptId &&
+            admission.expiresAt.isAfter(admission.retryAt),
+        'ADMISSION_IDEMPOTENCY_FAILED');
+    final exchangeInput = sdk.PhoneSessionRequest(
+        idToken: env['ACCOUNT_SMOKE_TOKEN']!,
+        deviceId: 'generated-account-smoke',
+        attemptId: admission.attemptId);
     final session = await request(
         'exchange',
+        (abort) =>
+            api.exchangePhoneSession(exchangeInput, abortTrigger: abort));
+    _check(
+        session.needsOnboarding &&
+            !session.user.listenerApproved &&
+            RegExp(r'^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$')
+                .hasMatch(session.user.id) &&
+            session.testOnly.toJson() == true,
+        'RESTRICTED_NEW_CUSTOMER_REQUIRED');
+    final retrySession = await request(
+        'exchange_retry',
+        (abort) =>
+            api.exchangePhoneSession(exchangeInput, abortTrigger: abort));
+    _check(retrySession.user.id == session.user.id,
+        'ENROLLMENT_IDEMPOTENCY_FAILED');
+    final refreshed = await request(
+        'bound_exchange_without_admission',
         (abort) => api.exchangePhoneSession(
             sdk.PhoneSessionRequest(
                 idToken: env['ACCOUNT_SMOKE_TOKEN']!,
                 deviceId: 'generated-account-smoke'),
             abortTrigger: abort));
-    _check(
-        session.needsOnboarding &&
-            !session.user.listenerApproved &&
-            session.testOnly.toJson() == true,
-        'RESTRICTED_NEW_CUSTOMER_REQUIRED');
+    _check(refreshed.user.id == session.user.id, 'BOUND_IDENTITY_CHANGED');
     bearer.accessToken = session.token;
     final initial = await request('restricted_onboarding',
         (abort) => api.getOnboarding(abortTrigger: abort));
@@ -174,7 +210,8 @@ class _Smoke {
         (abort) => api.getConsentHistory(abortTrigger: abort));
     _check(
         consent.items
-            .any((event) => event.purpose == 'listener-review-material'),
+                .any((event) => event.purpose == 'listener-review-material') &&
+            consent.items.any((event) => event.purpose == 'phone-signin'),
         'REVIEW_CONSENT_MISSING');
     final notice = await request('deletion_notice',
         (abort) => api.getDeletionNotice(abortTrigger: abort));
@@ -183,7 +220,7 @@ class _Smoke {
         'delete_synthetic_account',
         (abort) => api.requestAccountDeletion(
             sdk.DeletionRequest.fromJson({
-                  'noticeVersion': notice.noticeVersion.toJson(),
+              'noticeVersion': notice.noticeVersion.toJson(),
               'confirm': true,
               'receiptToken': token,
             })!,
@@ -203,10 +240,28 @@ class _Smoke {
         recovered.requestId == deleted.requestId &&
             recovered.status.toJson() == 'review_required',
         'RECEIPT_RECOVERY_FAILED');
+    final blockedAdmission = await request(
+        'deleted_phone_admission_blocked',
+        (abort) => api.requestFirebasePhoneAdmissionWithHttpInfo(
+            _key(), admissionInput,
+            abortTrigger: abort));
+    final blockedExchange = await request(
+        'deleted_identity_replay_blocked',
+        (abort) => api.exchangePhoneSessionWithHttpInfo(exchangeInput,
+            abortTrigger: abort));
+    _check(
+        [blockedAdmission, blockedExchange].every((response) =>
+            response.statusCode == 403 &&
+            (jsonDecode(response.body) as Map)['error']['code'] ==
+                'ACCOUNT_RESTRICTED'),
+        'DELETION_TOMBSTONE_BYPASSED');
     stdout.writeln(jsonEncode({
       'accountClientSmoke': 'passed',
       'identity': 'synthetic',
       'realSms': false,
+      'firebaseAdmission': true,
+      'opaqueIdentityEnrollment': true,
+      'deletedIdentityBlocked': true,
       'privateWavRoundTrip': true,
       'onboarding': true,
       'deletionReceiptRecovery': true

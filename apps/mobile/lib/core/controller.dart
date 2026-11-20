@@ -11,6 +11,7 @@ import 'phone_sign_in.dart';
 import 'account_privacy.dart';
 import 'listener_application.dart';
 import 'review_sample_picker.dart';
+import 'native_firebase_identity.dart';
 
 final appControllerProvider = ChangeNotifierProvider<AppController>((ref) {
   final controller = AppController(
@@ -31,14 +32,18 @@ class AppController extends ChangeNotifier {
       ReviewSamplePicker? samplePicker,
       this.startTimers = true,
       this.developmentEnabled = !kReleaseMode})
-      : firebase = identityClient ?? RestFirebaseIdentityClient() {
+      : firebase = identityClient ?? NativeFirebaseIdentityClient() {
     audio.onChanged = _audioChanged;
     audio.onFailure = (code) => unawaited(_audioFailed(code));
     phoneSignIn = PhoneSignIn(
         api: api,
         firebase: firebase,
         deviceId: () => _deviceId,
-        onAuthenticated: _acceptPhoneSession)
+        onAuthenticated: (tokens, result) {
+          final attempt = phoneSignIn.attemptRevision;
+          return _acceptPhoneSession(tokens, result,
+              isCurrent: () => phoneSignIn.isCurrentAttempt(attempt));
+        })
       ..addListener(_notify);
     api.prepareSession = _ensurePhoneSession;
     api.sessionIdentity = () => (user?.id, _identityRevision);
@@ -251,6 +256,10 @@ class AppController extends ChangeNotifier {
       if (canRestorePhoneSession) {
         await _restorePhoneSession();
       } else {
+        if (firebase is PhoneIdentityClient) {
+          // SDK persistence alone is not an accepted NightShift session.
+          await (firebase as PhoneIdentityClient).signOut();
+        }
         api.token = await store.read('token');
       }
       if (api.token != null && !needsOnboarding) {
@@ -304,6 +313,9 @@ class AppController extends ChangeNotifier {
         _invalidateSessionRequests();
         _resetHistory();
         phoneSignIn.reset();
+        if (firebase is PhoneIdentityClient) {
+          await (firebase as PhoneIdentityClient).signOut();
+        }
         _phoneTokens = null;
         needsOnboarding = canRestorePhoneSession = false;
         onboardingProfile = null;
@@ -322,24 +334,50 @@ class AppController extends ChangeNotifier {
         await refresh();
       });
 
-  Future<void> _acceptPhoneSession(FirebaseTokens tokens, Json result) async {
+  Future<void> _acceptPhoneSession(FirebaseTokens tokens, Json result,
+      {bool Function()? isCurrent}) async {
     final priorSession = _sessionRevision;
     await _sessionCleanup;
-    if (_disposed || priorSession != _sessionRevision) return;
-    if (result['token'] != tokens.idToken ||
-        result['needsOnboarding'] is! bool) {
+    if (_disposed ||
+        priorSession != _sessionRevision ||
+        isCurrent?.call() == false) {
+      if (firebase is PhoneIdentityClient) {
+        await (firebase as PhoneIdentityClient).discard(tokens);
+      }
+      return;
+    }
+    final UserProfile acceptedUser;
+    try {
+      if (result['token'] != tokens.idToken ||
+          result['needsOnboarding'] is! bool) {
+        throw const ApiFailure('INVALID_RESPONSE', 'Invalid identity session.');
+      }
+      acceptedUser = UserProfile.fromJson(result['user'] as Json);
+    } catch (_) {
+      if (firebase is PhoneIdentityClient) {
+        await (firebase as PhoneIdentityClient).discard(tokens);
+      }
       throw const ApiFailure('INVALID_RESPONSE', 'Invalid identity session.');
     }
     _invalidateSessionRequests();
     _resetHistory();
+    final session = _sessionRevision;
+    try {
+      await _savePhoneTokens(tokens, session);
+    } catch (_) {
+      await _discardUnacceptedPhoneTokens(tokens, session);
+      rethrow;
+    }
+    if (_disposed ||
+        session != _sessionRevision ||
+        isCurrent?.call() == false) {
+      await _discardUnacceptedPhoneTokens(tokens, session);
+      return;
+    }
     _phoneTokens = tokens;
     api.token = tokens.idToken;
     needsOnboarding = result['needsOnboarding'] as bool;
-    user = UserProfile.fromJson(result['user'] as Json);
-    final session = _sessionRevision;
-    await _savePhoneTokens(tokens, session);
-    if (_disposed || session != _sessionRevision) return;
-    await store.write('baseUrl', api.baseUrl);
+    user = acceptedUser;
     canRestorePhoneSession = true;
     if (needsOnboarding) {
       await loadOnboarding();
@@ -347,6 +385,26 @@ class AppController extends ChangeNotifier {
       await refresh();
     }
     _notify();
+  }
+
+  Future<void> _discardUnacceptedPhoneTokens(
+      FirebaseTokens tokens, int session) async {
+    final previous = _phoneStorage;
+    final cleanup = (() async {
+      await previous;
+      if (session != _sessionRevision) return;
+      await store.delete('token');
+      await store.delete('phoneSession');
+    })();
+    // Any later accepted session writes after this deletion, never before it.
+    _phoneStorage = cleanup.catchError((Object _) {});
+    try {
+      await cleanup;
+    } finally {
+      if (firebase is PhoneIdentityClient) {
+        await (firebase as PhoneIdentityClient).discard(tokens);
+      }
+    }
   }
 
   Future<void> _restorePhoneSession() async {
@@ -359,12 +417,25 @@ class AppController extends ChangeNotifier {
       // Refresh credentials must not be restored against a different backend.
       if (!phoneSignIn.safeBackend ||
           saved['baseUrl'] != phoneSignIn.backendUrl ||
-          saved['baseUrl'] != api.baseUrl ||
-          saved['refreshToken'] is! String) {
+          saved['baseUrl'] != api.baseUrl) {
         throw const ApiFailure('INVALID_ID_TOKEN', 'Sign in again.',
             status: 401);
       }
-      final tokens = await firebase.refresh(saved['refreshToken'] as String);
+      final FirebaseTokens tokens;
+      if (firebase is PhoneIdentityClient) {
+        if (saved['provider'] != 'firebase-native' || saved['uid'] is! String) {
+          throw const ApiFailure('UNAUTHENTICATED', 'Sign in again.',
+              status: 401);
+        }
+        tokens = await (firebase as PhoneIdentityClient)
+            .restore(saved['uid'] as String);
+      } else {
+        if (saved['refreshToken'] is! String) {
+          throw const ApiFailure('UNAUTHENTICATED', 'Sign in again.',
+              status: 401);
+        }
+        tokens = await firebase.refresh(saved['refreshToken'] as String);
+      }
       if (_disposed || session != _sessionRevision) return;
       final result = await api.request('POST', '/auth/exchange',
           body: {'idToken': tokens.idToken, 'deviceId': _deviceId});
@@ -395,7 +466,8 @@ class AppController extends ChangeNotifier {
     final renewal = Completer<void>();
     _phoneRenewal = renewal.future;
     try {
-      final next = await firebase.refresh(tokens.refreshToken);
+      final next =
+          await firebase.refresh(tokens.nativeUid ?? tokens.refreshToken);
       if (_disposed || session != _sessionRevision) {
         throw const ApiFailure('UNAUTHENTICATED', 'Sign in again.',
             status: 401);
@@ -433,10 +505,17 @@ class AppController extends ChangeNotifier {
       if (_disposed || session != _sessionRevision) return;
       await store.write(
           'phoneSession',
-          jsonEncode(
-              {'refreshToken': tokens.refreshToken, 'baseUrl': baseUrl}));
+          jsonEncode(tokens.nativeUid != null
+              ? {
+                  'provider': 'firebase-native',
+                  'uid': tokens.nativeUid,
+                  'baseUrl': baseUrl
+                }
+              : {'refreshToken': tokens.refreshToken, 'baseUrl': baseUrl}));
       if (_disposed || session != _sessionRevision) return;
       await store.write('token', tokens.idToken);
+      if (_disposed || session != _sessionRevision) return;
+      await store.write('baseUrl', baseUrl);
     })();
     _phoneStorage = write.catchError((Object _) {});
     return write;
@@ -1043,9 +1122,15 @@ class AppController extends ChangeNotifier {
     try {
       _invalidateSessionRequests();
       _videoConsentCallId = null;
-      await closeVideoPreview();
       api.token = null;
       _phoneTokens = null;
+      if (firebase is PhoneIdentityClient) {
+        // Native SDK cleanup may still be blocked by its earlier operation.
+        // App access and its durable acceptance marker are cleared independently.
+        unawaited((firebase as PhoneIdentityClient)
+            .signOut()
+            .catchError((Object _) {}));
+      }
       privacy.clearPrivateView();
       listenerApplication.clearPrivateView();
       phoneSignIn.reset();
@@ -1060,11 +1145,12 @@ class AppController extends ChangeNotifier {
       held = 0;
       _joinedId = '';
       lastPath = '/home';
-      await audio.leave();
       await _phoneStorage;
       await store.delete('token');
       await store.delete('phoneSession');
       await store.write('lastPath', lastPath);
+      await closeVideoPreview();
+      await audio.leave();
     } finally {
       // The caller still receives storage errors; this barrier only sequences
       // a later sign-in, whose token write can safely replace any old value.

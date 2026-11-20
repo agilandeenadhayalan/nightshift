@@ -51,6 +51,7 @@ part 'model/error.dart';
 part 'model/error_error.dart';
 part 'model/event.dart';
 part 'model/favorite_listener200_response.dart';
+part 'model/firebase_phone_admission.dart';
 part 'model/firebase_verify_request.dart';
 part 'model/get_events200_response.dart';
 part 'model/get_rates200_response.dart';

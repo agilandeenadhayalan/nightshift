@@ -12,7 +12,7 @@
     "db:migrate": "node --env-file-if-exists=../../.env dist/src/migrate.js",
     "db:seed": "node --env-file-if-exists=../../.env dist/src/seed.js",
     "test": "node --test dist/test/unit.test.js dist/test/firebase.test.js dist/test/msg91.test.js",
-    "test:integration": "node --env-file-if-exists=../../.env --test --test-concurrency=1 --test-timeout=60000 dist/test/integration.test.js dist/test/schema.test.js dist/test/otp.test.js dist/test/phone-auth.test.js dist/test/video.integration.test.js dist/test/account-onboarding.test.js dist/test/account-lifecycle.test.js dist/test/listener-applications.test.js"
+    "test:integration": "node --env-file-if-exists=../../.env --test --test-concurrency=1 --test-timeout=60000 dist/test/integration.test.js dist/test/schema.test.js dist/test/otp.test.js dist/test/phone-auth.test.js dist/test/firebase-phone.test.js dist/test/video.integration.test.js dist/test/account-onboarding.test.js dist/test/account-lifecycle.test.js dist/test/listener-applications.test.js"
   },
   "dependencies": {
     "@nestjs/common": "11.2.11",

@@ -2,6 +2,22 @@
 // Unknown codes deliberately use a safe fallback in the selected app language.
 String errorMessage(String? code, String locale) {
   final copy = switch (code) {
+    'PHONE_AUTH_PENDING' => (
+        'Phone verification is still finishing. Wait before trying again.',
+        'தொலைபேசி சரிபார்ப்பு இன்னும் முடிகிறது. மீண்டும் முயற்சிக்கும் முன் காத்திருக்கவும்.'
+      ),
+    'PHONE_PROVIDER_LIMIT' => (
+        'Firebase has temporarily limited SMS requests. Wait before requesting another code.',
+        'Firebase SMS கோரிக்கைகளை தற்காலிகமாக கட்டுப்படுத்தியுள்ளது. மீண்டும் கோரும் முன் காத்திருக்கவும்.'
+      ),
+    'PHONE_APP_VERIFICATION_FAILED' => (
+        'The app could not be verified for phone sign-in. Complete the verification screen or try again later.',
+        'தொலைபேசி உள்நுழைவிற்கு செயலியை சரிபார்க்க முடியவில்லை. சரிபார்ப்புத் திரையை முடிக்கவும் அல்லது பின்னர் முயற்சிக்கவும்.'
+      ),
+    'PHONE_ADMISSION_EXPIRED' => (
+        'This sign-in attempt expired. Request a new code to continue.',
+        'இந்த உள்நுழைவு முயற்சி காலாவதியானது. தொடர புதிய குறியீட்டைக் கோரவும்.'
+      ),
     'PRIVATE_ORIGIN_REQUIRED' => (
         'Private applications need a configured secure server. Reconnect using phone sign-in.',
         'தனிப்பட்ட விண்ணப்பத்திற்கு பாதுகாப்பான சேவையகம் தேவை. தொலைபேசி உள்நுழைவு மூலம் மீண்டும் இணைக்கவும்.'

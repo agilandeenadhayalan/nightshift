@@ -4,8 +4,11 @@ import 'package:http/http.dart' as http;
 import 'api.dart';
 
 class FirebaseTokens {
-  const FirebaseTokens(this.idToken, this.refreshToken, this.expiresAt);
+  const FirebaseTokens(this.idToken, this.refreshToken, this.expiresAt,
+      {this.nativeUid, this.nativeGeneration});
   final String idToken, refreshToken;
+  final String? nativeUid;
+  final int? nativeGeneration;
   final DateTime expiresAt;
   @override
   String toString() => 'FirebaseTokens[redacted]';

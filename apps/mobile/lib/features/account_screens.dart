@@ -81,12 +81,10 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
                 CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
                     value: state.consent,
-                    onChanged: state.busy
-                        ? null
-                        : (value) => state.setConsent(value ?? false),
+                    onChanged: (value) => state.setConsent(value ?? false),
                     title: Text(app.text(
-                        'I agree to use my number for an SMS sign-in code and to use Firebase to securely verify my sign-in.',
-                        'SMS உள்நுழைவுக் குறியீட்டிற்கு என் எண்ணைப் பயன்படுத்தவும், Firebase மூலம் என் உள்நுழைவை பாதுகாப்பாக சரிபார்க்கவும் ஒப்புக்கொள்கிறேன்.'))),
+                        'I agree to receive an SMS sign-in code. Google receives and stores my phone number for sign-in and spam and abuse prevention across Google services. Standard SMS rates may apply.',
+                        'SMS உள்நுழைவுக் குறியீட்டைப் பெற ஒப்புக்கொள்கிறேன். உள்நுழைவு மற்றும் Google சேவைகளில் தேவையற்ற செய்திகள், முறைகேடுகளைத் தடுக்க Google என் எண்ணைப் பெற்று சேமிக்கும். வழக்கமான SMS கட்டணங்கள் பொருந்தலாம்.'))),
                 if (state.retrySeconds > 0)
                   Text(app.text(
                       'Request another code in ${state.retrySeconds}s.',
@@ -117,7 +115,15 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
                           labelText: app.text(
                               'Six-digit code', 'ஆறு இலக்கக் குறியீடு'))),
                   if (state.expired)
-                    Text(errorMessage('OTP_EXPIRED', app.locale)),
+                    Text(errorMessage(
+                        state.nativePhone
+                            ? 'PHONE_ADMISSION_EXPIRED'
+                            : 'OTP_EXPIRED',
+                        app.locale)),
+                  if (state.autoRetrievalEnded && !state.expired)
+                    Text(app.text(
+                        'Automatic code reading ended. You can still enter the code manually.',
+                        'தானாக குறியீடு படிப்பது முடிந்தது. குறியீட்டை நீங்களே இன்னும் உள்ளிடலாம்.')),
                   FilledButton(
                       onPressed: state.canVerify
                           ? () async {

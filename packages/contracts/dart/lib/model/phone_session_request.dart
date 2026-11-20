@@ -15,22 +15,33 @@ class PhoneSessionRequest {
   PhoneSessionRequest({
     required this.idToken,
     required this.deviceId,
+    this.attemptId,
   });
 
   String idToken;
 
   String deviceId;
 
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? attemptId;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is PhoneSessionRequest &&
     other.idToken == idToken &&
-    other.deviceId == deviceId;
+    other.deviceId == deviceId &&
+    other.attemptId == attemptId;
 
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
     (idToken.hashCode) +
-    (deviceId.hashCode);
+    (deviceId.hashCode) +
+    (attemptId == null ? 0 : attemptId!.hashCode);
 
   @override
   // Never include tokens, access keys or private fields in diagnostics.
@@ -40,6 +51,9 @@ class PhoneSessionRequest {
     final json = <String, dynamic>{};
       json[r'idToken'] = this.idToken;
       json[r'deviceId'] = this.deviceId;
+    if (this.attemptId != null) {
+      json[r'attemptId'] = this.attemptId;
+    }
     return json;
   }
 
@@ -70,6 +84,7 @@ class PhoneSessionRequest {
       return PhoneSessionRequest(
         idToken: mapValueOfType<String>(json, r'idToken')!,
         deviceId: mapValueOfType<String>(json, r'deviceId')!,
+        attemptId: mapValueOfType<String>(json, r'attemptId'),
       );
     }
     return null;

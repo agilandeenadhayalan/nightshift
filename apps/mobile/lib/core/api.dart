@@ -178,6 +178,9 @@ class NightShiftApi {
       case 'POST /auth/otp/request':
         return api.requestOtpChallenge(
             key(), generated.OtpRequest.fromJson(data)!);
+      case 'POST /auth/firebase/admissions':
+        return api.requestFirebasePhoneAdmission(
+            key(), generated.OtpRequest.fromJson(data)!);
       case 'POST /auth/otp/verify':
         return api
             .verifyOtpChallenge(generated.OtpVerifyRequest.fromJson(data)!);

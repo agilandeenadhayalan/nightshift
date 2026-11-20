@@ -225,6 +225,8 @@ class ApiClient {
           return Event.fromJson(value);
         case 'FavoriteListener200Response':
           return FavoriteListener200Response.fromJson(value);
+        case 'FirebasePhoneAdmission':
+          return FirebasePhoneAdmission.fromJson(value);
         case 'FirebaseVerifyRequest':
           return FirebaseVerifyRequest.fromJson(value);
         case 'GetEvents200Response':
