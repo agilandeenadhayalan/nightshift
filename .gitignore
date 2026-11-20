@@ -32,3 +32,4 @@ artifacts/
 .next/
 playwright-report/
 test-results/
+apps/mobile/android/app/src/staffLocalDebug/

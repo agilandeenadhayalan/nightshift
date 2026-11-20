@@ -17,6 +17,7 @@ import { ListenerApplications, LocalReviewStorage } from './listener-application
 import { DirectorySubscription } from './directory';
 import { StaffAuthority } from './staff/authority';
 import { StaffController } from './staff/http';
+import { createStaffAuthority } from './staff/factory';
 
 type AuthenticatedRequest=Request & {actor:Actor;requestId:string};
 @Injectable()
@@ -144,10 +145,9 @@ export async function createApplication(config:Config,clock:()=>number=Date.now,
   const onboarding=new Onboarding(db,clock,async actor=>{await service.logoutCall(actor);await service.withdrawPresence(actor.id);});
   const applications=new ListenerApplications(db,{storage:config.privateReviewDirectory?new LocalReviewStorage(config.privateReviewDirectory):undefined,capabilityKey:config.devAccessKey},clock);
   const lifecycle=new AccountLifecycle(db,clock,userId=>service.withdrawPresence(userId),userId=>applications.erasePrivateMaterials(userId));
-  // There is no approved live staff verifier/configuration yet. Test harnesses
-  // construct the separate staff controller explicitly; environment values or
-  // customer identity adapters cannot enable this production bootstrap.
-  const staff=new StaffAuthority(db);
+  let staffRuntime:ReturnType<typeof createStaffAuthority>;
+  try{staffRuntime=createStaffAuthority(db,auth,config,clock);}catch(error){await phone.close();await presence.close();await db.close();throw error;}
+  const staff=staffRuntime.authority;
   @Module({controllers:[PublicController,AccountController,AppController,StaffController],providers:[SessionGuard,OnboardingSessionGuard,{provide:Auth,useValue:auth},{provide:NightShiftService,useValue:service},{provide:PhoneAuthentication,useValue:phone},{provide:Onboarding,useValue:onboarding},{provide:AccountLifecycle,useValue:lifecycle},{provide:ListenerApplications,useValue:applications},{provide:StaffAuthority,useValue:staff}]})
   class AppModule{}
   const app=await NestFactory.create(AppModule,{logger:['error','warn'],bodyParser:true});
@@ -258,10 +258,10 @@ export async function createApplication(config:Config,clock:()=>number=Date.now,
     if(privacyRunning)return;privacyRunning=true;
     try{
       // Each recovery pass gets a chance even when the other storage boundary fails.
-      await Promise.allSettled([lifecycle.processPending(),applications.sweepExpiredUploads(),service.directory.cleanupExpired()]);
+      await Promise.allSettled([lifecycle.processPending(),applications.sweepExpiredUploads(),service.directory.cleanupExpired(),staff.cleanupAccessRequests()]);
     }catch{/* Retry durable work on the next tick; never log private records. */}
     finally{privacyRunning=false;}
   })(),30000);privacyTimer.unref();
   await app.init();
-  return {app,db,presence,auth,service,phone,lifecycle,applications,async close(){clearInterval(timer);clearInterval(directoryTimer);clearInterval(privacyTimer);await io.close();await app.close();await phone.close();await presence.close();await db.close();}};
+  return {app,db,presence,auth,service,phone,lifecycle,applications,async close(){clearInterval(timer);clearInterval(directoryTimer);clearInterval(privacyTimer);await io.close();await app.close();await staffRuntime.close();await phone.close();await presence.close();await db.close();}};
 }

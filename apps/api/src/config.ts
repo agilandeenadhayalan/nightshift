@@ -5,6 +5,7 @@ export interface Config {
   agoraAppId?: string; agoraAppCertificate?: string;
   videoCallsEnabled?: boolean;
   privateReviewDirectory?: string;
+  staffAuth?: {origin:string;digestKey:string;policyVersion:string;sessionSeconds:number};
   phoneAuth?: {
     provider?: 'msg91'|'firebase';
     projectId: string; digestKey: string; consentVersion: string;
@@ -50,7 +51,18 @@ export function loadConfig(env = process.env): Config {
       consentVersion: env.PHONE_AUTH_CONSENT_VERSION!, provider:provider as 'firebase'|'msg91',
       ...(provider==='firebase'?{dailyAdmissionLimit:dailySendLimit}:{msg91WidgetId:env.MSG91_WIDGET_ID!,msg91AuthKey:env.MSG91_AUTH_KEY!,dailySendLimit}) };
   }
+  let staffAuth:Config['staffAuth'];
+  if(env.STAFF_AUTH_ENABLED!==undefined&&!['true','false'].includes(env.STAFF_AUTH_ENABLED))throw new Error('STAFF_AUTH_ENABLED must be true or false');
+  if(env.STAFF_AUTH_ENABLED==='true'){
+    let origin:URL;try{origin=new URL(env.STAFF_CONSOLE_ORIGIN??'');}catch{throw new Error('Staff access requires an explicit HTTPS console origin');}
+    const sessionSeconds=Number(env.STAFF_SESSION_SECONDS??1800);
+    if(phoneAuth?.provider!=='firebase'||origin.protocol!=='https:'||origin.origin!==env.STAFF_CONSOLE_ORIGIN
+      ||origin.username||origin.password||(env.STAFF_AUTH_DIGEST_KEY?.length??0)<32||(env.STAFF_AUTH_DIGEST_KEY?.length??0)>256
+      ||!Number.isSafeInteger(sessionSeconds)||sessionSeconds<60||sessionSeconds>1800
+      ||!/^[A-Za-z0-9._-]{1,80}$/.test(env.STAFF_AUTH_POLICY_VERSION??''))throw new Error('Staff access requires native Firebase, a stable private digest key, explicit policy version and bounded session configuration');
+    staffAuth={origin:origin.origin,digestKey:env.STAFF_AUTH_DIGEST_KEY!,policyVersion:env.STAFF_AUTH_POLICY_VERSION!,sessionSeconds};
+  }
   return { databaseUrl: env.DATABASE_URL, redisUrl: env.REDIS_URL, port,
     devAccessKey: env.DEV_ACCESS_KEY!, agoraAppId: env.AGORA_APP_ID,
-    agoraAppCertificate: env.AGORA_APP_CERTIFICATE, videoCallsEnabled: env.VIDEO_CALLS_ENABLED === 'true', phoneAuth,privateReviewDirectory };
+    agoraAppCertificate: env.AGORA_APP_CERTIFICATE, videoCallsEnabled: env.VIDEO_CALLS_ENABLED === 'true', phoneAuth,privateReviewDirectory,staffAuth };
 }

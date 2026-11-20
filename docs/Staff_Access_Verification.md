@@ -1,6 +1,6 @@
 # Staff access foundation
 
-Recorded 21 November 2026 for the #10 prerequisite to #14. The owner explicitly replaced the earlier MFA requirement with SMS OTP-only authentication, appointed themself initial reviewer and access administrator, selected the Redmi account, and requested staff pages inside NightShift's built-in browser. D26, FA-010 and the GitHub issue record that amendment. Customer and Listener remain the only app modes. Live staff access has not been provisioned.
+Recorded 21 November 2026 for the #10 prerequisite to #14. This document records the PR #76 foundation; see the subsequent [embedded integration](Embedded_Staff_Verification.md) for the real adapter and native browser. The owner explicitly replaced the earlier MFA requirement with SMS OTP-only authentication, appointed themself initial reviewer and access administrator, selected the Redmi account, and requested staff pages inside NightShift's built-in browser. D26, FA-010 and the GitHub issue record that amendment. Customer and Listener remain the only app modes. Live staff access has not been provisioned.
 
 ## Implemented
 
@@ -28,7 +28,7 @@ The review entry is unavailable because this slice has no review/evidence/decisi
 | Repository guards/tooling | Secret/contract/boundary checks and 11/11 tooling tests; `staff-repo-final.log` |
 | Dependency audit | Zero reported vulnerabilities; `staff-dependency-audit.log` |
 
-All artifacts are under ignored `artifacts/`. Tests use dedicated PostgreSQL test databases, random schemas and isolated Redis keys. The live phone database, Redis13 and private Firebase runtime remain unchanged. No real grant, provider/billing change, notification or production deployment occurred. The earlier phone/session [PR #75](https://github.com/agilandeenadhayalan/nightshift/pull/75) passed exact-head CI; this foundation needs its own CI result.
+All artifacts are under ignored `artifacts/`. Tests use dedicated PostgreSQL test databases, random schemas and isolated Redis keys. No real grant, provider/billing change, notification or production deployment occurred in this foundation. The earlier phone/session [PR #75](https://github.com/agilandeenadhayalan/nightshift/pull/75) passed exact-head CI. Foundation [PR #76](https://github.com/agilandeenadhayalan/nightshift/pull/76) subsequently passed all three jobs at `b37378549507717cb4f5706704aca876ba59a1ea`, run44797495100. Besides the font fix, that run corrects an hourly quota test: the old timing failure was reproduced, then all11 phone checks passed with a deterministic clock and reset-boundary coverage. Live phone database/runtime changes belong to the separately recorded continuation.
 
 ## Remaining acceptance
 

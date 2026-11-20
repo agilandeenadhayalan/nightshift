@@ -1,4 +1,4 @@
-export const permissions = ['listener.review.read', 'listener.review.evidence.read', 'listener.review.decide'] as const;
+export const permissions = ['listener.review.read', 'listener.review.evidence.read', 'listener.review.decide', 'staff.access.manage'] as const;
 export type Permission = typeof permissions[number];
 export type StaffSession = {staff: {id: string}; permissions: Permission[]; expiresAt: string; csrfToken: string};
 export type StaffStatus = {configured: boolean; available: boolean; reasonCode: 'STAFF_AUTH_UNAVAILABLE' | null};
@@ -25,4 +25,10 @@ export function sessionValue(value: unknown): value is StaffSession {
     Array.isArray(value.permissions) && value.permissions.length <= permissions.length &&
     new Set(value.permissions).size === value.permissions.length && value.permissions.every(p => permissions.includes(p)) &&
     utcTime(value.expiresAt) && typeof value.csrfToken === 'string' && hex64.test(value.csrfToken);
+}
+export function accessRequestValue(value: unknown): boolean {
+  return object(value) && exactKeys(value, ['requestId', 'accountReference', 'status', 'expiresAt']) &&
+    typeof value.requestId === 'string' && uuid.test(value.requestId) &&
+    typeof value.accountReference === 'string' && uuid.test(value.accountReference) &&
+    ['pending', 'provisioned'].includes(String(value.status)) && utcTime(value.expiresAt);
 }

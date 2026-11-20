@@ -26,6 +26,7 @@ class MainActivity: FlutterActivity() {
     }
     private val reviewHandler = Handler(Looper.getMainLooper())
     private var reviewChannel: MethodChannel? = null
+    private var staffSessionBridge: StaffSessionBridge? = null
     private var reviewSelection: ReviewSelection? = null
     private val allocatedReviewCodes = mutableSetOf<Int>()
 
@@ -77,6 +78,8 @@ class MainActivity: FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        staffSessionBridge?.close()
+        staffSessionBridge = StaffSessionBridge(this, flutterEngine)
         reviewChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "nightshift/private_review_sample").also { channel ->
             channel.setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -207,6 +210,8 @@ class MainActivity: FlutterActivity() {
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        staffSessionBridge?.close()
+        staffSessionBridge = null
         cancelReviewSelection()
         reviewChannel?.setMethodCallHandler(null)
         reviewChannel = null
@@ -214,6 +219,8 @@ class MainActivity: FlutterActivity() {
     }
 
     override fun onDestroy() {
+        staffSessionBridge?.close()
+        staffSessionBridge = null
         cancelReviewSelection()
         super.onDestroy()
     }

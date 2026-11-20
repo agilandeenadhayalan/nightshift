@@ -1129,6 +1129,12 @@ class ProfileScreen extends ConsumerWidget {
               'தனியுரிமை மற்றும் கணக்கு நீக்கம்'))),
       const SizedBox(height: 16),
       OutlinedButton.icon(
+          onPressed:
+              state.busy || state.hasCall ? null : () => context.go('/staff'),
+          icon: const Icon(Icons.admin_panel_settings_outlined),
+          label: Text(state.text('Staff workspace', 'ஊழியர் பணியிடம்'))),
+      const SizedBox(height: 16),
+      OutlinedButton.icon(
           onPressed: state.busy ? null : state.logout,
           icon: const Icon(Icons.logout),
           label: Text(state.text('Sign out', 'வெளியேறு'))),

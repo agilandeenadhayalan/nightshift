@@ -97,16 +97,28 @@ export class Auth {
     return {token,userId:identity.userId,expiresAt:expiresAt.toISOString(),needsOnboarding:!account.rows[0].adult_confirmed};
   }
   async authenticate(token?: string, allowOnboarding=false): Promise<Actor> {
+    return (await this.authenticateIdentity(token,allowOnboarding)).actor;
+  }
+  /** Internal verified phone context. Never serialized by customer endpoints. */
+  async authenticatedPhone(token:string){
+    const result=await this.authenticateIdentity(token,false);
+    requireThat(result.identity?.signInProvider==='phone'&&result.identity.phoneNumber,
+      401,'UNAUTHENTICATED','Use a verified phone sign-in.');
+    return {actor:result.actor,identity:result.identity};
+  }
+  private async authenticateIdentity(token?:string,allowOnboarding=false){
     requireThat(token && token.length <= 16384, 401, 'UNAUTHENTICATED', 'Sign in again');
     const hash = tokenHash(token);
     const read=()=>this.db.pool.query(`SELECT u.id,u.adult_confirmed,u.identity_revoked_before,s.auth_kind FROM auth_sessions s JOIN users u ON u.id=s.user_id
       WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>$2 AND NOT u.suspended`, [hash,new Date(this.clock())]);
     let { rows } = await read();
     let identityAuthTime:number|undefined;
+    let verifiedIdentity:Awaited<ReturnType<PhoneAuthentication['sessionIdentity']>>|undefined;
     requireThat(rows.length, 401, 'UNAUTHENTICATED', 'Sign in again');
     if(rows[0].auth_kind==='firebase'){
       requireThat(this.phone,401,'UNAUTHENTICATED','Sign in again.');
       const identity=await this.phone.sessionIdentity(token);
+      verifiedIdentity=identity;
       identityAuthTime=identity.authTime;
       requireThat(identity.userId===rows[0].id,401,'UNAUTHENTICATED','Sign in again.');
       // Provider verification is asynchronous; do not authorize a session that
@@ -117,7 +129,7 @@ export class Auth {
         401,'SESSION_REVOKED','Sign in again with a fresh phone verification.');
     }
     requireThat(allowOnboarding || rows[0].adult_confirmed,403,'ONBOARDING_REQUIRED','Complete adult onboarding first.');
-    return { id: rows[0].id, sessionHash: hash, ...(identityAuthTime===undefined?{}:{identityAuthTime}) };
+    return {actor:{ id: rows[0].id, sessionHash: hash, ...(identityAuthTime===undefined?{}:{identityAuthTime}) },identity:verifiedIdentity};
   }
   async logout(actor: Actor, beforeRevoke?: (c:PoolClient)=>Promise<void>) {
     const presenceVersion = await this.db.tx(async c=>{

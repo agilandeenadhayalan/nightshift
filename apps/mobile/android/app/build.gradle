@@ -5,6 +5,35 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+// Flutter and the native cookie boundary must use the same compiled origin.
+def staffOrigin = ""
+def staffOriginSeen = false
+if (project.hasProperty("dart-defines")) {
+    project.property("dart-defines").split(",").each { encoded ->
+        def define = new String(encoded.decodeBase64(), "UTF-8")
+        if (define.startsWith("STAFF_CONSOLE_ORIGIN=")) {
+            if (staffOriginSeen) throw new GradleException("Duplicate staff origin")
+            staffOriginSeen = true
+            staffOrigin = define.substring("STAFF_CONSOLE_ORIGIN=".length())
+        }
+    }
+}
+def staffLoopback = false
+if (!staffOrigin.isEmpty()) {
+    def uri = new URI(staffOrigin)
+    if (uri.scheme != "https" || !uri.host || uri.userInfo || uri.rawQuery || uri.rawFragment ||
+        (uri.rawPath && !uri.rawPath.isEmpty()) || uri.port == 443 || uri.port == 0 || uri.port > 65535 ||
+        !(staffOrigin ==~ /https:\/\/[a-z0-9.\-]+(?::[1-9][0-9]{0,4})?/)) {
+        throw new GradleException("Staff origin must be a canonical HTTPS origin")
+    }
+    staffLoopback = uri.host.startsWith("127.") || uri.host == "localhost" || uri.host.endsWith(".localhost")
+}
+gradle.taskGraph.whenReady { graph ->
+    if (staffLoopback && graph.allTasks.any { it.project == project && (it.name.toLowerCase().contains("release") || it.name.toLowerCase().contains("profile")) }) {
+        throw new GradleException("Loopback staff access is debug-only")
+    }
+}
+
 android {
     namespace = "com.nightshift.app"
     compileSdk = 35
@@ -33,6 +62,7 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         buildConfigField "boolean", "ALLOW_DEBUG_SCREEN_CAPTURE", "false"
+        buildConfigField "String", "STAFF_CONSOLE_ORIGIN", '"' + staffOrigin + '"'
     }
 
     buildTypes {
@@ -47,6 +77,14 @@ android {
         release {
             // Production signing is intentionally not configured for a test milestone.
         }
+    }
+
+    // Generated local public CA only. No key, global trust change, or release
+    // source-set inclusion. The normal debug manifest works without this file.
+    def staffLocalDebug = file("src/staffLocalDebug")
+    if (new File(staffLocalDebug, "res/raw/nightshift_staff_dev_ca.pem").isFile()) {
+        sourceSets.debug.res.srcDir(new File(staffLocalDebug, "res"))
+        sourceSets.debug.manifest.srcFile(new File(staffLocalDebug, "AndroidManifest.xml"))
     }
 }
 
