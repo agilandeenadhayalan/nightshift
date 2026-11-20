@@ -353,6 +353,12 @@ void main() {
     ];
     await tapVisible(tester, find.text('Recents'));
     expect(find.text('Video call'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Audio call'), 220,
+        scrollable: find
+            .descendant(
+                of: find.byType(ListView), matching: find.byType(Scrollable))
+            .first);
+    await tester.pumpAndSettle();
     expect(find.text('Audio call'), findsOneWidget);
   });
 

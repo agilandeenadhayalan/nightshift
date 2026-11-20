@@ -8,6 +8,8 @@ import 'message_copy.dart';
 import 'state_widgets.dart';
 import 'video_preflight.dart';
 import 'video_view.dart';
+import 'discovery_view.dart';
+import '../core/discovery.dart';
 
 class PageBody extends StatelessWidget {
   const PageBody({super.key, required this.children});
@@ -294,9 +296,9 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(appControllerProvider);
-    final available = state.listeners
-        .where((l) => l.languages.contains(state.language))
-        .toList();
+    if (!state.isListener && state.snapshotLoaded) {
+      return DirectoryScreen(state: state);
+    }
     return RefreshIndicator(
         onRefresh: state.refresh,
         child: PageBody(children: [
@@ -357,160 +359,54 @@ class HomeScreen extends ConsumerWidget {
                     '3,600 கட்டண இணைப்பு விநாடிகளுக்கு ₹500. ஆறு கட்டண நிமிடங்கள் = ₹50. இது சோதனை மதிப்பீடு; உண்மையான பணம் அல்ல. காத்திருப்பு மற்றும் இணைப்பு இடைவெளிக்கு வருமானம் இல்லை.')),
             Text(state.text('Tamil · English • Manually approved test listener',
                 'தமிழ் · English • சோதனைக்காக அங்கீகரிக்கப்பட்ட கேட்பவர்')),
-          ] else ...[
-            Card(
-                child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                              state.text('Your test credits',
-                                  'உங்கள் சோதனை நாணயங்கள்'),
-                              style: Theme.of(context).textTheme.labelLarge),
-                          const SizedBox(height: 6),
-                          Text(creditAmount(state.balance - state.held),
-                              style:
-                                  Theme.of(context).textTheme.headlineMedium),
-                          Text(state.text(
-                              'Available coins • no purchase required',
-                              'கிடைக்கும் நாணயங்கள் • வாங்க வேண்டியதில்லை')),
-                        ]))),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-                value: state.language,
-                isExpanded: true,
-                decoration: InputDecoration(
-                    labelText:
-                        state.text('Conversation language', 'உரையாடல் மொழி')),
-                items: const [
-                  DropdownMenuItem(value: 'ta', child: Text('தமிழ் · Tamil')),
-                  DropdownMenuItem(value: 'en', child: Text('English'))
-                ],
-                onChanged: (value) => state.setLanguage(value!)),
-            const SizedBox(height: 16),
-            if (available.isEmpty && !state.offline && state.error == null)
-              StatusCard(
-                  title: state.text('No listeners available yet',
-                      'கேட்பவர்கள் தற்போது இல்லை'),
-                  message: state.text(
-                      'Ask the test Listener to go online on the other phone, then refresh.',
-                      'மற்ற தொலைபேசியில் கேட்பவரை ஆன்லைன் செல்லச் சொல்லி, புதுப்பிக்கவும்.'),
-                  action: OutlinedButton.icon(
-                      onPressed: state.refresh,
-                      icon: const Icon(Icons.refresh),
-                      label: Text(state.text('Refresh', 'புதுப்பி')))),
-            for (final listener in available)
-              Card(
-                  child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(children: [
-                              const CircleAvatar(
-                                  child: Icon(Icons.person_outline)),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                  child: Text(listener.name,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge))
-                            ]),
-                            const SizedBox(height: 12),
-                            Text(state.offline
-                                ? state.text('Availability unknown',
-                                    'கிடைக்கும் நிலை தெரியவில்லை')
-                                : listener.available
-                                    ? listener.videoRate != null &&
-                                            state.video != null
-                                        ? state.text(
-                                            '● Available for audio and video',
-                                            '● ஆடியோ மற்றும் வீடியோவிற்கு கிடைக்கிறார்')
-                                        : state.text('● Available for audio',
-                                            '● ஆடியோவிற்கு கிடைக்கிறார்')
-                                    : state.text('Busy or offline',
-                                        'பிஸியாக அல்லது ஆஃப்லைன்')),
-                            Text(listener.languages
-                                .map((l) => l == 'ta' ? 'தமிழ்' : 'English')
-                                .join(' · ')),
-                            const SizedBox(height: 8),
-                            Text(testRateLabel(state, listener.rate)),
-                            const SizedBox(height: 16),
-                            FilledButton.icon(
-                                onPressed: !listener.available ||
-                                        state.busy ||
-                                        state.offline
-                                    ? null
-                                    : () => showAudioCallConfirmation(
-                                        context, state, listener),
-                                icon: const Icon(Icons.call_outlined),
-                                label: Text(state.text('Call', 'அழை'),
-                                    semanticsLabel: state.text(
-                                        'Call ${listener.name}',
-                                        '${listener.name} அழைக்கவும்'))),
-                            if (listener.videoRate != null &&
-                                state.video != null) ...[
-                              const SizedBox(height: 12),
-                              Text(state.text(
-                                  'Video · ${testRateLabel(state, listener.videoRate!)}',
-                                  'வீடியோ · ${testRateLabel(state, listener.videoRate!)}')),
-                              OutlinedButton.icon(
-                                  onPressed: !listener.available ||
-                                          state.busy ||
-                                          state.offline
-                                      ? null
-                                      : () => _confirmVideoCall(
-                                          context, state, listener),
-                                  icon: const Icon(Icons.videocam_outlined),
-                                  label: Text(
-                                      state.text(
-                                          'Video call', 'வீடியோ அழைப்பு'),
-                                      semanticsLabel: state.text(
-                                          'Video call ${listener.name}',
-                                          '${listener.name} வீடியோ அழைப்பு'))),
-                            ],
-                          ]))),
           ],
         ]));
-  }
-
-  Future<void> _confirmVideoCall(BuildContext context, AppController state,
-      ListenerProfile listener) async {
-    final rate = listener.videoRate;
-    if (rate == null) return;
-    final agreed = await showVideoPreflight(context, state,
-        rate: rate,
-        confirmLabel:
-            state.text('Start video call', 'வீடியோ அழைப்பைத் தொடங்கு'));
-    if (agreed && context.mounted) {
-      await state.startCall(listener, video: true, cameraConsent: true);
-    }
   }
 }
 
 Future<void> showAudioCallConfirmation(
     BuildContext context, AppController state, ListenerProfile listener) async {
+  final owner = state.accountIdentity;
   final agreed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-            title: Text(state.text(
-                'Call ${listener.name}', '${listener.name} அழைக்கவும்')),
-            content: SingleChildScrollView(
-                child: Text('${testRateLabel(state, listener.rate)}\n\n'
-                    '${testTariffDescription(state, listener.rate)}\n\n'
-                    '${state.text('Both phones must keep the app open.', 'இரு செயலிகளும் திறந்திருப்பது அவசியம்.')}')),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(state.text('Cancel', 'ரத்து'))),
-              FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: Text(state.text(
-                      'Start audio call', 'ஆடியோ அழைப்பைத் தொடங்கு')))
-            ],
-          ));
-  if (agreed == true && context.mounted) await state.startCall(listener);
+      builder: (context) => AnimatedBuilder(
+          animation: state,
+          builder: (context, _) {
+            final available = owner == state.accountIdentity &&
+                state.canCallListener(listener) &&
+                !state.busy;
+            return AlertDialog(
+                title: Text(state.text(
+                    'Call ${listener.name}', '${listener.name} அழைக்கவும்')),
+                content: SingleChildScrollView(
+                    child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(
+                          '${testRateLabel(state, listener.rate)}\n\n${testTariffDescription(state, listener.rate)}\n\n${state.text('Both phones must keep the app open.', 'இரு செயலிகளும் திறந்திருப்பது அவசியம்.')}'),
+                      if (!available)
+                        Text(state.text(
+                            'Listener is no longer available. Refresh before calling.',
+                            'கேட்பவர் தற்போது கிடைக்கவில்லை. அழைப்பதற்கு முன் புதுப்பிக்கவும்.')),
+                    ])),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: Text(state.text('Cancel', 'ரத்து'))),
+                  FilledButton(
+                      onPressed:
+                          available ? () => Navigator.pop(context, true) : null,
+                      child: Text(state.text(
+                          'Start audio call', 'ஆடியோ அழைப்பைத் தொடங்கு'))),
+                ]);
+          }));
+  if (agreed == true &&
+      context.mounted &&
+      owner == state.accountIdentity &&
+      state.canCallListener(listener)) {
+    await state.startCall(listener);
+  }
 }
 
 class CallScreen extends ConsumerWidget {
@@ -595,7 +491,10 @@ class CallScreen extends ConsumerWidget {
                     radius: 48, child: Icon(Icons.person_outline, size: 48)),
               ],
               const SizedBox(height: 24),
-              Text(call.otherName(state.user!.id),
+              Text(
+                  !state.isListener && state.discovery.removed(call.listenerId)
+                      ? state.text('Unavailable listener', 'கிடைக்காத கேட்பவர்')
+                      : call.otherName(state.user!.id),
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 12),
@@ -884,9 +783,42 @@ class HistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _HistoryScreenState extends ConsumerState<HistoryScreen> {
+  bool _favorites = false, _measurePending = false;
+  late final Discovery _discovery;
+  final Map<String, GlobalKey> _recentKeys = {};
+  void _watchVisible() {
+    if (_measurePending) return;
+    _measurePending = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _measurePending = false;
+      if (!mounted || _favorites) return;
+      final state = ref.read(appControllerProvider);
+      if (state.isListener) return;
+      final viewport = context.findRenderObject();
+      if (viewport is! RenderBox || !viewport.hasSize) return;
+      final top = viewport.localToGlobal(Offset.zero).dy,
+          bottom = top + viewport.size.height;
+      final ids = <String>[];
+      for (final call in state.history) {
+        final box = _recentKeys[call.id]?.currentContext?.findRenderObject();
+        if (box is! RenderBox || !box.hasSize || !box.attached) continue;
+        final y = box.localToGlobal(Offset.zero).dy;
+        if (y < bottom && y + box.size.height > top) ids.add(call.listenerId);
+      }
+      state.discovery.watchRecents(ids);
+    });
+  }
+
+  @override
+  void dispose() {
+    _discovery.watchRecents([]);
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
+    _discovery = ref.read(appControllerProvider).discovery;
     Future.microtask(() {
       if (!mounted) return;
       final state = ref.read(appControllerProvider);
@@ -899,11 +831,49 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(appControllerProvider);
+    _watchVisible();
+    if (state.isListener) return _history(context, state);
+    return Column(children: [
+      Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          child: SegmentedButton<bool>(
+              segments: [
+                ButtonSegment(
+                    value: false,
+                    label: Text(
+                        state.text('Recent calls', 'சமீபத்திய அழைப்புகள்'))),
+                ButtonSegment(
+                    value: true,
+                    label: Text(state.text('Favorites', 'விருப்பமானவர்கள்')))
+              ],
+              selected: {
+                _favorites
+              },
+              onSelectionChanged: (value) {
+                state.discovery.watchRecents([]);
+                setState(() => _favorites = value.single);
+              })),
+      Expanded(
+          child: _favorites
+              ? DirectoryScreen(state: state, kind: DirectoryKind.favorites)
+              : NotificationListener<ScrollNotification>(
+                  onNotification: (_) {
+                    _watchVisible();
+                    return false;
+                  },
+                  child: _history(context, state))),
+    ]);
+  }
+
+  Widget _history(BuildContext context, AppController state) {
     final earned = state.history
         .where((c) => c.listenerId == state.user?.id)
         .fold<int>(0, (sum, call) => sum + call.earningPaise);
     return RefreshIndicator(
-        onRefresh: state.loadHistory,
+        onRefresh: () async {
+          await state.loadHistory();
+          await state.discovery.refreshRecents();
+        },
         child: PageBody(children: [
           const ErrorNotice(),
           Text(
@@ -960,6 +930,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       },
                       style: Theme.of(context).textTheme.titleMedium)),
             Card(
+                key: _recentKeys.putIfAbsent(call.id, GlobalKey.new),
                 child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: Column(
@@ -983,6 +954,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                             Text(state.text(
                                 'Test earnings ₹${(call.earningPaise / 100).toStringAsFixed(2)}',
                                 'சோதனை வருமானம் ₹${(call.earningPaise / 100).toStringAsFixed(2)}')),
+                          if (!state.isListener)
+                            RecentAvailability(
+                                state: state, listenerId: call.listenerId),
                           const SizedBox(height: 8),
                           SelectableText(
                               state.text('Call ID: ${call.id}',
@@ -1021,9 +995,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
 Future<void> showSafetyDialog(
     BuildContext context, AppController state, CallSession call) async {
+  final owner = state.accountIdentity;
   final result = await showDialog<(String, bool)>(
       context: context, builder: (context) => _SafetyDialog(controller: state));
-  if (result != null) {
+  if (result != null && owner == state.accountIdentity) {
     await state.submitSafety(call, result.$1, block: result.$2);
     if (context.mounted && state.error == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(

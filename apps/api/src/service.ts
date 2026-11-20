@@ -6,14 +6,18 @@ import { Actor } from './auth';
 import { Config } from './config';
 import { ApiError, requireThat, fields, object, string, uuid } from './errors';
 import { MICRO, TEST_RATE, TEST_VIDEO_RATE, testCharge, testEarning } from '@nightshift/backend-domain';
+import { Directory } from './directory';
 
 type Row = Record<string, any>;
 type Query = Pick<PoolClient, 'query'>;
 const dateMs = (value: unknown) => value ? new Date(value as string).getTime() : 0;
 const iso = (value: unknown) => value ? new Date(value as string).toISOString() : null;
 export class NightShiftService {
+  readonly directory:Directory;
   constructor(readonly db: Database, readonly presence: Presence, readonly config: Config,
-    private readonly clock: () => number = Date.now) {}
+    private readonly clock: () => number = Date.now) {
+    this.directory=new Directory(db,presence,()=>this.videoAvailable(),clock,(c,actor)=>this.liveOwner(c,actor));
+  }
 
   private videoAvailable() {
     return this.config.videoCallsEnabled === true
@@ -124,24 +128,12 @@ export class NightShiftService {
   async languages(actor: Actor, raw: unknown) {
     const body=object(raw); fields(body,['languages']);
     requireThat(Array.isArray(body.languages) && body.languages.length>0 && body.languages.length<=2 && body.languages.every(x=>['ta','en'].includes(x)),400,'INVALID_LANGUAGE','Select Tamil or English');
-    await this.db.pool.query('UPDATE users SET languages=$2 WHERE id=$1',[actor.id,[...new Set(body.languages)]]);
+    await this.db.tx(async c=>{await this.liveOwner(c,actor);await c.query('UPDATE users SET languages=$2 WHERE id=$1',[actor.id,[...new Set(body.languages as string[])]]);});
     return this.user(actor.id);
   }
-  async listeners(actorId: string, language = 'ta', cursor?: string) {
-    requireThat(['ta','en'].includes(language), 400, 'INVALID_LANGUAGE', 'Select Tamil or English');
-    if (cursor) uuid(cursor);
-    // Scan only a bounded, stable identity slice. Presence is Redis TTL state, not a DB heartbeat write.
-    const { rows } = await this.db.pool.query(`SELECT u.id,u.display_name,u.languages,
-      EXISTS(SELECT 1 FROM active_participant_claims a WHERE a.user_id=u.id) busy,
-      EXISTS(SELECT 1 FROM favorites f WHERE f.actor_id=$1 AND f.target_id=u.id) favorite
-      FROM users u WHERE u.id<>$1 AND u.listener_approved AND u.adult_confirmed AND NOT u.suspended
-      AND u.mode='listener' AND u.desired_online AND $2=ANY(u.languages)
-      AND ($3::uuid IS NULL OR u.id>$3) AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
-        (b.actor_id=$1 AND b.target_id=u.id) OR (b.target_id=$1 AND b.actor_id=u.id)) ORDER BY u.id LIMIT 21`, [actorId,language,cursor??null]);
-    const slice = rows.slice(0,20); const online = await this.reachable(slice.map(r=>r.id));
-    return { items: slice.filter(r=>online.has(r.id)).map(r=>({id:r.id,displayName:r.display_name,languages:r.languages,
-      online:true,available:!r.busy,busy:r.busy,favorite:r.favorite,testOnly:true,rate:TEST_RATE,
-      videoRate:this.videoAvailable()?TEST_VIDEO_RATE:null})), nextCursor: rows.length>20 ? slice.at(-1)!.id : null };
+  async listeners(actorId: string, language = 'ta') {
+    // Snapshot compatibility does not allocate/evict the scrolling client's view.
+    return this.directory.preview(actorId,language);
   }
   private async row(c: Query, actorId: string, id: string, lock=false): Promise<Row> {
     uuid(id);
@@ -367,21 +359,26 @@ export class NightShiftService {
     uuid(target);requireThat(target!==actor.id,400,'SELF_BLOCK','Cannot block yourself');
     await this.db.tx(async c=>{
       await c.query('SELECT id FROM users WHERE id=ANY($1::uuid[]) ORDER BY id FOR NO KEY UPDATE',[[actor.id,target]]);
+      await this.liveOwner(c,actor);
       const {rows}=await c.query("SELECT * FROM call_sessions WHERE ((customer_id=$1 AND listener_id=$2) OR (customer_id=$2 AND listener_id=$1)) AND state<>'ended' FOR UPDATE",[actor.id,target]);
       await c.query('INSERT INTO blocks(actor_id,target_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[actor.id,target]);
+      await c.query('DELETE FROM favorites WHERE (actor_id=$1 AND target_id=$2) OR (actor_id=$2 AND target_id=$1)',[actor.id,target]);
       for(const r of rows)await this.finish(c,r,'blocked',this.clock());
     });return {blocked:true};
   }
   async favorite(actor:Actor,target:string,enabled:boolean) {
     uuid(target);requireThat(target!==actor.id,400,'INVALID_TARGET','Choose another listener');
-    const {rows}=await this.db.pool.query('SELECT id FROM users WHERE id=$1 AND listener_approved AND NOT suspended',[target]);
-    requireThat(rows.length,404,'NOT_FOUND','Listener not found');
-    if(enabled){
-      const blocked=await this.db.pool.query('SELECT 1 FROM blocks WHERE (actor_id=$1 AND target_id=$2) OR (actor_id=$2 AND target_id=$1)',[actor.id,target]);
-      requireThat(!blocked.rowCount,403,'PAIR_BLOCKED','This listener is unavailable');
-    }
-    if(enabled)await this.db.pool.query('INSERT INTO favorites(actor_id,target_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[actor.id,target]);
-    else await this.db.pool.query('DELETE FROM favorites WHERE actor_id=$1 AND target_id=$2',[actor.id,target]);
+    await this.db.tx(async c=>{
+      const {rows}=await c.query('SELECT * FROM users WHERE id=ANY($1::uuid[]) ORDER BY id FOR NO KEY UPDATE',[[actor.id,target]]);
+      await this.liveOwner(c,actor);
+      if(enabled){
+        const listener=rows.find(r=>r.id===target);
+        requireThat(listener?.listener_approved&&listener.adult_confirmed&&!listener.suspended,404,'NOT_FOUND','Listener not found');
+        const blocked=await c.query('SELECT 1 FROM blocks WHERE (actor_id=$1 AND target_id=$2) OR (actor_id=$2 AND target_id=$1)',[actor.id,target]);
+        requireThat(!blocked.rowCount,403,'PAIR_BLOCKED','This listener is unavailable');
+        await c.query('INSERT INTO favorites(actor_id,target_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[actor.id,target]);
+      }else await c.query('DELETE FROM favorites WHERE actor_id=$1 AND target_id=$2',[actor.id,target]);
+    });
     return {favorite:enabled};
   }
   async report(actor:Actor,raw:unknown,key:unknown) {

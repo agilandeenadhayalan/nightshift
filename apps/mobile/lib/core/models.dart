@@ -98,17 +98,20 @@ class ListenerProfile {
       required this.name,
       required this.languages,
       required this.available,
+      this.busy = false,
+      this.favorite = false,
       this.rate = const CallRate.audio(),
       this.videoRate});
   factory ListenerProfile.fromJson(Json json) => ListenerProfile(
         id: json['id'] as String,
         name: json['displayName'] as String,
         languages: List<String>.from(json['languages'] ?? []),
-        available: json['available'] == true ||
-            json['status'] == 'available' ||
-            (!json.containsKey('available') &&
-                json['online'] == true &&
-                json['busy'] != true),
+        available: json['busy'] != true &&
+            (json.containsKey('available')
+                ? json['available'] == true
+                : json['status'] == 'available' || json['online'] == true),
+        busy: json['busy'] == true,
+        favorite: json['favorite'] == true,
         rate: _callRate({'rate': json['rate']}),
         videoRate: json['videoRate'] == null
             ? null
@@ -116,7 +119,16 @@ class ListenerProfile {
       );
   final String id, name;
   final List<String> languages;
-  final bool available;
+  final bool available, busy, favorite;
+  ListenerProfile withFavorite(bool value) => ListenerProfile(
+      id: id,
+      name: name,
+      languages: languages,
+      available: available,
+      busy: busy,
+      favorite: value,
+      rate: rate,
+      videoRate: videoRate);
   final CallRate rate;
   final CallRate? videoRate;
 }

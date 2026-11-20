@@ -225,6 +225,51 @@ class FakeApi extends NightShiftApi {
         {'method': method, 'path': path, 'body': body, 'key': idempotencyKey});
     final intercepted = await interceptor?.call(method, path, body);
     if (intercepted != null) return intercepted;
+    final uri = Uri.parse(path);
+    if (method == 'GET' &&
+        (uri.path == '/listeners' || uri.path == '/favorites')) {
+      return {
+        'items': directory
+            .where((row) =>
+                (row['languages'] as List)
+                    .contains(uri.queryParameters['language']) &&
+                (uri.queryParameters['availableOnly'] != 'true' ||
+                    row['available'] == true) &&
+                (uri.path != '/favorites' || row['favorite'] == true))
+            .take(20)
+            .map(directoryCard)
+            .toList(),
+        'nextCursor': null,
+        'viewEpoch': 'fixture-view',
+        'serverTime': DateTime.now().toUtc().toIso8601String(),
+        'expiresAt': DateTime.now()
+            .toUtc()
+            .add(const Duration(minutes: 5))
+            .toIso8601String(),
+        'truncated': false
+      };
+    }
+    if (path == '/listeners/status') {
+      final ids = List<String>.from(body!['listenerIds'] as List);
+      final found = directory
+          .where((row) =>
+              ids.contains(row['id']) &&
+              (row['languages'] as List).contains(body['language']))
+          .toList();
+      return {
+        'items': found.map(directoryCard).toList(),
+        'removedIds':
+            ids.where((id) => !found.any((row) => row['id'] == id)).toList(),
+        'serverTime': DateTime.now().toUtc().toIso8601String()
+      };
+    }
+    if (path.startsWith('/favorites/')) {
+      final id = uri.pathSegments.last, value = method == 'PUT';
+      directory = directory
+          .map((row) => row['id'] == id ? {...row, 'favorite': value} : row)
+          .toList();
+      return {'favorite': value};
+    }
     if (path == '/auth/dev') {
       return {'token': 'test-session-token', 'user': user};
     }
@@ -295,3 +340,11 @@ class FakeApi extends NightShiftApi {
     return {};
   }
 }
+
+Json directoryCard(Json value) => {
+      'online': value['available'] == true,
+      'busy': false,
+      'favorite': false,
+      'rate': rateJson(),
+      ...value
+    };

@@ -107,6 +107,7 @@
 - [x] Publish the original Task 4 evidence/PR package and start remote CI tracking on #73. Remote pass/failure remains the live Checks result.
 - [x] Verify Blaze and the saved ₹5,000 monthly alerts-only budget. My Billing Account 3 is linked after Account 2 reached its linked-project quota; actual-spend alerts are 50%/90%/100%. Console displays a 1,000 sent-SMS/day quota, matching the owner's daily operating maximum.
 - [x] Create the owner-authorized dedicated Firebase verifier identity with only `firebaseauth.users.get` and service-account-scoped short-lived access-token permission. The owner will test on their own Indian SIM.
-- [ ] Complete isolated server credential authorization and verify Admin access, then complete consented real-SIM tests within both approved limits. Budget alerts and app admissions do not enforce an SMS spending cutoff.
+- [x] Complete isolated server credential authorization in Opera and verify Admin read access without creating a service-account key.
+- [ ] Complete consented real-SIM delivery, native token exchange and revocation tests within both approved limits. The isolated baseline server and both phone installs are ready. Budget alerts and app admissions do not enforce an SMS spending cutoff.
 
 The earlier account checkpoint is committed as `9e853bb`; its preserved APK and 213 Flutter tests are historical evidence. Current native-flow evidence is recorded in Account_Application_Verification.md. No product issue is closed solely because its local engineering subset passes.

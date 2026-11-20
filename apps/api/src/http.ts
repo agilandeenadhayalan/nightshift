@@ -14,6 +14,7 @@ import { createPhoneAuthentication, PhoneAuthentication, PhoneAuthDependencies }
 import { Onboarding } from './identity/onboarding';
 import { AccountLifecycle } from './account-lifecycle';
 import { ListenerApplications, LocalReviewStorage } from './listener-applications';
+import { DirectorySubscription } from './directory';
 
 type AuthenticatedRequest=Request & {actor:Actor;requestId:string};
 @Injectable()
@@ -107,7 +108,13 @@ class AppController {
   @Put('me/availability') availability(@Req() req:AuthenticatedRequest,@Body() body:unknown){return this.service.availability(req.actor,body);}
   @Put('me/languages') languages(@Req() req:AuthenticatedRequest,@Body() body:unknown){return this.service.languages(req.actor,body);}
   @Post('presence/heartbeat') heartbeat(@Req() req:AuthenticatedRequest){return this.service.heartbeat(req.actor);}
-  @Get('listeners') listeners(@Req() req:AuthenticatedRequest,@Query('language') language?:string,@Query('cursor') cursor?:string){return this.service.listeners(req.actor.id,language,cursor);}
+  @Get('listeners') listeners(@Req() req:AuthenticatedRequest,@Query('language') language?:string,@Query('cursor') cursor?:string,@Query('availableOnly') availableOnly?:string){return this.directoryPage(req,false,language,cursor,availableOnly);}
+  @Get('favorites') favorites(@Req() req:AuthenticatedRequest,@Query('language') language?:string,@Query('cursor') cursor?:string,@Query('availableOnly') availableOnly?:string){return this.directoryPage(req,true,language,cursor,availableOnly);}
+  private directoryPage(req:AuthenticatedRequest,favorites:boolean,language?:string,cursor?:string,availableOnly?:string){
+    requireThat(availableOnly===undefined||availableOnly==='true'||availableOnly==='false',400,'INVALID_FIELD','availableOnly must be true or false');
+    return this.service.directory.page(req.actor,{language,cursor,availableOnly:availableOnly==='true'},favorites);
+  }
+  @Post('listeners/status') listenerStatuses(@Req() req:AuthenticatedRequest,@Body() body:unknown){return this.service.directory.statuses(req.actor,body);}
   @Get('calls') history(@Req() req:AuthenticatedRequest,@Query('cursor') cursor?:string){return this.service.history(req.actor.id,cursor);}
   @Get('calls/:id') call(@Req() req:AuthenticatedRequest,@Param('id') id:string){return this.service.call(req.actor.id,id);}
   @Post('calls') create(@Req() req:AuthenticatedRequest,@Body() body:unknown){return this.service.createCall(req.actor,body,req.headers['idempotency-key']);}
@@ -157,7 +164,37 @@ export async function createApplication(config:Config,clock:()=>number=Date.now,
     try{socket.data.actor=await auth.authenticate(socket.handshake.auth.token);socket.data.token=socket.handshake.auth.token;next();}
     catch{next(new Error('UNAUTHENTICATED'));}
   });
-  io.on('connection',socket=>{socket.join(`user:${(socket.data.actor as Actor).id}`);});
+  io.on('connection',socket=>{
+    socket.join(`user:${(socket.data.actor as Actor).id}`);
+    socket.data.directoryRevision=0;socket.data.directoryPending=false;
+    type SubscriptionRequest={raw:unknown;revision:number;reply:(value:unknown)=>void};
+    let queued:SubscriptionRequest|undefined;
+    const validateNext=()=>{
+      if(socket.data.directoryPending||!queued||!socket.connected)return;
+      const {raw,revision,reply}=queued;queued=undefined;
+      socket.data.directoryPending=true;
+      void(async()=>{
+        try{
+          const actor=await auth.authenticate(socket.data.token);
+          const subscription=await service.directory.subscribe(actor,raw);
+          if(!socket.connected)return;
+          if(revision!==socket.data.directoryRevision){reply({ok:false,code:'DIRECTORY_SUBSCRIPTION_SUPERSEDED'});return;}
+          socket.data.directory=subscription;socket.data.directoryFingerprint=undefined;socket.data.directorySentAt=0;
+          reply({ok:true,viewEpoch:subscription?.viewEpoch??null});
+        }catch(error){if(socket.connected)reply({ok:false,code:revision!==socket.data.directoryRevision?'DIRECTORY_SUBSCRIPTION_SUPERSEDED':error instanceof ApiError?error.code:'SERVICE_UNAVAILABLE'});}
+        finally{socket.data.directoryPending=false;validateNext();}
+      })();
+    };
+    socket.on('directory.subscribe',(raw:unknown,ack?:unknown)=>{
+      const reply=(value:unknown)=>{if(typeof ack==='function')ack(value);};
+      // Invalidate the old slice immediately. Coalesce rapid scroll/filter
+      // changes into one latest request behind at most one active validation.
+      const revision=++socket.data.directoryRevision;socket.data.directory=undefined;
+      queued?.reply({ok:false,code:'DIRECTORY_SUBSCRIPTION_SUPERSEDED'});
+      queued={raw,revision,reply};validateNext();
+    });
+    socket.on('disconnect',()=>{++socket.data.directoryRevision;socket.data.directory=undefined;queued=undefined;});
+  });
   let running=false;
   const timer=setInterval(()=>void(async()=>{
     if(running)return;running=true;
@@ -180,16 +217,45 @@ export async function createApplication(config:Config,clock:()=>number=Date.now,
       io.emit('service.unavailable',{code:'SERVICE_UNAVAILABLE'});
     }finally{running=false;}
   })(),1000);timer.unref();
+  // Directory reads cannot hold up call recovery or durable call delivery.
+  // Four workers cap the extra DB/provider concurrency; passes never overlap.
+  let directoryRunning=false;
+  const directoryTimer=setInterval(()=>void(async()=>{
+    if(directoryRunning)return;directoryRunning=true;
+    try{
+      const pending=[...io.sockets.sockets.values()].filter(socket=>socket.data.directory);let next=0;
+      await Promise.all(Array.from({length:Math.min(4,pending.length)},async()=>{
+        while(next<pending.length){
+          const socket=pending[next++]!;
+          const subscription=socket.data.directory as DirectorySubscription|undefined;
+          if(!socket.connected||!subscription)continue;
+          const revision=socket.data.directoryRevision;
+          try{
+            const actor=await auth.authenticate(socket.data.token);
+            const update=await service.directory.updates(actor,subscription);
+            if(!socket.connected||revision!==socket.data.directoryRevision)continue;
+            const fingerprint=JSON.stringify({items:update.items,removedIds:update.removedIds});
+            if(fingerprint!==socket.data.directoryFingerprint||clock()-socket.data.directorySentAt>=15000){
+              socket.emit('directory.updated',update);socket.data.directoryFingerprint=fingerprint;socket.data.directorySentAt=clock();
+            }
+          }catch(error){
+            if(socket.connected&&revision===socket.data.directoryRevision){socket.data.directory=undefined;
+              socket.emit('directory.invalidated',{viewEpoch:subscription.viewEpoch,code:error instanceof ApiError?error.code:'SERVICE_UNAVAILABLE'});}
+          }
+        }
+      }));
+    }finally{directoryRunning=false;}
+  })(),1000);directoryTimer.unref();
   // Privacy recovery is bounded and independent of the call/media control loop.
   let privacyRunning=false;
   const privacyTimer=setInterval(()=>void(async()=>{
     if(privacyRunning)return;privacyRunning=true;
     try{
       // Each recovery pass gets a chance even when the other storage boundary fails.
-      await Promise.allSettled([lifecycle.processPending(),applications.sweepExpiredUploads()]);
+      await Promise.allSettled([lifecycle.processPending(),applications.sweepExpiredUploads(),service.directory.cleanupExpired()]);
     }catch{/* Retry durable work on the next tick; never log private records. */}
     finally{privacyRunning=false;}
   })(),30000);privacyTimer.unref();
   await app.init();
-  return {app,db,presence,auth,service,phone,lifecycle,applications,async close(){clearInterval(timer);clearInterval(privacyTimer);await io.close();await app.close();await phone.close();await presence.close();await db.close();}};
+  return {app,db,presence,auth,service,phone,lifecycle,applications,async close(){clearInterval(timer);clearInterval(directoryTimer);clearInterval(privacyTimer);await io.close();await app.close();await phone.close();await presence.close();await db.close();}};
 }

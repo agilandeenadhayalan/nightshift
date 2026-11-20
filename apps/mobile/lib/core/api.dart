@@ -228,7 +228,16 @@ class NightShiftApi {
       case 'GET /listeners':
         return api.listListeners(
             language: uri.queryParameters['language'],
+            availableOnly: uri.queryParameters['availableOnly'] == 'true',
             cursor: uri.queryParameters['cursor']);
+      case 'GET /favorites':
+        return api.listFavorites(
+            language: uri.queryParameters['language'],
+            availableOnly: uri.queryParameters['availableOnly'] == 'true',
+            cursor: uri.queryParameters['cursor']);
+      case 'POST /listeners/status':
+        return api.getListenerStatuses(
+            generated.ListenerStatusRequest.fromJson(data)!);
       case 'GET /calls':
         return api.listCalls(cursor: uri.queryParameters['cursor']);
       case 'POST /calls':

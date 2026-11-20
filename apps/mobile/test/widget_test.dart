@@ -30,7 +30,7 @@ void main() {
     expect(find.text('Discover'), findsOneWidget);
     expect(find.text('Recents'), findsOneWidget);
     expect(find.text('Profile'), findsOneWidget);
-    expect(find.text('No listeners available yet'), findsOneWidget);
+    expect(find.text('No listeners match this filter'), findsOneWidget);
     await tester.tap(find.text('Recents'));
     await tester.pumpAndSettle();
     expect(find.text('No completed calls yet'), findsOneWidget);

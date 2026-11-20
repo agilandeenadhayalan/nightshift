@@ -1026,6 +1026,59 @@ class DefaultApi {
     return null;
   }
 
+  /// Current status for at most 40 own favorites, served view members or historical Listener counterparts. Unknown/ineligible IDs are removed without revealing account details. Historical call outcomes are separate.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [ListenerStatusRequest] listenerStatusRequest (required):
+  Future<Response> getListenerStatusesWithHttpInfo(ListenerStatusRequest listenerStatusRequest, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/listeners/status';
+
+    // ignore: prefer_final_locals
+    Object? postBody = listenerStatusRequest;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Current status for at most 40 own favorites, served view members or historical Listener counterparts. Unknown/ineligible IDs are removed without revealing account details. Historical call outcomes are separate.
+  ///
+  /// Parameters:
+  ///
+  /// * [ListenerStatusRequest] listenerStatusRequest (required):
+  Future<ListenerStatuses?> getListenerStatuses(ListenerStatusRequest listenerStatusRequest, { Future<void>? abortTrigger, }) async {
+    final response = await getListenerStatusesWithHttpInfo(listenerStatusRequest, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ListenerStatuses',) as ListenerStatuses;
+    
+    }
+    return null;
+  }
+
   /// Performs an HTTP 'GET /v1/me' operation and returns the [Response].
   Future<Response> getMeWithHttpInfo({ Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
@@ -1521,15 +1574,20 @@ class DefaultApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /v1/listeners' operation and returns the [Response].
+  /// Private favorite listeners with current eligibility and presence, using the same frozen-view pagination as Discover.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] language:
   ///
+  /// * [bool] availableOnly:
+  ///
   /// * [String] cursor:
-  Future<Response> listListenersWithHttpInfo({ String? language, String? cursor, Future<void>? abortTrigger, }) async {
+  Future<Response> listFavoritesWithHttpInfo({ String? language, bool? availableOnly, String? cursor, Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
-    final path = r'/v1/listeners';
+    final path = r'/v1/favorites';
 
     // ignore: prefer_final_locals
     Object? postBody;
@@ -1540,6 +1598,9 @@ class DefaultApi {
 
     if (language != null) {
       queryParams.addAll(_queryParams('', 'language', language));
+    }
+    if (availableOnly != null) {
+      queryParams.addAll(_queryParams('', 'availableOnly', availableOnly));
     }
     if (cursor != null) {
       queryParams.addAll(_queryParams('', 'cursor', cursor));
@@ -1560,13 +1621,88 @@ class DefaultApi {
     );
   }
 
+  /// Private favorite listeners with current eligibility and presence, using the same frozen-view pagination as Discover.
+  ///
   /// Parameters:
   ///
   /// * [String] language:
   ///
+  /// * [bool] availableOnly:
+  ///
   /// * [String] cursor:
-  Future<ListenerPage?> listListeners({ String? language, String? cursor, Future<void>? abortTrigger, }) async {
-    final response = await listListenersWithHttpInfo(language: language, cursor: cursor, abortTrigger: abortTrigger,);
+  Future<ListenerPage?> listFavorites({ String? language, bool? availableOnly, String? cursor, Future<void>? abortTrigger, }) async {
+    final response = await listFavoritesWithHttpInfo(language: language, availableOnly: availableOnly, cursor: cursor, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ListenerPage',) as ListenerPage;
+    
+    }
+    return null;
+  }
+
+  /// Twenty-card pages from a five-minute owner/filter-bound frozen view. Live eligibility is rechecked without reranking; refresh creates a new view. At most four active views per owner and 2000 IDs per view. A truncated view must not be presented as complete or as proof of no language supply.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [String] language:
+  ///
+  /// * [bool] availableOnly:
+  ///
+  /// * [String] cursor:
+  Future<Response> listListenersWithHttpInfo({ String? language, bool? availableOnly, String? cursor, Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/listeners';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    if (language != null) {
+      queryParams.addAll(_queryParams('', 'language', language));
+    }
+    if (availableOnly != null) {
+      queryParams.addAll(_queryParams('', 'availableOnly', availableOnly));
+    }
+    if (cursor != null) {
+      queryParams.addAll(_queryParams('', 'cursor', cursor));
+    }
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Twenty-card pages from a five-minute owner/filter-bound frozen view. Live eligibility is rechecked without reranking; refresh creates a new view. At most four active views per owner and 2000 IDs per view. A truncated view must not be presented as complete or as proof of no language supply.
+  ///
+  /// Parameters:
+  ///
+  /// * [String] language:
+  ///
+  /// * [bool] availableOnly:
+  ///
+  /// * [String] cursor:
+  Future<ListenerPage?> listListeners({ String? language, bool? availableOnly, String? cursor, Future<void>? abortTrigger, }) async {
+    final response = await listListenersWithHttpInfo(language: language, availableOnly: availableOnly, cursor: cursor, abortTrigger: abortTrigger,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

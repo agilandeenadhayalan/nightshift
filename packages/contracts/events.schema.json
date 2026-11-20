@@ -365,11 +365,173 @@
             "null"
           ],
           "format": "uuid"
+        },
+        "viewEpoch": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "truncated": {
+          "type": "boolean"
         }
       },
       "required": [
         "items",
-        "nextCursor"
+        "nextCursor",
+        "viewEpoch",
+        "expiresAt",
+        "serverTime",
+        "truncated"
+      ],
+      "additionalProperties": false
+    },
+    "ListenerStatusRequest": {
+      "type": "object",
+      "properties": {
+        "language": {
+          "type": "string",
+          "enum": [
+            "ta",
+            "en"
+          ]
+        },
+        "listenerIds": {
+          "type": "array",
+          "maxItems": 40,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "required": [
+        "language",
+        "listenerIds"
+      ],
+      "additionalProperties": false
+    },
+    "ListenerStatuses": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Listener"
+          }
+        },
+        "removedIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "serverTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "items",
+        "removedIds",
+        "serverTime"
+      ],
+      "additionalProperties": false
+    },
+    "DirectorySubscription": {
+      "type": "object",
+      "properties": {
+        "viewEpoch": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "language": {
+          "type": "string",
+          "enum": [
+            "ta",
+            "en"
+          ]
+        },
+        "visibleIds": {
+          "type": "array",
+          "maxItems": 40,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "required": [
+        "viewEpoch",
+        "language",
+        "visibleIds"
+      ],
+      "additionalProperties": false
+    },
+    "DirectoryUpdate": {
+      "type": "object",
+      "properties": {
+        "viewEpoch": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "language": {
+          "type": "string",
+          "enum": [
+            "ta",
+            "en"
+          ]
+        },
+        "serverTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Listener"
+          }
+        },
+        "removedIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "required": [
+        "viewEpoch",
+        "language",
+        "serverTime",
+        "items",
+        "removedIds"
+      ],
+      "additionalProperties": false
+    },
+    "DirectoryInvalidated": {
+      "type": "object",
+      "properties": {
+        "viewEpoch": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "code": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "viewEpoch",
+        "code"
       ],
       "additionalProperties": false
     },
@@ -1278,5 +1440,19 @@
       "additionalProperties": false
     }
   },
-  "$ref": "#/$defs/Event"
+  "$ref": "#/$defs/Event",
+  "x-socket-events": {
+    "directory.subscribe": {
+      "schema": "#/$defs/DirectorySubscription",
+      "description": "Authenticated websocket auth.token; replaces the slice. null or empty visibleIds unsubscribes. ACK {ok:true,viewEpoch} or {ok:false,code}. Only served members of this owner/language epoch are accepted."
+    },
+    "directory.updated": {
+      "schema": "#/$defs/DirectoryUpdate",
+      "description": "Only the subscribed visible IDs. Live status changes immediately; preserve order until explicit refresh. Changed payloads checked each second; freshness at least every 15 seconds while healthy."
+    },
+    "directory.invalidated": {
+      "schema": "#/$defs/DirectoryInvalidated",
+      "description": "Expired, denied or unavailable subscription; mark stale and refresh explicitly."
+    }
+  }
 }
