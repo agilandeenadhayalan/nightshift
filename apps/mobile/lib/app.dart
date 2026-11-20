@@ -10,6 +10,7 @@ import 'features/state_widgets.dart';
 import 'features/account_screens.dart';
 import 'features/privacy_screens.dart';
 import 'features/listener_application_screen.dart';
+import 'features/staff_workspace_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final state = ref.read(appControllerProvider);
@@ -55,6 +56,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
       GoRoute(path: '/call', builder: (_, __) => const CallScreen()),
       GoRoute(path: '/privacy', builder: (_, __) => const PrivacyScreen()),
+      GoRoute(path: '/staff', builder: (_, __) => const StaffWorkspaceScreen()),
       GoRoute(
           path: '/listener-application',
           builder: (_, __) => const ListenerApplicationScreen()),

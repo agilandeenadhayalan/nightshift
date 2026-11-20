@@ -1,0 +1,63 @@
+# Embedded staff access
+
+Continuation of #10, recorded 21 November 2026. The owner selected SMS OTP-only, the Redmi account for reviewer/access-administrator permissions, and staff pages inside NightShift. Customer and Listener remain the two app modes. This slice does not approve a Listener application or implement the review workflow in #14.
+
+## Identity and authorization
+
+The real Firebase Admin adapter verifies the existing registered phone identity and its current provider state. Native challenge/exchange require the exact current app bearer; a customer identity alone receives no staff privileges. A provisioned staff principal must match the provider subject and canonical app user. Staff sessions carry the source app user, device, phone binding and authentication lineage. Every authorization rechecks that lineage under the staff-principal lock followed by all involved app-user locks in sorted order. Logout, device replacement, suspension and deletion therefore invalidate the source authority; refreshed tokens in the same active lineage do not manufacture a new phone verification.
+
+The initial private engineering policy uses a 30-minute maximum staff session, phone authentication no older than one hour, and two-minute single-use challenges. Opening staff access refreshes the native ID token and registers it through the existing app session path. It never sends an SMS automatically. Expired authentication or explicit staff sign-out requires the owner to complete phone sign-in again; refreshing a token does not manufacture a new phone authentication time. The native screen explains this for both fresh-authentication and staff-session rejection codes. Recovery/backup and production policy approval remain separate owner decisions.
+
+An authenticated access request returns only an opaque request reference and canonical account reference. It does not create a principal or grant. The offline provisioning command requires both exact references and explicit permissions, defaults to a read-only preview, and rechecks provider identity and live source lineage before applying. Initial allowed permissions are `listener.review.read`, `listener.review.evidence.read`, `listener.review.decide` and `staff.access.manage`; this slice has no browser grant/revoke UI. Pending enrollment data expires after one hour, is removed by bounded cleanup, and is erased when its app owner is suspended or loses adulthood eligibility. Separate staff authority/audit history follows the still-unresolved retention policy.
+
+## Native and browser boundary
+
+Firebase proof stays in the native HTTP client. It reaches only four allowlisted native proxy operations over the fixed HTTPS staff origin. That transport refuses redirects, bounds bodies and deadlines, and forwards the app bearer only on those operations. The browser session routes remain cookie-only.
+
+Android receives only the validated opaque session capability, bounded expiry and account generation. Its dedicated MethodChannel reconstructs the fixed-name host-only Secure/HttpOnly/SameSite=Strict cookie; it is not callable from web JavaScript. Cookie writes and cleanup are serialized through actual native callbacks. A callback timeout does not free the operation slot, and stale generations cannot install after newer cleanup. The WebView then opens a credential-free fixed URL. Account changes, backgrounding and logout hide the page and invalidate outstanding work. Native restrictions deny external navigation, file/content access, browser permissions and TLS-error bypasses.
+
+The Next page uses a fresh server nonce for scripts/styles and restricts resources and connections to its own origin. This matters because cookies are host-scoped, not port-scoped. Production browser checks verify hydration, injected-script rejection and blocked requests to a second port, alongside expiry, logout and 200% text layout. The nonce implementation follows the [Next.js CSP guide](https://nextjs.org/docs/app/guides/content-security-policy).
+
+## Private HTTPS device setup
+
+`scripts/prepare-staff-local-https.ps1` generates a private development CA and seven-day localhost certificate under `%LOCALAPPDATA%/NightShift/staff-local-https`, with restricted filesystem access. It copies only the public CA into the ignored `apps/mobile/android/app/src/staffLocalDebug` overlay. The optional overlay is included only by the Android debug source set, scopes the extra trust anchor to `127.0.0.1`, and preserves the existing debug customer API loopback connection. It changes no OS trust store. Profile/release reject a loopback staff origin and do not include that resource source set.
+
+The dedicated Dart HTTP client uses that public CA only in debug, with normal certificate-chain and hostname verification. It does not change the global trust context or accept invalid certificates. Android trust behavior is based on [Network Security Configuration](https://developer.android.com/privacy-and-security/security-config).
+
+Use the repository's Node24 toolchain and these explicit local-only settings in a private environment:
+
+```
+STAFF_CONSOLE_ORIGIN=https://127.0.0.1:3443
+STAFF_LOCAL_TLS_DIR=<absolute private certificate directory>
+STAFF_API_BASE_URL=http://127.0.0.1:3001
+```
+
+After building the admin app, `npm run start:local-https --workspace @nightshift/admin` binds only `127.0.0.1:3443`. The wrapper rejects a different Host and uses existing certificate files. It does not call mkcert or install system trust. Phone testing additionally requires USB reverse for port3443 and an APK compiled with the same `STAFF_CONSOLE_ORIGIN`.
+
+Backend activation separately requires `STAFF_AUTH_ENABLED=true`, native Firebase phone configuration, a private stable `STAFF_AUTH_DIGEST_KEY`, an explicit `STAFF_AUTH_POLICY_VERSION` and `STAFF_SESSION_SECONDS` between60 and1800. These values do not provision an account. Keep all private configuration, database snapshots and provider identifiers outside Git.
+
+## Verification and remaining evidence
+
+The preceding [PR #76](https://github.com/agilandeenadhayalan/nightshift/pull/76) passed all three CI jobs at `b37378549507717cb4f5706704aca876ba59a1ea`; its hourly quota regression now uses a deterministic clock and tests the reset boundary. This continuation has the following evidence; all artifacts are ignored and contain synthetic test output or non-sensitive build metadata.
+
+| Check | Recorded result |
+| --- | --- |
+| Backend regression before final challenge cleanup | 230/230, zero failures/skips; `staff-native-integration-final.log` |
+| Final challenge privacy/lock correction | A real PostgreSQL deadlock was reproduced, then47/47 native/foundation/schema checks passed; `staff-challenge-lock-before.log`, `staff-challenge-lock-after.log` |
+| API units/build | 43/43 and TypeScript compile; native provider checks use signed synthetic SDK fixtures, not real SMS |
+| Flutter | Analyzer clean, 316/316 tests; `embedded-staff-mobile.log` |
+| Android cookie coordinator | 14 policy/callback/generation checks; Kotlin debug compilation passed; `staff-native-compile.log` |
+| Admin build/contracts/transport | 22/22 plus production build/typecheck; `staff-native-admin-final.log` |
+| Actual Chromium | 8/8, including enforced CSP and large-text font variants; `staff-native-admin-browser.log` |
+| Repository validation | Secret/contract/boundary checks and11 tooling checks; `staff-embedded-repo-final.log` |
+| Private TLS | Normal trust and hostname validation, exact Host and loopback listener; `staff-local-tls-evidence.json` |
+| Configured Android APK | ARM64 debug build passed, signature/package verified and173 source inputs unchanged; `embedded-staff-build-record.json` |
+| Release/profile exclusion | Both loopback build dry runs reject before app tasks; `embedded-staff-release-guard.log`, `embedded-staff-profile-guard.log` |
+
+The final cleanup removes expired challenge identity bindings after two minutes while preserving anonymous rate-window accounting until one hour; deletion removes its owner's binding immediately. Owner locks now precede challenge rows consistently. The first230-test full run precedes these changes; the47 focused checks and subsequent exact-head CI supply their separate evidence. Independent native, backend and proxy/TLS source reviews found no remaining blocker in this slice.
+
+The initial configured APK is `artifacts/nightshift-firebase-staff-arm64.apk`,162861624bytes, SHA256 `eb6de493e791c0c98c5eac8d7b53d25105e4dcbc1e602eac77caa0578bf289c4`. Its package is `com.nightshift.app`, ARM64 versionCode4002, minSDK23/target35. The merged manifest keeps backups disabled and includes only the debug network configuration; its public CA matches the generated overlay. A follow-up corrects the fresh-sign-in explanation after staff logout, with7 focused UI/controller checks and a clean analyzer. Its separate APK/build record must match the follow-up commit before installation; the initial APK was not installed. Installation and live staff results are separate from build evidence.
+
+The local HTTPS check accepted the trusted certificate, rejected an untrusted CA and a wrong hostname, and returned421 for a wrong Host. The listener was confirmed bound to loopback and stopped after that check. No real staff grant or phone-runtime migration was used for those checks.
+
+The authenticated Redmi access-request reference, explicit provisioning, actual embedded-phone session/revocation checks and review criteria remain acceptance gates. A successful synthetic test or compiled APK does not establish those outcomes. See [staff review plan](Staff_Review_Plan.md) for the separate #14 work.

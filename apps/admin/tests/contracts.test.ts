@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {Ajv2020} from 'ajv/dist/2020.js';
 import formats from 'ajv-formats';
-import {sessionValue, statusValue} from '../src/lib/staff-contract.ts';
+import {accessRequestValue, sessionValue, statusValue} from '../src/lib/staff-contract.ts';
 import {proxyStaff} from '../src/server/transport.ts';
 const require = createRequire(import.meta.url);
 const contract = require('@nightshift/contracts/staff.openapi.json');
@@ -30,6 +30,18 @@ test('both staff status responses require explicit reasonCode', () => {
     assert.ok(schema(value)); assert.ok(statusValue(value));
     const missing = {configured: value.configured, available: value.available};
     assert.equal(schema(missing), false); assert.equal(statusValue(missing), false);
+  }
+});
+test('native receipt and explicit access-administration permission match the separate public schema', () => {
+  const authority = {...session, permissions: ['staff.access.manage']};
+  assert.ok(validate('StaffSession')(authority)); assert.ok(sessionValue(authority));
+  const schema = validate('StaffAccessRequest');
+  const receipt = {requestId: session.staff.id, accountReference: 'a874c564-4701-445c-a090-cceab31ba9c9', status: 'pending', expiresAt: session.expiresAt};
+  for (const status of ['pending', 'provisioned']) {
+    const value = {...receipt, status}; assert.ok(schema(value)); assert.ok(accessRequestValue(value));
+  }
+  for (const broken of [{...receipt, status: 'admin'}, {...receipt, providerSubject: 'private'}, {...receipt, requestId: 'invalid'}]) {
+    assert.equal(schema(broken), false); assert.equal(accessRequestValue(broken), false);
   }
 });
 test('challenge and sanitized proxy errors conform to public staff contract', async () => {

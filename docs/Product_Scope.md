@@ -6,7 +6,7 @@ Decision source: owner instructions in the implementation request and `NightShif
 
 ## Agreed engineering scope
 
-NightShift is one Android application, built in one Flutter project with one Android application ID. It has exactly two user-facing modes: **Customer** and **Listener**. Both modes use one shared NestJS backend and PostgreSQL database. Staff review, finance and moderation tools remain separate from the mobile app. Listener entitlement is a server decision; switching a screen does not grant it.
+NightShift is one Android application, built in one Flutter project with one Android application ID. It has exactly two user-facing modes: **Customer** and **Listener**. Both modes use one shared NestJS backend and PostgreSQL database. Staff review, finance and moderation retain separate authorization. The owner requested their web pages inside the mobile app's built-in browser; this does not add a customer-facing mode. Listener entitlement is a server decision; switching a screen does not grant it.
 
 The product is adult, one-to-one paid conversation with approved listeners, initially in Tamil and English. It is not a professional care service and does not promise romance, friendship, income or listener availability. The current implementation milestone uses fictional test identities and test credits only. No purchase, payout or public launch is authorized by completing a development demo.
 

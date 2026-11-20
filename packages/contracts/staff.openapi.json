@@ -58,7 +58,7 @@
             }
           },
           "401": {
-            "description": "Staff session is missing, expired or revoked",
+            "description": "Staff or app session is missing, expired or revoked",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -76,7 +76,25 @@
             }
           },
           "403": {
-            "description": "Staff permission, origin or CSRF denied",
+            "description": "Staff permission, origin, freshness or CSRF denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Current access request does not exist",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -135,7 +153,11 @@
     "/v1/admin/auth/challenge": {
       "post": {
         "operationId": "createStaffChallenge",
-        "security": [],
+        "security": [
+          {
+            "nativeAppSession": []
+          }
+        ],
         "parameters": [
           {
             "name": "Origin",
@@ -196,7 +218,7 @@
             }
           },
           "401": {
-            "description": "Staff session is missing, expired or revoked",
+            "description": "Staff or app session is missing, expired or revoked",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -214,7 +236,25 @@
             }
           },
           "403": {
-            "description": "Staff permission, origin or CSRF denied",
+            "description": "Staff permission, origin, freshness or CSRF denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Current access request does not exist",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -268,7 +308,7 @@
             }
           }
         },
-        "description": "Issues a short-lived Secure HttpOnly host-only challenge cookie. The response CSRF token stays in memory and is required for exchange."
+        "description": "Native HTTP only. Requires a registered current phone app session and binds its device/authentication lineage to a120-second Secure HttpOnly challenge cookie. CSRF remains in native memory."
       }
     },
     "/v1/admin/auth/exchange": {
@@ -276,7 +316,8 @@
         "operationId": "exchangeStaffProof",
         "security": [
           {
-            "staffChallenge": []
+            "staffChallenge": [],
+            "nativeAppSession": []
           }
         ],
         "parameters": [
@@ -348,7 +389,7 @@
             }
           },
           "401": {
-            "description": "Staff session is missing, expired or revoked",
+            "description": "Staff or app session is missing, expired or revoked",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -366,7 +407,25 @@
             }
           },
           "403": {
-            "description": "Staff permission, origin or CSRF denied",
+            "description": "Staff permission, origin, freshness or CSRF denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Current access request does not exist",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -420,7 +479,319 @@
             }
           }
         },
-        "description": "Consumes the challenge, verifies current provider phone authentication and an explicitly provisioned staff principal, and issues the separate opaque staff session cookie. Provider/customer role claims do not grant permissions."
+        "description": "Native HTTP only. Proof must equal the current app bearer. Consumes the challenge and checks the exact linked staff principal and grants. Returns an opaque staff cookie with at most1800seconds lifetime; only that cookie enters the fixed-origin browser. Provider/customer role claims never grant permissions."
+      }
+    },
+    "/v1/admin/access-requests": {
+      "post": {
+        "operationId": "createStaffAccessRequest",
+        "security": [
+          {
+            "nativeAppSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "Must exactly match the configured staff origin."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffEmptyBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Staff response; never grants ordinary application modes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffAccessRequest"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Staff or app session is missing, expired or revoked",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Staff permission, origin, freshness or CSRF denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Current access request does not exist",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Staff request rate limit",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Staff authentication is unavailable",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Creates a pending verified account reference for explicit offline owner provisioning. No client identity, role or target ID is accepted. Does not grant access."
+      }
+    },
+    "/v1/admin/access-requests/current": {
+      "get": {
+        "operationId": "getCurrentStaffAccessRequest",
+        "security": [
+          {
+            "nativeAppSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "Must exactly match the configured staff origin."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Staff response; never grants ordinary application modes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffAccessRequest"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Staff or app session is missing, expired or revoked",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Staff permission, origin, freshness or CSRF denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Current access request does not exist",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Staff request rate limit",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Staff authentication is unavailable",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns only the current account/device authentication-lineage request. Missing or expired requests return404 STAFF_ACCESS_REQUEST_NOT_FOUND."
       }
     },
     "/v1/admin/session": {
@@ -464,7 +835,7 @@
             }
           },
           "401": {
-            "description": "Staff session is missing, expired or revoked",
+            "description": "Staff or app session is missing, expired or revoked",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -482,7 +853,25 @@
             }
           },
           "403": {
-            "description": "Staff permission, origin or CSRF denied",
+            "description": "Staff permission, origin, freshness or CSRF denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Current access request does not exist",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -611,7 +1000,7 @@
             }
           },
           "401": {
-            "description": "Staff session is missing, expired or revoked",
+            "description": "Staff or app session is missing, expired or revoked",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -629,7 +1018,25 @@
             }
           },
           "403": {
-            "description": "Staff permission, origin or CSRF denied",
+            "description": "Staff permission, origin, freshness or CSRF denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Current access request does not exist",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -689,6 +1096,11 @@
   },
   "components": {
     "securitySchemes": {
+      "nativeAppSession": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Current registered Firebase phone app session. Native HTTP only; never supplied to the embedded browser."
+      },
       "staffSession": {
         "type": "apiKey",
         "in": "cookie",
@@ -785,10 +1197,11 @@
               "enum": [
                 "listener.review.read",
                 "listener.review.evidence.read",
-                "listener.review.decide"
+                "listener.review.decide",
+                "staff.access.manage"
               ]
             },
-            "maxItems": 3,
+            "maxItems": 4,
             "uniqueItems": true
           },
           "expiresAt": {
@@ -805,6 +1218,37 @@
           "permissions",
           "expiresAt",
           "csrfToken"
+        ],
+        "additionalProperties": false
+      },
+      "StaffAccessRequest": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accountReference": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "provisioned"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "requestId",
+          "accountReference",
+          "status",
+          "expiresAt"
         ],
         "additionalProperties": false
       },

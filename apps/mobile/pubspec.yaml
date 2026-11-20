@@ -49,6 +49,8 @@ dependencies:
   crypto: 3.0.6
   firebase_core: 4.13.0
   firebase_auth: 6.5.7
+  webview_flutter: 4.13.0
+  webview_flutter_android: 4.8.0
 
 dev_dependencies:
   flutter_test:

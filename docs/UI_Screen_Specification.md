@@ -50,7 +50,7 @@ Use warm neutral backgrounds, one distinctive accent, readable text, large tap t
 
 ## Admin and website
 
-Admin pages: MFA sign-in; review queue and application detail; users/roles/suspensions/appeals; active and completed calls; payment reconciliation; wallet journal; payout review; reports and evidence; support queue; rate/feature settings; operational dashboard; audit log. Approving payouts and changing prices are separate permissions. No ordinary support agent can edit a balance or view full identity documents. Production support actions are reason-coded and audited. See FA-014,040,042–048,049.
+Admin pages: owner-selected SMS OTP sign-in (D26), with separate staff grants and in-app browser access; review queue and application detail; users/roles/suspensions/appeals; active and completed calls; payment reconciliation; wallet journal; payout review; reports and evidence; support queue; rate/feature settings; operational dashboard; audit log. Approving payouts and changing prices are separate permissions. No ordinary support agent can edit a balance or view full identity documents. Production support actions are reason-coded and audited. See FA-014,040,042–048,049.
 
 Public website pages: home and Android download; how it works and clear pricing explanation; become a listener; support/contact; privacy; terms; community rules; child-safety standards; refund policy; listener terms; account deletion request. Do not display fictional download links, unearned trust badges, false user counts, fake reviews or unavailable 24/7 support. Business/policy copy must be finalized before public release.
 

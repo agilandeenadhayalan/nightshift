@@ -7,12 +7,13 @@ export interface VerifiedStaffSignIn {
   authTime:number;issuedAt:number;expiresAt:number;authenticationMethods:string[];
 }
 export interface StaffIdentityReference {issuer:string;audience:string;tenant:string;subject:string;}
-export interface CurrentStaffIdentity extends StaffIdentityReference {disabled:boolean;validAfter:number;}
+export interface CurrentStaffIdentity extends StaffIdentityReference {disabled:boolean;validAfter:number;phoneDigest?:string;}
 export interface StaffIdentityVerifier {
   verifySignIn(proof:string):Promise<VerifiedStaffSignIn>;
   currentIdentity(identity:StaffIdentityReference):Promise<CurrentStaffIdentity>;
 }
 export interface StaffPolicy {
+  requireAppBinding?:boolean;
   issuer:string;audience:string;tenant:string;origin:string;version:string;digestKey:string;
   requiredMethods:readonly string[];maxAuthenticationAgeSeconds:number;sessionSeconds:number;
   challengeSeconds:number;challengeLimitPerHour:number;clientChallengeLimitPerHour:number;

@@ -114,6 +114,7 @@ jobs:
       - run: npm run check:client
       - run: npm run check:mobile
       - run: npm run test:review-reader
+      - run: npm run test:staff-cookie
       - run: npm run build
       - run: npm run smoke:accounts
       - run: npm run build:android

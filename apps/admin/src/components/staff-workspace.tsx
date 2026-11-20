@@ -9,6 +9,7 @@ const labels: Record<Permission, string> = {
   'listener.review.read': 'View applications',
   'listener.review.evidence.read': 'Listen to review samples',
   'listener.review.decide': 'Record review decisions',
+  'staff.access.manage': 'Administer staff access',
 };
 async function get(path: string, signal: AbortSignal) {
   const response = await fetch(`/api/staff/${path}`, {credentials: 'same-origin', cache: 'no-store', redirect: 'error', signal});

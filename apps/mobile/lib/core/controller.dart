@@ -14,6 +14,9 @@ import 'review_sample_picker.dart';
 import 'native_firebase_identity.dart';
 import 'discovery.dart';
 import 'directory_events.dart';
+import 'staff_workspace.dart';
+import 'staff_session.dart';
+import 'staff_transport.dart';
 
 final appControllerProvider = ChangeNotifierProvider<AppController>((ref) {
   final controller = AppController(
@@ -33,9 +36,27 @@ class AppController extends ChangeNotifier {
       NightShiftApi? receiptApi,
       ReviewSamplePicker? samplePicker,
       DirectoryEvents? directoryEvents,
+      StaffWorkspace? staffWorkspace,
+      StaffCookies? staffCookies,
+      StaffTransport? staffTransport,
       this.startTimers = true,
       this.developmentEnabled = !kReleaseMode})
       : firebase = identityClient ?? NativeFirebaseIdentityClient() {
+    this.staffWorkspace = staffWorkspace ??
+        StaffWorkspace(
+            identity: () => user == null ? null : accountIdentity,
+            ownerId: () => user?.id,
+            enabled: () =>
+                !_disposed &&
+                foreground &&
+                user != null &&
+                !needsOnboarding &&
+                !hasCall,
+            proof: _staffProof,
+            cookies: staffCookies,
+            transport: staffTransport,
+            startTimer: startTimers);
+    this.staffWorkspace.addListener(_notify);
     discovery = Discovery(
         api: api,
         identity: () => (user?.id, _identityRevision),
@@ -78,6 +99,7 @@ class AppController extends ChangeNotifier {
       ..addListener(_notify);
   }
   late final Discovery discovery;
+  late final StaffWorkspace staffWorkspace;
   Object get accountIdentity => (user?.id, _identityRevision, api.baseUrl);
   bool canCallListener(ListenerProfile listener) =>
       foreground &&
@@ -481,14 +503,15 @@ class AppController extends ChangeNotifier {
 
   Future<void> restorePhoneSession() => perform(_restorePhoneSession);
 
-  Future<void> _ensurePhoneSession() async {
+  Future<void> _ensurePhoneSession({bool force = false}) async {
     final tokens = _phoneTokens;
     if (tokens != null &&
         (!phoneSignIn.safeBackend || api.baseUrl != phoneSignIn.backendUrl)) {
       throw const ApiFailure('INVALID_ID_TOKEN', 'Sign in again.', status: 401);
     }
     if (tokens == null ||
-        tokens.expiresAt.difference(DateTime.now()).inSeconds > 60) {
+        (!force &&
+            tokens.expiresAt.difference(DateTime.now()).inSeconds > 60)) {
       return;
     }
     if (_phoneRenewal != null) return _phoneRenewal;
@@ -525,6 +548,28 @@ class AppController extends ChangeNotifier {
       _phoneRenewal = null;
     }
     return renewal.future;
+  }
+
+  Future<String> _staffProof() async {
+    final identity = accountIdentity;
+    if (_phoneTokens?.nativeUid == null || firebase is! PhoneIdentityClient) {
+      throw const ApiFailure(
+          'STAFF_PHONE_SIGN_IN_REQUIRED', 'Sign in by phone.');
+    }
+    // Staff proof is one-use. Refresh and register the new native token for
+    // each explicit opening; this does not change the original SMS auth_time.
+    await _ensurePhoneSession(force: true);
+    if (_disposed ||
+        identity != accountIdentity ||
+        user == null ||
+        _phoneTokens?.nativeUid == null ||
+        api.token == null ||
+        api.token != _phoneTokens!.idToken ||
+        !foreground ||
+        hasCall) {
+      throw const ApiFailure('STAFF_STALE', 'Staff access has closed.');
+    }
+    return api.token!;
   }
 
   Future<void> _savePhoneTokens(FirebaseTokens tokens, int session) {
@@ -1180,6 +1225,7 @@ class AppController extends ChangeNotifier {
   Future<void> setForeground(bool value) async {
     if (foreground == value) return;
     foreground = value;
+    staffWorkspace.reconcile();
     discovery.reconcile();
     if (!value) {
       final identity = _identityRevision, intent = ++_availabilityIntent;
@@ -1252,6 +1298,7 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> logout() => perform(() async {
+        staffWorkspace.close();
         _videoConsentCallId = null;
         await closeVideoPreview();
         await audio.leave();
@@ -1310,6 +1357,7 @@ class AppController extends ChangeNotifier {
   }
 
   void _invalidateSessionRequests() {
+    staffWorkspace.close();
     discovery.reset();
     _identityRevision++;
     _sessionRevision++;
@@ -1372,6 +1420,7 @@ class AppController extends ChangeNotifier {
 
   void _notify() {
     if (!_disposed) {
+      staffWorkspace.reconcile();
       discovery.reconcile();
       notifyListeners();
     }
@@ -1380,6 +1429,8 @@ class AppController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    staffWorkspace.removeListener(_notify);
+    staffWorkspace.dispose();
     _videoPreviewRequest++;
     _videoPreviewRequested = videoPreviewBusy = false;
     _videoConsentCallId = null;

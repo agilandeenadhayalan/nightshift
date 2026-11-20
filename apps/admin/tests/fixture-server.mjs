@@ -10,7 +10,7 @@ const contract = require('@nightshift/contracts/staff.openapi.json');
 const ajv = new Ajv2020({strict: true}); require('ajv-formats')(ajv);
 const validators = Object.fromEntries(Object.entries(contract.components.schemas).map(([name, schema]) => [name, ajv.compile(schema)]));
 const token = 'a'.repeat(64), csrf = 'b'.repeat(64);
-let mode = 'unavailable', sessionReads = 0, mutations = 0;
+let mode = 'unavailable', sessionReads = 0, mutations = 0, probes = 0;
 const session = () => ({staff: {id: 'c874c564-4701-445c-a090-cceab31ba9c9'}, permissions: ['listener.review.read'],
   expiresAt: new Date(Date.now() + (mode === 'expiring' ? 1200 : 600000)).toISOString(), csrfToken: csrf});
 const upstream = createServer(async (req, res) => {
@@ -26,9 +26,10 @@ const upstream = createServer(async (req, res) => {
   const failure = (code, status) => send({error: {code, message: 'Synthetic staff access is unavailable.'}, requestId: randomUUID()}, status);
   if (req.url === '/__fixture/control' && req.method === 'POST') {
     const chunks = []; for await (const chunk of req) chunks.push(chunk);
-    mode = JSON.parse(Buffer.concat(chunks).toString()).mode; sessionReads = mutations = 0; return send({ok: true});
+    mode = JSON.parse(Buffer.concat(chunks).toString()).mode; sessionReads = mutations = probes = 0; return send({ok: true});
   }
-  if (req.url === '/__fixture/counts') return send({sessionReads, mutations});
+  if (req.url === '/__fixture/counts') return send({sessionReads, mutations, probes});
+  if (req.url?.startsWith('/__fixture/probe')) {probes++; return send({received: true});}
   if (req.url === '/v1/admin/auth/status') return send(mode === 'unavailable' ? {configured: false, available: false, reasonCode: 'STAFF_AUTH_UNAVAILABLE'} : {configured: true, available: true, reasonCode: null});
   if (req.url === '/v1/admin/session') {
     sessionReads++;

@@ -9,7 +9,7 @@ test('unconfigured access shows no sign-in shortcut or private request', async (
   await expect(page.getByRole('heading', {name: 'Staff sign-in is not available yet'})).toBeVisible();
   await page.getByRole('button', {name: 'Check access again'}).click();
   await expect(page.getByText('Access not configured')).toBeVisible();
-  expect(await (await request.get('http://127.0.0.1:4774/__fixture/counts')).json()).toEqual({sessionReads: 0, mutations: 0});
+  expect(await (await request.get('http://127.0.0.1:4774/__fixture/counts')).json()).toEqual({sessionReads: 0, mutations: 0, probes: 0});
   expect(await page.evaluate(() => ({local: localStorage.length, session: sessionStorage.length}))).toEqual({local: 0, session: 0});
   await page.screenshot({path: '../../artifacts/staff-admin-unconfigured.png', fullPage: true});
 });
@@ -65,7 +65,11 @@ for (const font of [
   {name: 'sans-serif fallback', css: 'body, .brand {font-family: Arial, sans-serif}'},
 ]) test(`narrow screen and 200% text keep access controls reachable by keyboard with ${font.name}`, async ({page, request}) => {
   await mode(request, 'unavailable'); await page.setViewportSize({width: 360, height: 800}); await page.goto('/');
-  await page.addStyleTag({content: `html {font-size: 200%} ${font.css}`});
+  await page.evaluate(css => {
+    const style = document.createElement('style');
+    style.nonce = document.querySelector<HTMLScriptElement>('script[nonce]')!.nonce;
+    style.textContent = css; document.head.append(style);
+  }, `html {font-size: 200%} ${font.css}`);
   const action = page.getByRole('button', {name: 'Check access again'});
   await action.focus(); await expect(action).toBeFocused();
   await action.press('Enter'); await expect(page.getByText('Access not configured')).toBeVisible();
