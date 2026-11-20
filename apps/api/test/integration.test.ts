@@ -80,7 +80,7 @@ test('health and HTTP guards reject missing credentials and client-forged roles'
 test('seed grants do not duplicate and directory expires Redis presence',async()=>{
   assert.equal((await runtime.service.wallet(customer.id)).balanceMicrocredits,10000*MICRO);
   await online();assert.equal((await runtime.service.listeners(customer.id,'ta')).items[0]?.id,listener.id);
-  await runtime.presence.clear(listener.id);assert.equal((await runtime.service.listeners(customer.id,'ta')).items.length,0);
+  await runtime.presence.clear(listener.id);assert.equal((await runtime.service.listeners(customer.id,'ta')).items[0]?.available,false);
   await assert.rejects(()=>runtime.service.createCall(customer,{listenerId:listener.id,quoteId:'test-audio-v1'},idem()),{code:'LISTENER_OFFLINE'});
 });
 test('simultaneous callers reserve the listener exactly once; cancellation frees both claims',async()=>{

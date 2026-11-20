@@ -217,6 +217,12 @@ class ApiClient {
           return DeletionRequest.fromJson(value);
         case 'DevelopmentSignInRequest':
           return DevelopmentSignInRequest.fromJson(value);
+        case 'DirectoryInvalidated':
+          return DirectoryInvalidated.fromJson(value);
+        case 'DirectorySubscription':
+          return DirectorySubscription.fromJson(value);
+        case 'DirectoryUpdate':
+          return DirectoryUpdate.fromJson(value);
         case 'Error':
           return Error.fromJson(value);
         case 'ErrorError':
@@ -249,6 +255,10 @@ class ApiClient {
           return ListenerApplicationState.fromJson(value);
         case 'ListenerPage':
           return ListenerPage.fromJson(value);
+        case 'ListenerStatusRequest':
+          return ListenerStatusRequest.fromJson(value);
+        case 'ListenerStatuses':
+          return ListenerStatuses.fromJson(value);
         case 'Login':
           return Login.fromJson(value);
         case 'OnboardingProfile':

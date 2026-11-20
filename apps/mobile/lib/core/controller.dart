@@ -12,6 +12,8 @@ import 'account_privacy.dart';
 import 'listener_application.dart';
 import 'review_sample_picker.dart';
 import 'native_firebase_identity.dart';
+import 'discovery.dart';
+import 'directory_events.dart';
 
 final appControllerProvider = ChangeNotifierProvider<AppController>((ref) {
   final controller = AppController(
@@ -30,9 +32,23 @@ class AppController extends ChangeNotifier {
       FirebaseIdentityClient? identityClient,
       NightShiftApi? receiptApi,
       ReviewSamplePicker? samplePicker,
+      DirectoryEvents? directoryEvents,
       this.startTimers = true,
       this.developmentEnabled = !kReleaseMode})
       : firebase = identityClient ?? NativeFirebaseIdentityClient() {
+    discovery = Discovery(
+        api: api,
+        identity: () => (user?.id, _identityRevision),
+        enabled: () =>
+            !_disposed &&
+            foreground &&
+            user != null &&
+            !needsOnboarding &&
+            api.token != null,
+        events:
+            directoryEvents ?? (startTimers ? SocketDirectoryEvents() : null),
+        startTimer: startTimers)
+      ..addListener(_notify);
     audio.onChanged = _audioChanged;
     audio.onFailure = (code) => unawaited(_audioFailed(code));
     phoneSignIn = PhoneSignIn(
@@ -61,6 +77,17 @@ class AppController extends ChangeNotifier {
         })
       ..addListener(_notify);
   }
+  late final Discovery discovery;
+  Object get accountIdentity => (user?.id, _identityRevision, api.baseUrl);
+  bool canCallListener(ListenerProfile listener) =>
+      foreground &&
+      user != null &&
+      !isListener &&
+      !hasCall &&
+      !offline &&
+      (discovery.tracking || discovery.observed(listener.id)
+          ? discovery.callable(listener.id)
+          : listener.available);
   final NightShiftApi api;
   final SessionStore store;
   final CallAudio audio;
@@ -246,6 +273,7 @@ class AppController extends ChangeNotifier {
       language = await store.read('language') ?? 'ta';
       if (!['en', 'ta'].contains(locale)) locale = 'en';
       if (!['en', 'ta'].contains(language)) language = 'ta';
+      discovery.language = language;
       _abandonedCallId = await store.read('abandonedCallId');
       lastPath = await store.read('lastPath') ?? '/home';
       if (!['/home', '/history', '/profile'].contains(lastPath)) {
@@ -775,6 +803,13 @@ class AppController extends ChangeNotifier {
   Future<void> startCall(ListenerProfile listener,
           {bool video = false, bool cameraConsent = false}) =>
       perform(() async {
+        final identity = accountIdentity;
+        bool current() =>
+            !_disposed && identity == accountIdentity && foreground;
+        if (!canCallListener(listener)) {
+          throw const ApiFailure(
+              'LISTENER_UNAVAILABLE', 'Refresh availability before calling.');
+        }
         if (video && !cameraConsent) {
           throw const ApiFailure('VIDEO_CONSENT_REQUIRED',
               'Review the camera and consent before calling.');
@@ -786,7 +821,11 @@ class AppController extends ChangeNotifier {
         }
         await closeVideoPreview();
         await audio.checkPermission();
-        if (_disposed || !foreground) return;
+        if (!current()) return;
+        if (!canCallListener(listener)) {
+          throw const ApiFailure(
+              'LISTENER_UNAVAILABLE', 'Listener is no longer available.');
+        }
         _revision++;
         final session = _sessionRevision;
         final response = await api.request('POST', '/calls',
@@ -1116,14 +1155,22 @@ class AppController extends ChangeNotifier {
   Future<void> submitSafety(CallSession call, String reason,
           {required bool block}) =>
       perform(() async {
+        final owner = accountIdentity, ownerId = user?.id;
+        if (ownerId == null ||
+            (call.customerId != ownerId && call.listenerId != ownerId)) {
+          return;
+        }
         if (block) {
           if (activeCall?.id == call.id) await _stopLocally(call);
+          if (owner != accountIdentity) return;
           final target =
               call.customerId == user!.id ? call.listenerId : call.customerId;
           await api.request('PUT', '/blocks/$target', body: {});
+          if (owner != accountIdentity) return;
+          discovery.forget(target);
           await refresh();
         }
-        if (reason.trim().isNotEmpty) {
+        if (reason.trim().isNotEmpty && owner == accountIdentity) {
           await api.request('POST', '/reports',
               body: {'callId': call.id, 'reason': reason.trim()},
               idempotencyKey: newId());
@@ -1133,6 +1180,7 @@ class AppController extends ChangeNotifier {
   Future<void> setForeground(bool value) async {
     if (foreground == value) return;
     foreground = value;
+    discovery.reconcile();
     if (!value) {
       final identity = _identityRevision, intent = ++_availabilityIntent;
       final owner = user?.id, origin = api.baseUrl;
@@ -1186,6 +1234,7 @@ class AppController extends ChangeNotifier {
 
   Future<void> setLanguage(String value) async {
     language = ['en', 'ta'].contains(value) ? value : 'ta';
+    await discovery.filter(language: language);
     await store.write('language', language);
     if (api.token != null) {
       await refresh();
@@ -1261,6 +1310,7 @@ class AppController extends ChangeNotifier {
   }
 
   void _invalidateSessionRequests() {
+    discovery.reset();
     _identityRevision++;
     _sessionRevision++;
     _availabilityIntent++;
@@ -1321,7 +1371,10 @@ class AppController extends ChangeNotifier {
   }
 
   void _notify() {
-    if (!_disposed) notifyListeners();
+    if (!_disposed) {
+      discovery.reconcile();
+      notifyListeners();
+    }
   }
 
   @override
@@ -1336,6 +1389,8 @@ class AppController extends ChangeNotifier {
     audio.onChanged = null;
     audio.onFailure = null;
     unawaited(audio.leave());
+    discovery.removeListener(_notify);
+    discovery.dispose();
     api.close();
     phoneSignIn.removeListener(_notify);
     phoneSignIn.dispose();

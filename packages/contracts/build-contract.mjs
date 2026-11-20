@@ -14,7 +14,12 @@ const schemas={
     createdAt:date,expiresAt:date,acceptedAt:nullableDate,endedAt:nullableDate,reason:{type:['string','null']},connectedMs:integer,chargeMicrocredits:integer,earningPaise:integer,rate:ref('Rate'),maxDurationSeconds:integer,testOnly:{const:true,type:'boolean'}}),
   Snapshot:object({user:ref('User'),activeCall:{anyOf:[ref('Call'),{type:'null'}]},listeners:array(ref('Listener')),wallet:ref('Wallet'),serverTime:date}),
   CallPage:object({items:array(ref('Call')),nextCursor:{type:['string','null'],format:'uuid'}}),
-  ListenerPage:object({items:array(ref('Listener')),nextCursor:{type:['string','null'],format:'uuid'}}),
+  ListenerPage:object({items:array(ref('Listener')),nextCursor:{type:['string','null'],format:'uuid'},viewEpoch:id,expiresAt:date,serverTime:date,truncated:bool}),
+  ListenerStatusRequest:object({language:{type:'string',enum:['ta','en']},listenerIds:{type:'array',maxItems:40,uniqueItems:true,items:id}}),
+  ListenerStatuses:object({items:array(ref('Listener')),removedIds:array(id),serverTime:date}),
+  DirectorySubscription:object({viewEpoch:id,language:{type:'string',enum:['ta','en']},visibleIds:{type:'array',maxItems:40,uniqueItems:true,items:id}}),
+  DirectoryUpdate:object({viewEpoch:id,language:{type:'string',enum:['ta','en']},serverTime:date,items:array(ref('Listener')),removedIds:array(id)}),
+  DirectoryInvalidated:object({viewEpoch:id,code:str}),
   Login:object({token:str,expiresAt:date,user:ref('User'),testOnly:{const:true,type:'boolean'}}),
   OtpRequest:object({phone:{type:'string',pattern:'^\\+91[6-9][0-9]{9}$'},deviceId:{type:'string',minLength:1,maxLength:128},consentVersion:{type:'string',minLength:1,maxLength:80}}),
   OtpVerifyRequest:object({challengeId:id,phone:{type:'string',pattern:'^\\+91[6-9][0-9]{9}$'},code:{type:'string',pattern:'^[0-9]{6}$'},deviceId:{type:'string',minLength:1,maxLength:128}}),
@@ -54,6 +59,8 @@ const idempotency={name:'Idempotency-Key',in:'header',required:true,schema:{type
 const json=schema=>({required:true,content:{'application/json':{schema}}});
 const identityResponses=schema=>({...responses(schema),410:{description:'OTP challenge expired',content:{'application/json':{schema:ref('Error')}}}});
 const reviewResponses=schema=>({...responses(schema),410:{description:'Private upload lease expired',content:{'application/json':{schema:ref('Error')}}},413:{description:'Private sample exceeds the 2 MiB limit',content:{'application/json':{schema:ref('Error')}}}});
+const directoryParameters=[{name:'language',in:'query',schema:{type:'string',enum:['ta','en'],default:'ta'}},{name:'availableOnly',in:'query',schema:{type:'boolean',default:false}},{name:'cursor',in:'query',schema:id}];
+const directoryResponses={...responses(ref('ListenerPage')),410:{description:'Directory view expired; explicitly refresh without a cursor',content:{'application/json':{schema:ref('Error')}}}};
 const paths={
   '/v1/health':{get:{operationId:'health',security:[],responses:responses(object({status:str,service:str,testOnly:bool}))}},
   '/v1/auth/dev':{post:{operationId:'developmentSignIn',security:[],description:'Development/test only. Server refuses production boot.',requestBody:json(object({handle:{type:'string',enum:['customer','customer2','listener']},accessKey:{type:'string',minLength:24},deviceId:str})),responses:responses(ref('Login'))}},
@@ -84,7 +91,9 @@ const paths={
   '/v1/me/availability':{put:{operationId:'setAvailability',requestBody:json(object({online:bool})),responses:responses(ref('User'))}},
   '/v1/me/languages':{put:{operationId:'setLanguages',requestBody:json(object({languages:array({type:'string',enum:['ta','en']})})),responses:responses(ref('User'))}},
   '/v1/presence/heartbeat':{post:{operationId:'heartbeat',responses:responses(object({serverTime:date}))}},
-  '/v1/listeners':{get:{operationId:'listListeners',parameters:[{name:'language',in:'query',schema:{type:'string',enum:['ta','en']}},{name:'cursor',in:'query',schema:id}],responses:responses(ref('ListenerPage'))}},
+  '/v1/listeners':{get:{operationId:'listListeners',parameters:directoryParameters,description:'Twenty-card pages from a five-minute owner/filter-bound frozen view. Live eligibility is rechecked without reranking; refresh creates a new view. At most four active views per owner and 2000 IDs per view. A truncated view must not be presented as complete or as proof of no language supply.',responses:directoryResponses}},
+  '/v1/favorites':{get:{operationId:'listFavorites',parameters:directoryParameters,description:'Private favorite listeners with current eligibility and presence, using the same frozen-view pagination as Discover.',responses:directoryResponses}},
+  '/v1/listeners/status':{post:{operationId:'getListenerStatuses',requestBody:json(ref('ListenerStatusRequest')),description:'Current status for at most 40 own favorites, served view members or historical Listener counterparts. Unknown/ineligible IDs are removed without revealing account details. Historical call outcomes are separate.',responses:responses(ref('ListenerStatuses'))}},
   '/v1/calls':{
     get:{operationId:'listCalls',parameters:[{name:'cursor',in:'query',schema:id}],responses:responses(ref('CallPage'))},
     post:{operationId:'createCall',parameters:[idempotency],requestBody:json(object({listenerId:id,quoteId:{type:'string',enum:['test-audio-v1','test-video-v1']},mediaType,videoConsent:bool},['listenerId','quoteId'])),responses:responses(ref('Call'))}
@@ -105,7 +114,10 @@ paths['/v1/favorites/{id}']={put:{operationId:'favoriteListener',parameters:[pat
 // Nest defaults POST to 201. Describe actual statuses so generated clients accept the response.
 for(const route of Object.values(paths))for(const [method,operation] of Object.entries(route))if(method==='post'&&operation.responses[200]){operation.responses[201]=operation.responses[200];delete operation.responses[200];}
 const contract={openapi:'3.1.0',info:{title:'NightShift Android test milestone',version:'0.1.0',description:'One shared backend; fictional test credits only. Real-money and production identity adapters are disabled.'},servers:[{url:'http://localhost:3000'}],security:[{bearerAuth:[]}],paths,components:{securitySchemes:{bearerAuth:{type:'http',scheme:'bearer'}},schemas}};
-const event={$schema:'https://json-schema.org/draft/2020-12/schema',$defs:JSON.parse(JSON.stringify(schemas).replaceAll('#/components/schemas/','#/$defs/')),$ref:'#/$defs/Event'};
+const event={$schema:'https://json-schema.org/draft/2020-12/schema',$defs:JSON.parse(JSON.stringify(schemas).replaceAll('#/components/schemas/','#/$defs/')),$ref:'#/$defs/Event',
+  'x-socket-events':{'directory.subscribe':{schema:'#/$defs/DirectorySubscription',description:'Authenticated websocket auth.token; replaces the slice. null or empty visibleIds unsubscribes. ACK {ok:true,viewEpoch} or {ok:false,code}. Only served members of this owner/language epoch are accepted.'},
+    'directory.updated':{schema:'#/$defs/DirectoryUpdate',description:'Only the subscribed visible IDs. Live status changes immediately; preserve order until explicit refresh. Changed payloads checked each second; freshness at least every 15 seconds while healthy.'},
+    'directory.invalidated':{schema:'#/$defs/DirectoryInvalidated',description:'Expired, denied or unavailable subscription; mark stale and refresh explicitly.'}}};
 for(const [file,value] of [['openapi.json',contract],['events.schema.json',event]]){
   const url=new URL(file,import.meta.url),content=JSON.stringify(value,null,2)+'\n';
   if(process.argv.includes('--check')){if(await readFile(url,'utf8')!==content)throw new Error(`${file} needs regeneration`);}

@@ -111,11 +111,15 @@ void main() {
         return null;
       };
     final controller = await mountApp(tester, api: api, path: '/history');
-    await tester.ensureVisible(find.text('Load earlier calls'));
+    await tester.scrollUntilVisible(find.text('Load earlier calls'), 250,
+        scrollable: find.byType(Scrollable).last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Load earlier calls'));
     await tester.pumpAndSettle();
     expect(controller.history.map((call) => call.id), ['call-id']);
-    await tester.ensureVisible(find.text('Retry'));
+    await tester.scrollUntilVisible(find.text('Retry'), -250,
+        scrollable: find.byType(Scrollable).last);
+    await tester.pumpAndSettle();
     fail = false;
     await tester.tap(find.text('Retry'));
     await tester.pumpAndSettle();
@@ -189,12 +193,12 @@ void main() {
         child: const NightShiftApp()));
     await tester.pumpAndSettle();
     expect(find.text('Connection unavailable'), findsOneWidget);
-    expect(find.text('No listeners available yet'), findsNothing);
+    expect(find.text('No listeners match this filter'), findsNothing);
     expect(find.text('Your test credits'), findsNothing);
     api.snapshotFailure = null;
     await tester.tap(find.text('Refresh status'));
     await tester.pumpAndSettle();
-    expect(find.text('No listeners available yet'), findsOneWidget);
+    expect(find.text('No listeners match this filter'), findsOneWidget);
     expect(find.text('Your test credits'), findsOneWidget);
   });
 
@@ -237,13 +241,13 @@ void main() {
     await tester.tap(find.text('Dismiss'));
     await tester.pumpAndSettle();
     expect(find.text('Connect to see availability'), findsOneWidget);
-    expect(find.text('No listeners available yet'), findsNothing);
+    expect(find.text('No listeners match this filter'), findsNothing);
     expect(find.text('Your test credits'), findsNothing);
     api.snapshotFailure = null;
     await tester.tap(find.text('Refresh'));
     await tester.pumpAndSettle();
     expect(find.text('Your test credits'), findsOneWidget);
-    expect(find.text('No listeners available yet'), findsOneWidget);
+    expect(find.text('No listeners match this filter'), findsOneWidget);
   });
 
   testWidgets('first snapshot has a named loading state before data arrives',
@@ -263,7 +267,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Loading availability…'), findsOneWidget);
-    expect(find.text('No listeners available yet'), findsNothing);
+    expect(find.text('No listeners match this filter'), findsNothing);
     expect(find.text('Your test credits'), findsNothing);
     pending.completeError(const ApiFailure('OFFLINE', 'Network unavailable'));
     await login;

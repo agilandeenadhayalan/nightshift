@@ -106,7 +106,7 @@ test('late heartbeat cannot overwrite a newer device lease or authorize itself a
     assert.equal(await presence.isOnline(actor.id),true,'stale bytes exist, so DB fencing is exercised');
     assert.equal((await service.user(actor.id)).online,false);
     const customer=await participant(false);
-    assert.ok(!(await service.listeners(customer.id)).items.some(row=>row.id===actor.id));
+    assert.ok(!(await service.listeners(customer.id)).items.some(row=>row.id===actor.id&&row.available));
     await assert.rejects(service.createCall(customer,{listenerId:actor.id,quoteId:'test-audio-v1'},randomUUID()),{code:'LISTENER_OFFLINE'});
     await service.heartbeat(replacement);assert.equal((await service.user(actor.id)).online,true);
   }finally{release.release();await pending;mock.mock.restore();}

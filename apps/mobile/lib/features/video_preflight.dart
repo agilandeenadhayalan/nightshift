@@ -21,12 +21,17 @@ String testTariffDescription(AppController state, CallRate rate) {
 }
 
 Future<bool> showVideoPreflight(BuildContext context, AppController state,
-    {required CallRate rate, required String confirmLabel}) async {
+    {required CallRate rate,
+    required String confirmLabel,
+    ListenerProfile? listener}) async {
   try {
     return await showDialog<bool>(
             context: context,
             builder: (context) => _VideoPreflight(
-                state: state, rate: rate, confirmLabel: confirmLabel)) ==
+                state: state,
+                rate: rate,
+                confirmLabel: confirmLabel,
+                listener: listener)) ==
         true;
   } finally {
     // Complete camera teardown before the caller sends consent/joins a channel.
@@ -38,8 +43,12 @@ Future<bool> showVideoPreflight(BuildContext context, AppController state,
 
 class _VideoPreflight extends StatefulWidget {
   const _VideoPreflight(
-      {required this.state, required this.rate, required this.confirmLabel});
+      {required this.state,
+      required this.rate,
+      required this.confirmLabel,
+      this.listener});
   final AppController state;
+  final ListenerProfile? listener;
   final CallRate rate;
   final String confirmLabel;
   @override
@@ -49,11 +58,13 @@ class _VideoPreflight extends StatefulWidget {
 class _VideoPreflightState extends State<_VideoPreflight> {
   bool _consent = false, _closing = false;
   String? _callId;
+  Object? _owner;
 
   @override
   void initState() {
     super.initState();
     _callId = widget.state.activeCall?.id;
+    _owner = widget.state.accountIdentity;
     widget.state.addListener(_checkLifetime);
   }
 
@@ -62,6 +73,7 @@ class _VideoPreflightState extends State<_VideoPreflight> {
     if (_closing || !mounted) return;
     if (!state.foreground ||
         state.user == null ||
+        state.accountIdentity != _owner ||
         state.activeCall?.id != _callId ||
         state.activeCall?.ended == true) {
       _closing = true;
@@ -88,7 +100,10 @@ class _VideoPreflightState extends State<_VideoPreflight> {
         final state = widget.state;
         final video = state.video;
         final previewing = video?.previewing == true;
-        final canConfirm = previewing &&
+        final available =
+            widget.listener == null || state.canCallListener(widget.listener!);
+        final canConfirm = available &&
+            previewing &&
             _consent &&
             !state.videoPreviewBusy &&
             !_closing &&
@@ -105,6 +120,10 @@ class _VideoPreflightState extends State<_VideoPreflight> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                      if (!available)
+                        Text(state.text(
+                            'Listener is no longer available. Refresh before calling.',
+                            'கேட்பவர் தற்போது கிடைக்கவில்லை. அழைப்பதற்கு முன் புதுப்பிக்கவும்.')),
                       Text(testRateLabel(state, widget.rate),
                           style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
