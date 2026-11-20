@@ -2,6 +2,8 @@
 
 Status on 20 November 2026: **not yet run on two real Android phones**. No audible-media result is claimed from a unit test, simulator, API test or debug APK. Use this record for [#6](https://github.com/agilandeenadhayalan/nightshift/issues/6), [#26](https://github.com/agilandeenadhayalan/nightshift/issues/26) and the first milestone; the broader release matrix remains [#51](https://github.com/agilandeenadhayalan/nightshift/issues/51).
 
+For #8, also complete the [Tamil/English large-text and TalkBack procedure](FA008_Verification.md#required-physical-accessibility-check). Its reading-order and control-reachability checks require a real phone even when widget tests pass.
+
 ## Prerequisites
 
 - Two consenting adult testers, two physical Android phones and headphones to avoid acoustic feedback.

@@ -6,11 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'core/controller.dart';
 import 'features/screens.dart';
+import 'features/state_widgets.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final state = ref.read(appControllerProvider);
   final router = GoRouter(
-    initialLocation: '/home',
+    initialLocation: state.initializing ? '/loading' : state.lastPath,
     restorationScopeId: 'nightshift-router',
     refreshListenable: state,
     redirect: (context, route) {
@@ -24,8 +25,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
           path: '/loading',
-          builder: (_, __) =>
-              const Scaffold(body: Center(child: CircularProgressIndicator()))),
+          builder: (_, __) => Scaffold(
+              body: Center(
+                  child: LoadingNotice(
+                      label: state.text('Loading NightShift…',
+                          'NightShift ஏற்றப்படுகிறது…'))))),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/call', builder: (_, __) => const CallScreen()),
       ShellRoute(
@@ -101,6 +105,8 @@ class _NightShiftAppState extends ConsumerState<NightShiftApp>
             style: FilledButton.styleFrom(minimumSize: const Size(48, 52))),
         outlinedButtonTheme: OutlinedButtonThemeData(
             style: OutlinedButton.styleFrom(minimumSize: const Size(48, 52))),
+        textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48))),
         cardTheme: const CardTheme(
             elevation: 0,
             margin: EdgeInsets.symmetric(vertical: 6),

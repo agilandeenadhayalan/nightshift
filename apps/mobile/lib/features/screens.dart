@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../core/controller.dart';
 import '../core/models.dart';
+import 'message_copy.dart';
+import 'state_widgets.dart';
 
 class PageBody extends StatelessWidget {
   const PageBody({super.key, required this.children});
@@ -13,6 +15,7 @@ class PageBody extends StatelessWidget {
           child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640),
         child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
             children: children),
       ));
@@ -51,40 +54,29 @@ class ErrorNotice extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(appControllerProvider);
     if (state.error == null) return const SizedBox.shrink();
-    return Semantics(
-        liveRegion: true,
-        child: Card(
-          color: Theme.of(context).colorScheme.errorContainer,
-          child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                      state.offline
-                          ? state.text(
-                              'Connection unavailable', 'இணைப்பு கிடைக்கவில்லை')
-                          : state.text(
-                              'Please try again', 'மீண்டும் முயற்சிக்கவும்'),
-                      style: Theme.of(context).textTheme.titleSmall),
-                  const SizedBox(height: 8),
-                  Text(state.error!),
-                  if (state.diagnosticId != null)
-                    SelectableText('Reference: ${state.diagnosticId}'),
-                  Wrap(spacing: 8, children: [
-                    TextButton(
-                        onPressed: () {
-                          state.clearError();
-                          unawaited(state.refresh());
-                        },
-                        child: Text(state.text('Retry', 'மீண்டும் முயற்சி'))),
-                    TextButton(
-                        onPressed: state.clearError,
-                        child: Text(state.text('Dismiss', 'மூடு'))),
-                  ]),
-                ],
-              )),
-        ));
+    return FailureNotice(
+      offline: state.offline,
+      title: state.offline
+          ? state.text('Connection unavailable', 'இணைப்பு கிடைக்கவில்லை')
+          : state.text('Please try again', 'மீண்டும் முயற்சிக்கவும்'),
+      message: state.user == null
+          ? '${errorMessage(state.errorCode, state.locale)} ${state.text('When ready, press Continue to NightShift.', 'தயாரானதும் NightShift தொடரவும் பொத்தானை அழுத்தவும்.')}'
+          : errorMessage(state.errorCode, state.locale),
+      reference: state.diagnosticId == null
+          ? null
+          : state.text('Reference: ${state.diagnosticId}',
+              'குறிப்பு: ${state.diagnosticId}'),
+      retryLabel: state.text('Refresh status', 'நிலையை புதுப்பி'),
+      // Refresh never replays a side effect. Sign-in has its own submit button.
+      onRetry: state.user == null || state.busy
+          ? null
+          : () {
+              state.clearError();
+              unawaited(state.refresh());
+            },
+      dismissLabel: state.text('Dismiss', 'மூடு'),
+      onDismiss: state.clearError,
+    );
   }
 }
 
@@ -201,10 +193,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       if (state.user != null) _key.clear();
                     },
               child: state.busy
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2))
+                  ? Text(state.text('Signing in…', 'உள்நுழைகிறது…'))
                   : Text(state.text(
                       'Continue to NightShift', 'NightShift தொடரவும்'))),
           const SizedBox(height: 20),
@@ -224,33 +213,38 @@ class HomeShell extends ConsumerWidget {
     final state = ref.watch(appControllerProvider);
     final index = switch (path) { '/history' => 1, '/profile' => 2, _ => 0 };
     return Scaffold(
-        appBar: AppBar(title: const Text('NightShift'), actions: [
-          Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Center(
-                  child: Text(
-                      state.isListener
-                          ? state.text('Listener', 'கேட்பவர்')
-                          : state.text('Customer', 'வாடிக்கையாளர்'),
-                      style: Theme.of(context).textTheme.labelLarge))),
-        ]),
+        appBar: AppBar(title: const Text('NightShift')),
         body: Column(children: [
           Material(
               color: const Color(0xFFE5EBDD),
               child: Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(children: [
-                    const Icon(Icons.science_outlined, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                        child: Text(
-                            state.text(
-                                'TEST CREDITS · Keep the app open for calls',
-                                'சோதனை நாணயங்கள் · அழைப்புக்கு செயலியை திறந்து வைத்திருங்கள்'),
-                            style: Theme.of(context).textTheme.labelMedium))
-                  ]))),
-          if (state.busy) const LinearProgressIndicator(minHeight: 2),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                            state.isListener
+                                ? state.text('Listener', 'கேட்பவர்')
+                                : state.text('Customer', 'வாடிக்கையாளர்'),
+                            style: Theme.of(context).textTheme.labelLarge),
+                        const SizedBox(height: 4),
+                        Row(children: [
+                          const Icon(Icons.science_outlined, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                              child: Text(
+                                  state.text(
+                                      'TEST CREDITS · Keep the app open for calls',
+                                      'சோதனை நாணயங்கள் · அழைப்புக்கு செயலியை திறந்து வைத்திருங்கள்'),
+                                  style:
+                                      Theme.of(context).textTheme.labelMedium))
+                        ]),
+                      ]))),
+          if (state.busy)
+            LinearProgressIndicator(
+                minHeight: 2,
+                semanticsLabel: state.text('Updating…', 'புதுப்பிக்கிறது…')),
           Expanded(child: child),
         ]),
         bottomNavigationBar: NavigationBar(
@@ -303,16 +297,34 @@ class HomeScreen extends ConsumerWidget {
                       'யாருடன் பேச விரும்புகிறீர்கள்?'),
               style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 20),
-          if (state.isListener) ...[
+          if (!state.snapshotLoaded) ...[
+            if (state.snapshotLoading)
+              LoadingNotice(
+                  label: state.text('Loading availability…',
+                      'கிடைக்கும் நிலை ஏற்றப்படுகிறது…'))
+            else if (state.error == null)
+              StatusCard(
+                  title: state.text('Connect to see availability',
+                      'கிடைக்கும் நிலையை பார்க்க இணைக்கவும்'),
+                  message: state.text('Refresh to retrieve the latest status.',
+                      'சமீபத்திய நிலையை பெற புதுப்பிக்கவும்.'),
+                  action: OutlinedButton.icon(
+                      onPressed: state.refresh,
+                      icon: const Icon(Icons.refresh),
+                      label: Text(state.text('Refresh', 'புதுப்பி')))),
+          ] else if (state.isListener) ...[
             StatusCard(
                 icon: state.user?.online == true
                     ? Icons.radio_button_checked
                     : Icons.pause_circle_outline,
-                title: state.user?.online == true
+                title: state.offline
                     ? state.text(
-                        'You are online', 'நீங்கள் ஆன்லைனில் உள்ளீர்கள்')
-                    : state.text(
-                        'You are offline', 'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள்'),
+                        'Connection unavailable', 'இணைப்பு கிடைக்கவில்லை')
+                    : state.user?.online == true
+                        ? state.text(
+                            'You are online', 'நீங்கள் ஆன்லைனில் உள்ளீர்கள்')
+                        : state.text(
+                            'You are offline', 'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள்'),
                 message: state.text(
                     'Only foreground reachability makes you available. Calls pause earnings during reconnects.',
                     'செயலி திறந்திருக்கும் போது மட்டுமே அழைப்புகள் வரும். மீண்டும் இணையும் நேரத்தில் வருமானம் கணக்கிடப்படாது.'),
@@ -355,6 +367,7 @@ class HomeScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
                 value: state.language,
+                isExpanded: true,
                 decoration: InputDecoration(
                     labelText:
                         state.text('Conversation language', 'உரையாடல் மொழி')),
@@ -364,7 +377,7 @@ class HomeScreen extends ConsumerWidget {
                 ],
                 onChanged: (value) => state.setLanguage(value!)),
             const SizedBox(height: 16),
-            if (available.isEmpty)
+            if (available.isEmpty && !state.offline && state.error == null)
               StatusCard(
                   title: state.text('No listeners available yet',
                       'கேட்பவர்கள் தற்போது இல்லை'),
@@ -393,11 +406,14 @@ class HomeScreen extends ConsumerWidget {
                                           .titleLarge))
                             ]),
                             const SizedBox(height: 12),
-                            Text(listener.available
-                                ? state.text('● Available for audio',
-                                    '● ஆடியோவிற்கு கிடைக்கிறார்')
-                                : state.text('Busy or offline',
-                                    'பிஸியாக அல்லது ஆஃப்லைன்')),
+                            Text(state.offline
+                                ? state.text('Availability unknown',
+                                    'கிடைக்கும் நிலை தெரியவில்லை')
+                                : listener.available
+                                    ? state.text('● Available for audio',
+                                        '● ஆடியோவிற்கு கிடைக்கிறார்')
+                                    : state.text('Busy or offline',
+                                        'பிஸியாக அல்லது ஆஃப்லைன்')),
                             Text(listener.languages
                                 .map((l) => l == 'ta' ? 'தமிழ்' : 'English')
                                 .join(' · ')),
@@ -413,7 +429,10 @@ class HomeScreen extends ConsumerWidget {
                                     : () =>
                                         _confirmCall(context, state, listener),
                                 icon: const Icon(Icons.call_outlined),
-                                label: Text(state.text('Call', 'அழை'))),
+                                label: Text(state.text('Call', 'அழை'),
+                                    semanticsLabel: state.text(
+                                        'Call ${listener.name}',
+                                        '${listener.name} அழைக்கவும்'))),
                           ]))),
           ],
         ]));
@@ -451,7 +470,11 @@ class CallScreen extends ConsumerWidget {
     final state = ref.watch(appControllerProvider),
         call = ref.watch(appControllerProvider).activeCall;
     if (call == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+          body: Center(
+              child: LoadingNotice(
+                  label:
+                      state.text('Loading call…', 'அழைப்பு ஏற்றப்படுகிறது…'))));
     }
     final incoming = call.listenerId == state.user?.id;
     final title = state.endingLocally
@@ -585,7 +608,8 @@ class CallScreen extends ConsumerWidget {
                   label: Text(
                       state.text('Report or block', 'புகாரளி அல்லது தடு'))),
               const SizedBox(height: 24),
-              SelectableText('Call ID: ${call.id}',
+              SelectableText(
+                  state.text('Call ID: ${call.id}', 'அழைப்பு எண்: ${call.id}'),
                   style: Theme.of(context).textTheme.bodySmall),
             ])));
   }
@@ -601,7 +625,13 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(appControllerProvider).loadHistory());
+    Future.microtask(() {
+      if (!mounted) return;
+      final state = ref.read(appControllerProvider);
+      if (!state.historyLoaded && state.historyError == null) {
+        unawaited(state.loadHistory());
+      }
+    });
   }
 
   @override
@@ -620,14 +650,33 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       'Earnings & calls', 'வருமானம் மற்றும் அழைப்புகள்')
                   : state.text('Your conversations', 'உங்கள் உரையாடல்கள்'),
               style: Theme.of(context).textTheme.headlineSmall),
-          if (state.isListener)
+          if (state.isListener && state.historyLoaded)
             StatusCard(
                 title: '₹${(earned / 100).toStringAsFixed(2)}',
                 message: state.text(
                     'Test earnings in the displayed history. No cash payouts. Rate and settlement are controlled by the backend.',
                     'காட்டப்பட்ட வரலாற்றின் சோதனை வருமானம். உண்மையான பணம் வழங்கப்படாது. விகிதமும் தீர்வும் சேவையகத்தால் கணக்கிடப்படும்.')),
           const SizedBox(height: 16),
-          if (state.history.isEmpty)
+          if (state.historyError != null)
+            FailureNotice(
+              offline: state.historyError!.code == 'OFFLINE',
+              title: state.historyError!.code == 'OFFLINE'
+                  ? state.text(
+                      'Connection unavailable', 'இணைப்பு கிடைக்கவில்லை')
+                  : state.text(
+                      'Could not load calls', 'அழைப்புகளை ஏற்ற முடியவில்லை'),
+              message: errorMessage(state.historyError!.code, state.locale),
+              reference: state.historyError!.requestId == null
+                  ? null
+                  : state.text('Reference: ${state.historyError!.requestId}',
+                      'குறிப்பு: ${state.historyError!.requestId}'),
+              retryLabel: state.text('Retry', 'மீண்டும் முயற்சி'),
+              onRetry: state.historyLoading ? null : state.retryHistory,
+            ),
+          if (state.history.isEmpty &&
+              state.historyLoaded &&
+              !state.historyLoading &&
+              state.historyError == null)
             StatusCard(
                 title: state.text('No completed calls yet',
                     'முடிந்த அழைப்புகள் இன்னும் இல்லை'),
@@ -660,8 +709,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                           Text(
                               '${_localDate(call.createdAt)} · ${durationLabel(call.connectedMs)}'),
                           Text(state.text(
-                              'End reason: ${call.reason ?? 'ended'}',
-                              'முடிவு காரணம்: ${call.reason ?? 'ended'}')),
+                              'End reason: ${endReasonLabel(call.reason, state.locale)}',
+                              'முடிவு காரணம்: ${endReasonLabel(call.reason, state.locale)}')),
                           Text(state.text(
                               '${creditAmount(call.chargeMicrocredits)} test coins',
                               '${creditAmount(call.chargeMicrocredits)} சோதனை நாணயங்கள்')),
@@ -670,7 +719,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                 'Test earnings ₹${(call.earningPaise / 100).toStringAsFixed(2)}',
                                 'சோதனை வருமானம் ₹${(call.earningPaise / 100).toStringAsFixed(2)}')),
                           const SizedBox(height: 8),
-                          SelectableText('Call ID: ${call.id}',
+                          SelectableText(
+                              state.text('Call ID: ${call.id}',
+                                  'அழைப்பு எண்: ${call.id}'),
                               style: Theme.of(context).textTheme.bodySmall),
                           TextButton.icon(
                               onPressed: state.busy
@@ -682,8 +733,11 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                   'Report or block', 'புகாரளி அல்லது தடு'))),
                         ]))),
           ],
-          if (state.historyLoading)
-            const Center(child: CircularProgressIndicator()),
+          if (state.historyLoading ||
+              (!state.historyLoaded && state.historyError == null))
+            LoadingNotice(
+                label: state.text(
+                    'Loading calls…', 'அழைப்புகள் ஏற்றப்படுகின்றன…')),
           if (state.historyCursor != null)
             OutlinedButton(
                 onPressed: state.historyLoading
@@ -803,6 +857,7 @@ class ProfileScreen extends ConsumerWidget {
       const SizedBox(height: 24),
       DropdownButtonFormField<String>(
           value: state.locale,
+          isExpanded: true,
           decoration: InputDecoration(
               labelText: state.text('App language', 'செயலி மொழி')),
           items: const [

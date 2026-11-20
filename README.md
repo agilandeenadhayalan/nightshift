@@ -46,6 +46,8 @@ The Android command builds the ARM64 debug APK. Native Flutter commands from `ap
 
 API changes also require `npm run generate:client` and `npm run check:client` with Java 17+. The official generator is pinned and checksum-verified; ordinary app builds use the checked-in Dart SDK. With the local backend running, `npm run smoke:client` checks the generated SDK's actual HTTP call/history journey using the ignored local environment.
 
+The Flutter navigation/state continuation and its physical accessibility checklist are tracked in [FA-008 verification](docs/FA008_Verification.md). Automated loading, retry, restoration and semantics tests complement the required real-phone checks.
+
 ## Browser reference
 
 With Node 24, from `audio/` run `node --test`, then `node server.mjs`. Open the printed private localhost URL in two Chromium tabs. Choose Listener and go online in one, Customer and call in the other. Answer, allow microphones, end and check statements. It supports one pair with test credits and creates an ignored local SQLite database. See [audio/README.md](audio/README.md).
