@@ -12,10 +12,11 @@ Actual local checks and artifact details are recorded in [monorepo verification]
 |---|---|---|
 | `apps/api` | NestJS HTTP/socket adapters, authorization, PostgreSQL transactions, provider adapters and recovery | `backend-domain`, `contracts` |
 | `apps/mobile` | One Flutter Android app; its npm manifest is a task adapter | Public Dart SDK from `contracts`, plus task metadata |
+| `apps/admin` | Separate Next.js staff session UI and protected proxy, intended for the in-app browser | Public staff schemas from `contracts` |
 | `packages/backend-domain` | Pure server-side billing rules, exported through the package entry point | None at runtime |
 | `packages/contracts` | Public OpenAPI/event schemas and generated Dart SDK | None among internal workspaces |
 | `audio` | Runnable independent browser reference with test credits | None |
-| `apps/admin`, `apps/web`, `apps/worker` | Reserved staff, public-site and worker boundaries | Not registered yet |
+| `apps/web`, `apps/worker` | Reserved public-site and worker boundaries | Not registered yet |
 | `packages/config` | Reserved configuration boundary | Not registered yet |
 
 ```mermaid
@@ -23,6 +24,7 @@ flowchart LR
   API["NestJS API"] --> DOMAIN["Backend domain"]
   API --> CONTRACTS["Public contracts"]
   MOBILE["Flutter task adapter"] -. "contract dependency" .-> CONTRACTS
+  ADMIN["Separate staff web workspace"] --> CONTRACTS
   AUDIO["Independent browser reference"]
 ```
 
@@ -50,6 +52,9 @@ Run `npm ci` once at the repository root using the pinned Node/npm versions. Kee
 | `npm run test:economics` | Python economics model tests |
 | `npm run mobile:setup` | Flutter dependency resolution |
 | `npm run check:mobile` | Flutter static analysis and tests |
+| `npm run check:admin` | Staff web build, typecheck and transport/contract tests |
+| `npm run test:admin:e2e` | Actual browser checks against an isolated synthetic upstream |
+| `npm run dev:admin` | Local staff web development server |
 | `npm run build:android` | ARM64 Android debug APK |
 | `npm run db:migrate`, `npm run db:seed` | Explicit local database operations |
 | `npm run start:api` | Backend process |

@@ -15,6 +15,8 @@ import { Onboarding } from './identity/onboarding';
 import { AccountLifecycle } from './account-lifecycle';
 import { ListenerApplications, LocalReviewStorage } from './listener-applications';
 import { DirectorySubscription } from './directory';
+import { StaffAuthority } from './staff/authority';
+import { StaffController } from './staff/http';
 
 type AuthenticatedRequest=Request & {actor:Actor;requestId:string};
 @Injectable()
@@ -142,7 +144,11 @@ export async function createApplication(config:Config,clock:()=>number=Date.now,
   const onboarding=new Onboarding(db,clock,async actor=>{await service.logoutCall(actor);await service.withdrawPresence(actor.id);});
   const applications=new ListenerApplications(db,{storage:config.privateReviewDirectory?new LocalReviewStorage(config.privateReviewDirectory):undefined,capabilityKey:config.devAccessKey},clock);
   const lifecycle=new AccountLifecycle(db,clock,userId=>service.withdrawPresence(userId),userId=>applications.erasePrivateMaterials(userId));
-  @Module({controllers:[PublicController,AccountController,AppController],providers:[SessionGuard,OnboardingSessionGuard,{provide:Auth,useValue:auth},{provide:NightShiftService,useValue:service},{provide:PhoneAuthentication,useValue:phone},{provide:Onboarding,useValue:onboarding},{provide:AccountLifecycle,useValue:lifecycle},{provide:ListenerApplications,useValue:applications}]})
+  // There is no approved live staff verifier/configuration yet. Test harnesses
+  // construct the separate staff controller explicitly; environment values or
+  // customer identity adapters cannot enable this production bootstrap.
+  const staff=new StaffAuthority(db);
+  @Module({controllers:[PublicController,AccountController,AppController,StaffController],providers:[SessionGuard,OnboardingSessionGuard,{provide:Auth,useValue:auth},{provide:NightShiftService,useValue:service},{provide:PhoneAuthentication,useValue:phone},{provide:Onboarding,useValue:onboarding},{provide:AccountLifecycle,useValue:lifecycle},{provide:ListenerApplications,useValue:applications},{provide:StaffAuthority,useValue:staff}]})
   class AppModule{}
   const app=await NestFactory.create(AppModule,{logger:['error','warn'],bodyParser:true});
   app.use((req:AuthenticatedRequest,res:Response,next:()=>void)=>{

@@ -6,6 +6,28 @@ on:
 permissions:
   contents: read
 jobs:
+  staff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run check:admin
+      - run: npm exec --workspace @nightshift/admin -- playwright install --with-deps chromium
+      - run: npm run test:admin:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: staff-synthetic-browser-failures
+          path: apps/admin/test-results
+          if-no-files-found: ignore
+          retention-days: 7
   backend:
     runs-on: ubuntu-latest
     services:

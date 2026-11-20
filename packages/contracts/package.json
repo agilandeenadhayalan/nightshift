@@ -5,7 +5,8 @@
   "description": "Public versioned HTTP and event schemas shared by clients and server",
   "exports": {
     "./openapi.json": "./openapi.json",
-    "./events.schema.json": "./events.schema.json"
+    "./events.schema.json": "./events.schema.json",
+    "./staff.openapi.json": "./staff.openapi.json"
   },
   "scripts": {
     "build": "node build-contract.mjs --check",

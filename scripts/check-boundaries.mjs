@@ -7,6 +7,7 @@ import ts from 'typescript';
 const allowedDependencies = new Map([
   ['@nightshift/api', new Set(['@nightshift/backend-domain', '@nightshift/contracts'])],
   ['@nightshift/mobile', new Set(['@nightshift/contracts'])],
+  ['@nightshift/admin', new Set(['@nightshift/contracts'])],
   ['@nightshift/backend-domain', new Set()],
   ['@nightshift/contracts', new Set()],
   ['@nightshift/audio', new Set()],
