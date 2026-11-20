@@ -1,6 +1,6 @@
 # Android two-phone milestone verification
 
-Status on 20 November 2026: **not yet run on two real Android phones**. No audible-media result is claimed from a unit test, simulator, API test or debug APK. Use this record for [#6](https://github.com/agilandeenadhayalan/nightshift/issues/6), [#26](https://github.com/agilandeenadhayalan/nightshift/issues/26) and the first milestone; the broader release matrix remains [#51](https://github.com/agilandeenadhayalan/nightshift/issues/51).
+Status on 20 November 2026: **partially exercised on two real Android phones; the audible-call milestone remains incomplete**. Sign-in, Listener availability, Customer discovery, invitation/acceptance, safe missing-RTC cleanup, decline/cancel/timeout and durable histories were observed; Agora configuration was absent, so no two-way-audio result is claimed. See the [dated device evidence](Device_Debug_2026-11-20.md). Keep this document as the reusable procedure for [#6](https://github.com/agilandeenadhayalan/nightshift/issues/6), [#26](https://github.com/agilandeenadhayalan/nightshift/issues/26) and the first milestone; the broader release matrix remains [#51](https://github.com/agilandeenadhayalan/nightshift/issues/51).
 
 For #8, also complete the [Tamil/English large-text and TalkBack procedure](FA008_Verification.md#required-physical-accessibility-check). Its reading-order and control-reachability checks require a real phone even when widget tests pass.
 
@@ -21,6 +21,8 @@ For the first physical-device test, follow `Local_Development.md`: run `adb -s D
 This first build is a **foreground call demonstration**. Backgrounding or locking intentionally ends media and marks availability offline; it does not promise background incoming calls or ongoing-call service support. Keep both phones foregrounded for the required path. Full notifications and foreground-service lifecycle behavior remain #29 work.
 
 ## Record before the run
+
+The table below is a template for the next complete audio run. Actual device/build metadata from the partial 20 November run is recorded in [Device_Debug_2026-11-20.md](Device_Debug_2026-11-20.md).
 
 | Evidence | Value |
 |---|---|
@@ -52,18 +54,18 @@ The milestone passes only when all eight steps pass on two real phones. Record b
 
 | Case | Procedure | Expected result | Result / evidence |
 |---|---|---|---|
-| Decline | Listener declines an invitation | Both parties recover, claims release, no charge | Pending |
-| Cancel | Customer cancels while ringing | Listener cannot accept a stale invite; no charge | Pending |
-| Ring timeout | Do not answer | One stable terminal result, claims release, no charge | Pending |
+| Decline | Listener declines an invitation | Both parties recover, claims release, no charge | Passed in [20 November partial run](Device_Debug_2026-11-20.md) |
+| Cancel | Customer cancels while ringing | Listener cannot accept a stale invite; no charge | Cancellation/claim release/no charge passed on 20 November; an explicit stale accept attempt remains pending |
+| Ring timeout | Do not answer | One stable terminal result, claims release, no charge | Passed in [20 November partial run](Device_Debug_2026-11-20.md) |
 | Accept/cancel race | Act on both phones near simultaneously | One server-authorized outcome; no second session | Pending |
 | Microphone denial | Deny permission on either phone | Clear recoverable failure; no healthy-time billing without both participants | Pending |
-| Missing/invalid RTC config | Use the backend's documented failure test | Actionable failure; no fake connected state or charged successful call | Pending |
-| Stale availability | Kill Listener app or disable network while idle | Listener becomes unavailable by configured expiry; no phantom supply | Pending |
+| Missing/invalid RTC config | Use the backend's documented failure test | Actionable failure; no fake connected state or charged successful call | Missing configuration passed on 20 November; invalid credentials remain untested |
+| Stale availability | Kill Listener app or disable network while idle | Listener becomes unavailable by configured expiry; no phantom supply | Idle force-stop tested on 20 November: unavailable by first inspection about 65s later, available again after foreground heartbeat. Exact 45s TTL timing and network-disable case remain unmeasured |
 | Concurrent callers | A second Customer attempts the same Listener | At most one active reservation; other caller gets a clear busy result | Pending |
 | Network gap | During a call disable one network briefly | Reconnecting state; gap excluded; same call resumes within grace | Pending |
 | Reconnect timeout | Keep network unavailable past grace | One terminal result; no ghost call or catch-up charge | Pending |
 | App process death | Kill either app mid-call | Conservative metering stops and session recovers/expires; no duplicate settlement | Pending |
-| Backend restart | Restart API mid-call | Durable session/history; no duplicate claim or debit; any recovery limit documented | Pending |
+| Backend restart | Restart API mid-call | Durable session/history; no duplicate claim or debit; any recovery limit documented | Completed-attempt histories persisted after restart on 20 November; active-media restart remains pending |
 | Permission settings change | Revoke microphone then resume | No silent capture or permanent broken state; clear recovery | Pending |
 | Mode switch during call | Attempt Customer/Listener switch | Disallowed while reserved/active; server remains authoritative | Pending |
 | Background / locked screen | Background and lock either device | This build intentionally ends media and goes offline; verify that safe exit. Background incoming/ongoing calls remain unsupported | Pending |
@@ -91,10 +93,10 @@ Provider-side paid-media cutoff is a separate gate: try continuing to publish/su
 
 | Milestone requirement | Result | Evidence |
 |---|---|---|
-| Listener goes online on Android device B | Pending | Real-device record required |
-| Customer on device A finds and calls B | Pending | Real-device record required |
-| Listener accepts; A hears B and B hears A | Pending | Real audible check required |
-| Either party ends, channel and microphone stop | Pending | Two call records required |
-| Both histories show the same completed calls | Pending | Real-device persistence check required |
+| Listener goes online on Android device B | Passed in partial run | [20 November device evidence](Device_Debug_2026-11-20.md) |
+| Customer on device A finds and calls B | Passed in partial run | Real invitation and acceptance persisted |
+| Listener accepts; A hears B and B hears A | Incomplete | Acceptance observed; missing Agora setup prevented audible media |
+| Either party ends, channel and microphone stop | Pending audible-call test | Safe automatic failure cleanup observed; successful media termination remains untested |
+| Both histories show the same completed calls | Passed for failed/declined/cancelled/timed-out attempts | Both apps and API restarted; repeat with audible calls to complete milestone |
 
 Attach redacted screenshots and safe diagnostic IDs if useful. Never attach audio, OTPs, full phone numbers, provider tokens, certificates or real personal data. Record failures honestly and link fixes; leave unexecuted cases pending.
