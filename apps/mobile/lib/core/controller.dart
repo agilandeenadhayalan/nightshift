@@ -35,16 +35,23 @@ class AppController extends ChangeNotifier {
   List<ListenerProfile> listeners = [];
   List<CallSession> history = [];
   String? historyCursor;
-  bool historyLoading = false;
+  bool historyLoading = false, historyLoaded = false;
+  ApiFailure? historyError;
+  bool _historyRetryAppend = false;
+  int _sessionRevision = 0, _historyRequest = 0, _snapshotRequest = 0;
   int balance = 0, held = 0;
   bool initializing = true, busy = false, offline = false, foreground = true;
   String locale = 'en', language = 'ta', lastPath = '/home';
-  String? error, diagnosticId;
+  String? error, errorCode, diagnosticId;
+  bool _errorFromSnapshot = false;
+  Future<void>? _sessionCleanup;
   String _deviceId = '', _joiningId = '', _joinedId = '';
   String? _abandonedCallId;
   bool _stopping = false;
   int _revision = 0;
   bool _polling = false, _mediaPosting = false, _disposed = false;
+  bool snapshotLoaded = false;
+  bool get snapshotLoading => _polling;
   Timer? _pollTimer, _presenceTimer;
   DateTime? _lastServerContact;
   String text(String english, String tamil) => locale == 'ta' ? tamil : english;
@@ -66,6 +73,8 @@ class AppController extends ChangeNotifier {
     try {
       locale = await store.read('locale') ?? 'en';
       language = await store.read('language') ?? 'ta';
+      if (!['en', 'ta'].contains(locale)) locale = 'en';
+      if (!['en', 'ta'].contains(language)) language = 'ta';
       _abandonedCallId = await store.read('abandonedCallId');
       lastPath = await store.read('lastPath') ?? '/home';
       if (!['/home', '/history', '/profile'].contains(lastPath)) {
@@ -75,7 +84,12 @@ class AppController extends ChangeNotifier {
       _deviceId = await store.read('deviceId') ?? newId();
       await store.write('deviceId', _deviceId);
       api.token = await store.read('token');
-      if (api.token != null) await refresh();
+      if (api.token != null) {
+        await refresh();
+        if (user != null && !hasCall && lastPath == '/history') {
+          await loadHistory();
+        }
+      }
     } catch (e) {
       _showError(e);
     }
@@ -94,6 +108,9 @@ class AppController extends ChangeNotifier {
 
   Future<void> login(String url, String handle, String accessKey) =>
       perform(() async {
+        // A revoked session may still be deleting its persisted token. Never
+        // let that older cleanup erase the token issued by this sign-in.
+        await _sessionCleanup;
         if (!developmentEnabled) {
           throw const ApiFailure('TEST_ONLY',
               'Development sign-in is unavailable in release builds.');
@@ -107,6 +124,8 @@ class AppController extends ChangeNotifier {
               'INVALID_URL', 'Enter a valid backend HTTP or HTTPS address.');
         }
         api.baseUrl = url.trim().replaceFirst(RegExp(r'/+$'), '');
+        _invalidateSessionRequests();
+        _resetHistory();
         api.token = null;
         final result = await api.request('POST', '/auth/dev', body: {
           'handle': handle,
@@ -125,22 +144,38 @@ class AppController extends ChangeNotifier {
     if (api.token == null || !foreground || _polling || _disposed) return;
     _polling = true;
     final revision = _revision;
+    final session = _sessionRevision;
+    final request = ++_snapshotRequest;
+    if (!snapshotLoaded) _notify();
     try {
       final snapshot = await api.request('GET', '/snapshot?language=$language');
-      if (revision != _revision || _disposed) return;
-      _lastServerContact = DateTime.now();
-      offline = false;
-      user = UserProfile.fromJson(snapshot['user'] as Json);
+      if (revision != _revision || session != _sessionRevision || _disposed) {
+        return;
+      }
+      final profile = UserProfile.fromJson(snapshot['user'] as Json);
       final wallet = snapshot['wallet'] as Json;
-      balance = number(wallet['balanceMicrocredits']);
-      held = number(wallet['heldMicrocredits']);
-      listeners = (snapshot['listeners'] as List)
+      final walletBalance = number(wallet['balanceMicrocredits']);
+      final walletHeld = number(wallet['heldMicrocredits']);
+      final directory = (snapshot['listeners'] as List)
           .map((j) => ListenerProfile.fromJson(j as Json))
           .toList();
       final previous = activeCall;
       final next = snapshot['activeCall'] == null
           ? null
           : CallSession.fromJson(snapshot['activeCall'] as Json);
+      _lastServerContact = DateTime.now();
+      offline = false;
+      user = profile;
+      balance = walletBalance;
+      held = walletHeld;
+      listeners = directory;
+      snapshotLoaded = true;
+      if (_errorFromSnapshot) {
+        error = null;
+        errorCode = null;
+        diagnosticId = null;
+        _errorFromSnapshot = false;
+      }
       // Snapshot is authoritative; terminal sessions cannot retain the microphone.
       if (next == null || next.ended) {
         activeCall = null;
@@ -150,6 +185,7 @@ class AppController extends ChangeNotifier {
           await audio.leave();
           _joinedId = '';
           lastPath = '/history';
+          await store.write('lastPath', lastPath);
           await loadHistory();
         }
         if (next != null) lastCall = next;
@@ -166,7 +202,8 @@ class AppController extends ChangeNotifier {
         if (_joinedId == next.id && !endingLocally) await reportMedia();
       }
     } catch (e) {
-      _showError(e);
+      if (session != _sessionRevision || _disposed) return;
+      _showError(e, fromSnapshot: true);
       if (e is ApiFailure && e.status == 401) await _clearSession();
       // Control connectivity loss must not leave media running indefinitely.
       if (hasCall &&
@@ -177,8 +214,10 @@ class AppController extends ChangeNotifier {
         _joinedId = '';
       }
     } finally {
-      _polling = false;
-      _notify();
+      if (request == _snapshotRequest) {
+        _polling = false;
+        _notify();
+      }
     }
   }
 
@@ -203,9 +242,13 @@ class AppController extends ChangeNotifier {
             !(busy && user?.listenerApproved == true && !hasCall)) {
           return;
         }
-        await api.request('PUT', '/me/mode',
+        final result = await api.request('PUT', '/me/mode',
             body: {'mode': isListener ? 'customer' : 'listener'});
+        // A poll already in flight must not undo the server-approved mode.
+        _revision++;
+        user = UserProfile.fromJson(result);
         lastPath = '/home';
+        await store.write('lastPath', lastPath);
         await refresh();
       });
 
@@ -243,6 +286,7 @@ class AppController extends ChangeNotifier {
           lastCall = updated;
           activeCall = null;
           lastPath = '/history';
+          await store.write('lastPath', lastPath);
           await loadHistory();
         } else {
           activeCall = updated;
@@ -316,7 +360,10 @@ class AppController extends ChangeNotifier {
 
   Future<void> _audioFailed(String code) async {
     if (_disposed || activeCall == null || endingLocally) return;
-    error = 'Audio connection failed. Try another call. ($code)';
+    error = 'Audio connection failed. Try another call.';
+    errorCode = 'AUDIO_FAILED';
+    diagnosticId = null;
+    _errorFromSnapshot = false;
     await audio.leave();
     await _endAfterFailure();
     _notify();
@@ -366,6 +413,7 @@ class AppController extends ChangeNotifier {
           _abandonedCallId = null;
           await store.delete('abandonedCallId');
           lastPath = '/history';
+          await store.write('lastPath', lastPath);
           await loadHistory();
           return;
         } on ApiFailure catch (e) {
@@ -382,17 +430,24 @@ class AppController extends ChangeNotifier {
 
   Future<void> loadHistory({bool append = false}) async {
     if (api.token == null ||
+        _disposed ||
         historyLoading ||
         (append && historyCursor == null)) {
       return;
     }
     historyLoading = true;
+    historyError = null;
+    _historyRetryAppend = append;
+    final session = _sessionRevision;
+    final request = ++_historyRequest;
+    _notify();
     try {
       final result = await api.request(
           'GET',
           append
               ? '/calls?cursor=${Uri.encodeQueryComponent(historyCursor!)}'
               : '/calls');
+      if (session != _sessionRevision || _disposed) return;
       final page = (result['items'] as List)
           .map((j) => CallSession.fromJson(j as Json))
           .where((c) => c.ended)
@@ -403,14 +458,34 @@ class AppController extends ChangeNotifier {
       for (final call in page) {
         unique[call.id] = call;
       }
+      // Validate the full response before replacing previously loaded rows.
+      final cursor = result['nextCursor'] as String?;
       history = unique.values.toList();
-      historyCursor = result['nextCursor'] as String?;
+      historyCursor = cursor;
+      historyLoaded = true;
       if (history.isNotEmpty) lastCall = history.first;
     } catch (e) {
-      _showError(e);
+      if (session != _sessionRevision || _disposed) return;
+      historyError = e is ApiFailure
+          ? e
+          : const ApiFailure('INVALID_RESPONSE',
+              'The server returned an unreadable response.');
+      if (e is ApiFailure && e.status == 401) {
+        _showError(e);
+        await _clearSession();
+      }
     } finally {
-      historyLoading = false;
+      if (request == _historyRequest) {
+        historyLoading = false;
+        _notify();
+      }
     }
+  }
+
+  Future<void> retryHistory() => loadHistory(append: _historyRetryAppend);
+
+  void clearHistoryError() {
+    historyError = null;
     _notify();
   }
 
@@ -451,18 +526,18 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> setLocale(String value) async {
-    locale = value;
-    await store.write('locale', value);
+    locale = ['en', 'ta'].contains(value) ? value : 'en';
+    await store.write('locale', locale);
     _notify();
   }
 
   Future<void> setLanguage(String value) async {
-    language = value;
-    await store.write('language', value);
+    language = ['en', 'ta'].contains(value) ? value : 'ta';
+    await store.write('language', language);
     if (api.token != null) {
       await perform(() async {
         await api.request('PUT', '/me/languages', body: {
-          'languages': [value]
+          'languages': [language]
         });
         await refresh();
       });
@@ -472,9 +547,10 @@ class AppController extends ChangeNotifier {
 
   Future<void> navigate(String path) async {
     if (hasCall) return;
-    lastPath = path;
-    await store.write('lastPath', path);
-    if (path == '/history') await loadHistory();
+    lastPath =
+        ['/home', '/history', '/profile'].contains(path) ? path : '/home';
+    await store.write('lastPath', lastPath);
+    if (lastPath == '/history') await loadHistory();
     _notify();
   }
 
@@ -489,21 +565,57 @@ class AppController extends ChangeNotifier {
       });
 
   Future<void> _clearSession() async {
-    activeCall = null;
-    await audio.leave();
-    await store.delete('token');
-    api.token = null;
-    user = null;
-    activeCall = null;
-    listeners = [];
+    final pending = _sessionCleanup;
+    if (pending != null) return pending;
+    final cleanup = Completer<void>();
+    _sessionCleanup = cleanup.future;
+    try {
+      _invalidateSessionRequests();
+      api.token = null;
+      user = null;
+      activeCall = null;
+      lastCall = null;
+      listeners = [];
+      _resetHistory();
+      balance = 0;
+      held = 0;
+      _joinedId = '';
+      lastPath = '/home';
+      await audio.leave();
+      await store.delete('token');
+      await store.write('lastPath', lastPath);
+    } finally {
+      // The caller still receives storage errors; this barrier only sequences
+      // a later sign-in, whose token write can safely replace any old value.
+      _sessionCleanup = null;
+      cleanup.complete();
+      _notify();
+    }
+  }
+
+  void _invalidateSessionRequests() {
+    _sessionRevision++;
+    _snapshotRequest++;
+    _polling = false;
+    snapshotLoaded = false;
+  }
+
+  void _resetHistory() {
+    _historyRequest++;
     history = [];
-    _joinedId = '';
+    historyCursor = null;
+    historyLoading = false;
+    historyLoaded = false;
+    historyError = null;
+    _historyRetryAppend = false;
   }
 
   Future<void> perform(Future<void> Function() operation) async {
     if (busy) return;
     busy = true;
     error = null;
+    errorCode = null;
+    _errorFromSnapshot = false;
     diagnosticId = null;
     _notify();
     try {
@@ -519,17 +631,23 @@ class AppController extends ChangeNotifier {
 
   void clearError() {
     error = null;
+    errorCode = null;
+    _errorFromSnapshot = false;
     diagnosticId = null;
     _notify();
   }
 
-  void _showError(Object error) {
+  void _showError(Object error, {bool fromSnapshot = false}) {
+    _errorFromSnapshot = fromSnapshot;
     if (error is ApiFailure) {
       this.error = error.message;
+      errorCode = error.code;
       diagnosticId = error.requestId;
       offline = error.code == 'OFFLINE';
     } else {
       this.error = 'Something went wrong. Try again.';
+      errorCode = 'UNKNOWN';
+      diagnosticId = null;
     }
   }
 
