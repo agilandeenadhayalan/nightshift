@@ -183,6 +183,59 @@ class DefaultApi {
     return null;
   }
 
+  /// Atomically record an immutable adult date of birth, private proposed nickname, built-in avatar, separate UI/speaking languages, and versioned development consent. Pending nicknames are not published.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [CompleteOnboardingRequest] completeOnboardingRequest (required):
+  Future<Response> completeOnboardingWithHttpInfo(CompleteOnboardingRequest completeOnboardingRequest, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/me/onboarding';
+
+    // ignore: prefer_final_locals
+    Object? postBody = completeOnboardingRequest;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'PUT',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Atomically record an immutable adult date of birth, private proposed nickname, built-in avatar, separate UI/speaking languages, and versioned development consent. Pending nicknames are not published.
+  ///
+  /// Parameters:
+  ///
+  /// * [CompleteOnboardingRequest] completeOnboardingRequest (required):
+  Future<OnboardingState?> completeOnboarding(CompleteOnboardingRequest completeOnboardingRequest, { Future<void>? abortTrigger, }) async {
+    final response = await completeOnboardingWithHttpInfo(completeOnboardingRequest, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'OnboardingState',) as OnboardingState;
+    
+    }
+    return null;
+  }
+
   /// Performs an HTTP 'POST /v1/calls' operation and returns the [Response].
   /// Parameters:
   ///
@@ -237,6 +290,65 @@ class DefaultApi {
     return null;
   }
 
+  /// Owner-only draft with explicit review-sample consent. A voice sample never proves age or gender.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [String] idempotencyKey (required):
+  ///
+  /// * [ListenerApplicationInput] listenerApplicationInput (required):
+  Future<Response> createListenerApplicationWithHttpInfo(String idempotencyKey, ListenerApplicationInput listenerApplicationInput, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/listener-applications';
+
+    // ignore: prefer_final_locals
+    Object? postBody = listenerApplicationInput;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    headerParams[r'Idempotency-Key'] = parameterToString(idempotencyKey);
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Owner-only draft with explicit review-sample consent. A voice sample never proves age or gender.
+  ///
+  /// Parameters:
+  ///
+  /// * [String] idempotencyKey (required):
+  ///
+  /// * [ListenerApplicationInput] listenerApplicationInput (required):
+  Future<ListenerApplication?> createListenerApplication(String idempotencyKey, ListenerApplicationInput listenerApplicationInput, { Future<void>? abortTrigger, }) async {
+    final response = await createListenerApplicationWithHttpInfo(idempotencyKey, listenerApplicationInput, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ListenerApplication',) as ListenerApplication;
+    
+    }
+    return null;
+  }
+
   /// Performs an HTTP 'POST /v1/reports' operation and returns the [Response].
   /// Parameters:
   ///
@@ -286,6 +398,70 @@ class DefaultApi {
     // FormatException when trying to decode an empty string.
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
       return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'CreateReport201Response',) as CreateReport201Response;
+    
+    }
+    return null;
+  }
+
+  /// Five-minute owner-bound upload lease. Private PCM WAV, 2–60 seconds, at most 2 MiB. No public URL.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [String] idempotencyKey (required):
+  ///
+  /// * [ReviewUploadRequest] reviewUploadRequest (required):
+  Future<Response> createReviewUploadWithHttpInfo(String id, String idempotencyKey, ReviewUploadRequest reviewUploadRequest, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/listener-applications/{id}/uploads'
+      .replaceAll('{id}', id);
+
+    // ignore: prefer_final_locals
+    Object? postBody = reviewUploadRequest;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    headerParams[r'Idempotency-Key'] = parameterToString(idempotencyKey);
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Five-minute owner-bound upload lease. Private PCM WAV, 2–60 seconds, at most 2 MiB. No public URL.
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [String] idempotencyKey (required):
+  ///
+  /// * [ReviewUploadRequest] reviewUploadRequest (required):
+  Future<ReviewUpload?> createReviewUpload(String id, String idempotencyKey, ReviewUploadRequest reviewUploadRequest, { Future<void>? abortTrigger, }) async {
+    final response = await createReviewUploadWithHttpInfo(id, idempotencyKey, reviewUploadRequest, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ReviewUpload',) as ReviewUpload;
     
     }
     return null;
@@ -462,6 +638,59 @@ class DefaultApi {
     return null;
   }
 
+  /// Registers a provider-verified ID token and device. Returns restricted access until adult onboarding completes. Every phone-session request checks Firebase revocation and local authorization. No credits or Listener approval are granted.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [PhoneSessionRequest] phoneSessionRequest (required):
+  Future<Response> exchangePhoneSessionWithHttpInfo(PhoneSessionRequest phoneSessionRequest, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/auth/exchange';
+
+    // ignore: prefer_final_locals
+    Object? postBody = phoneSessionRequest;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Registers a provider-verified ID token and device. Returns restricted access until adult onboarding completes. Every phone-session request checks Firebase revocation and local authorization. No credits or Listener approval are granted.
+  ///
+  /// Parameters:
+  ///
+  /// * [PhoneSessionRequest] phoneSessionRequest (required):
+  Future<PhoneSession?> exchangePhoneSession(PhoneSessionRequest phoneSessionRequest, { Future<void>? abortTrigger, }) async {
+    final response = await exchangePhoneSessionWithHttpInfo(phoneSessionRequest, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'PhoneSession',) as PhoneSession;
+    
+    }
+    return null;
+  }
+
   /// Performs an HTTP 'PUT /v1/favorites/{id}' operation and returns the [Response].
   /// Parameters:
   ///
@@ -560,6 +789,149 @@ class DefaultApi {
     return null;
   }
 
+  /// Owner-only recorded consent purposes and notice versions, including restricted onboarding accounts.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  Future<Response> getConsentHistoryWithHttpInfo({ Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/me/consents';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Owner-only recorded consent purposes and notice versions, including restricted onboarding accounts.
+  Future<ConsentHistory?> getConsentHistory({ Future<void>? abortTrigger, }) async {
+    final response = await getConsentHistoryWithHttpInfo(abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ConsentHistory',) as ConsentHistory;
+    
+    }
+    return null;
+  }
+
+  /// Development-only deletion effects and explicit retention limits before confirmation.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  Future<Response> getDeletionNoticeWithHttpInfo({ Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/me/deletion-notice';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Development-only deletion effects and explicit retention limits before confirmation.
+  Future<DeletionNotice?> getDeletionNotice({ Future<void>? abortTrigger, }) async {
+    final response = await getDeletionNoticeWithHttpInfo(abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'DeletionNotice',) as DeletionNotice;
+    
+    }
+    return null;
+  }
+
+  /// A private receipt capability reveals only deletion status after account sessions have been revoked. Never include it in URLs or diagnostics.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [DeletionReceiptRequest] deletionReceiptRequest (required):
+  Future<Response> getDeletionReceiptWithHttpInfo(DeletionReceiptRequest deletionReceiptRequest, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/account-deletion/status';
+
+    // ignore: prefer_final_locals
+    Object? postBody = deletionReceiptRequest;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// A private receipt capability reveals only deletion status after account sessions have been revoked. Never include it in URLs or diagnostics.
+  ///
+  /// Parameters:
+  ///
+  /// * [DeletionReceiptRequest] deletionReceiptRequest (required):
+  Future<DeletionReceipt?> getDeletionReceipt(DeletionReceiptRequest deletionReceiptRequest, { Future<void>? abortTrigger, }) async {
+    final response = await getDeletionReceiptWithHttpInfo(deletionReceiptRequest, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'DeletionReceipt',) as DeletionReceipt;
+    
+    }
+    return null;
+  }
+
   /// Performs an HTTP 'GET /v1/events' operation and returns the [Response].
   /// Parameters:
   ///
@@ -612,6 +984,48 @@ class DefaultApi {
     return null;
   }
 
+  /// Performs an HTTP 'GET /v1/me/listener-application' operation and returns the [Response].
+  Future<Response> getListenerApplicationWithHttpInfo({ Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/me/listener-application';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  Future<ListenerApplicationState?> getListenerApplication({ Future<void>? abortTrigger, }) async {
+    final response = await getListenerApplicationWithHttpInfo(abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ListenerApplicationState',) as ListenerApplicationState;
+    
+    }
+    return null;
+  }
+
   /// Performs an HTTP 'GET /v1/me' operation and returns the [Response].
   Future<Response> getMeWithHttpInfo({ Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
@@ -649,6 +1063,51 @@ class DefaultApi {
     // FormatException when trying to decode an empty string.
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
       return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'User',) as User;
+    
+    }
+    return null;
+  }
+
+  /// Owner-only profile and onboarding state. Available to restricted onboarding sessions; date of birth is never public.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  Future<Response> getOnboardingWithHttpInfo({ Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/me/onboarding';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Owner-only profile and onboarding state. Available to restricted onboarding sessions; date of birth is never public.
+  Future<OnboardingState?> getOnboarding({ Future<void>? abortTrigger, }) async {
+    final response = await getOnboardingWithHttpInfo(abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'OnboardingState',) as OnboardingState;
     
     }
     return null;
@@ -1121,6 +1580,65 @@ class DefaultApi {
     return null;
   }
 
+  /// Authenticated applicant-only private sample; never a public capability URL.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [String] uploadId (required):
+  Future<Response> readListenerSampleWithHttpInfo(String id, String uploadId, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/listener-applications/{id}/uploads/{uploadId}'
+      .replaceAll('{id}', id)
+      .replaceAll('{uploadId}', uploadId);
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Authenticated applicant-only private sample; never a public capability URL.
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [String] uploadId (required):
+  Future<MultipartFile?> readListenerSample(String id, String uploadId, { Future<void>? abortTrigger, }) async {
+    final response = await readListenerSampleWithHttpInfo(id, uploadId, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'MultipartFile',) as MultipartFile;
+    
+    }
+    return null;
+  }
+
   /// Report only local/remote RTC readiness. Video calls require videoReady and both audio and video readiness. No client duration or price. Heartbeat every two seconds; not provider proof.
   ///
   /// Note: This method returns the HTTP [Response].
@@ -1174,6 +1692,59 @@ class DefaultApi {
     // FormatException when trying to decode an empty string.
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
       return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'Call',) as Call;
+    
+    }
+    return null;
+  }
+
+  /// Requires provider authentication within five minutes. Withdraws account access and records deletion, retaining financial/dispute evidence for review. Client generates and securely persists a random 32-byte hex receipt capability before submitting.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [DeletionRequest] deletionRequest (required):
+  Future<Response> requestAccountDeletionWithHttpInfo(DeletionRequest deletionRequest, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/me/deletion-requests';
+
+    // ignore: prefer_final_locals
+    Object? postBody = deletionRequest;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Requires provider authentication within five minutes. Withdraws account access and records deletion, retaining financial/dispute evidence for review. Client generates and securely persists a random 32-byte hex receipt capability before submitting.
+  ///
+  /// Parameters:
+  ///
+  /// * [DeletionRequest] deletionRequest (required):
+  Future<DeletionReceipt?> requestAccountDeletion(DeletionRequest deletionRequest, { Future<void>? abortTrigger, }) async {
+    final response = await requestAccountDeletionWithHttpInfo(deletionRequest, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'DeletionReceipt',) as DeletionReceipt;
     
     }
     return null;
@@ -1424,6 +1995,61 @@ class DefaultApi {
     return null;
   }
 
+  /// Performs an HTTP 'POST /v1/listener-applications/{id}/submit' operation and returns the [Response].
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [String] idempotencyKey (required):
+  Future<Response> submitListenerApplicationWithHttpInfo(String id, String idempotencyKey, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/listener-applications/{id}/submit'
+      .replaceAll('{id}', id);
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    headerParams[r'Idempotency-Key'] = parameterToString(idempotencyKey);
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [String] idempotencyKey (required):
+  Future<ListenerApplication?> submitListenerApplication(String id, String idempotencyKey, { Future<void>? abortTrigger, }) async {
+    final response = await submitListenerApplicationWithHttpInfo(id, idempotencyKey, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ListenerApplication',) as ListenerApplication;
+    
+    }
+    return null;
+  }
+
   /// Performs an HTTP 'DELETE /v1/favorites/{id}' operation and returns the [Response].
   /// Parameters:
   ///
@@ -1468,6 +2094,123 @@ class DefaultApi {
     // FormatException when trying to decode an empty string.
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
       return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'FavoriteListener200Response',) as FavoriteListener200Response;
+    
+    }
+    return null;
+  }
+
+  /// Performs an HTTP 'PUT /v1/listener-applications/{id}' operation and returns the [Response].
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [ListenerApplicationInput] listenerApplicationInput (required):
+  Future<Response> updateListenerApplicationWithHttpInfo(String id, ListenerApplicationInput listenerApplicationInput, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/listener-applications/{id}'
+      .replaceAll('{id}', id);
+
+    // ignore: prefer_final_locals
+    Object? postBody = listenerApplicationInput;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'PUT',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [ListenerApplicationInput] listenerApplicationInput (required):
+  Future<ListenerApplication?> updateListenerApplication(String id, ListenerApplicationInput listenerApplicationInput, { Future<void>? abortTrigger, }) async {
+    final response = await updateListenerApplicationWithHttpInfo(id, listenerApplicationInput, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ListenerApplication',) as ListenerApplication;
+    
+    }
+    return null;
+  }
+
+  /// Performs an HTTP 'PUT /v1/listener-applications/{id}/uploads/{uploadId}' operation and returns the [Response].
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [String] uploadId (required):
+  ///
+  /// * [String] xUploadToken (required):
+  ///
+  /// * [MultipartFile] body (required):
+  Future<Response> uploadListenerSampleWithHttpInfo(String id, String uploadId, String xUploadToken, MultipartFile body, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/listener-applications/{id}/uploads/{uploadId}'
+      .replaceAll('{id}', id)
+      .replaceAll('{uploadId}', uploadId);
+
+    // ignore: prefer_final_locals
+    Object? postBody = body;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    headerParams[r'X-Upload-Token'] = parameterToString(xUploadToken);
+
+    const contentTypes = <String>['audio/wav'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'PUT',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [String] uploadId (required):
+  ///
+  /// * [String] xUploadToken (required):
+  ///
+  /// * [MultipartFile] body (required):
+  Future<ListenerApplication?> uploadListenerSample(String id, String uploadId, String xUploadToken, MultipartFile body, { Future<void>? abortTrigger, }) async {
+    final response = await uploadListenerSampleWithHttpInfo(id, uploadId, xUploadToken, body, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ListenerApplication',) as ListenerApplication;
     
     }
     return null;
@@ -1574,6 +2317,61 @@ class DefaultApi {
     // FormatException when trying to decode an empty string.
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
       return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'PhoneIdentity',) as PhoneIdentity;
+    
+    }
+    return null;
+  }
+
+  /// Performs an HTTP 'POST /v1/listener-applications/{id}/withdraw' operation and returns the [Response].
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [String] idempotencyKey (required):
+  Future<Response> withdrawListenerApplicationWithHttpInfo(String id, String idempotencyKey, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/listener-applications/{id}/withdraw'
+      .replaceAll('{id}', id);
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    headerParams[r'Idempotency-Key'] = parameterToString(idempotencyKey);
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [String] idempotencyKey (required):
+  Future<ListenerApplication?> withdrawListenerApplication(String id, String idempotencyKey, { Future<void>? abortTrigger, }) async {
+    final response = await withdrawListenerApplicationWithHttpInfo(id, idempotencyKey, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ListenerApplication',) as ListenerApplication;
     
     }
     return null;

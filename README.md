@@ -50,7 +50,7 @@ API changes also require `npm run generate:client` and `npm run check:client` wi
 
 The Flutter navigation/state continuation and its physical accessibility checklist are tracked in [FA-008 verification](docs/FA008_Verification.md). Automated loading, retry, restoration and semantics tests complement the required real-phone checks.
 
-The [FA-009 phone identity foundation](docs/FA009_Identity_Validation.md) adds disabled-by-default OTP/provider validation and tested abuse controls. It does not yet replace fictional app sign-in; real SMS, Firebase client exchange, onboarding and app-session evidence remain separate.
+The [account and application continuation](docs/Account_Application_Verification.md) adds phone sign-in and secure refresh, adult onboarding, private Listener applications, consent history and deletion receipts. Provider configuration remains disabled by default; real SMS, physical account journeys, staff review and retention approvals remain separate. The [all-issue completion plan](docs/Backlog_Completion_Plan.md) records the exact dependencies and outstanding work.
 
 ## Browser reference
 

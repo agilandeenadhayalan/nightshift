@@ -1,0 +1,34 @@
+# Accounts, private listener applications and deletion
+
+Continuation of #9–13 and #16, 20 November 2026. One Android app still has exactly Customer and Listener modes. Submission never grants Listener approval. Staff identity/MFA and the review console remain separate #10/#14 work; no staff feature has been added to the customer app.
+
+After this checkpoint's implementation, the owner selected native **Firebase paid SMS for India (+91)**. This supersedes the planned MSG91 live-provider setup. The current tests below verify the existing custom-token protocol; native Firebase SMS integration and live billing/provider evidence are the next task, not implied complete here.
+
+## Implemented behavior
+
+- Phone sign-in includes explicit consent, OTP cooldown/expiry/error recovery, Firebase custom-token exchange and secure refresh-credential storage. The app uses a fixed phone API origin, refuses redirects and permits HTTP only for explicit debug loopback/emulator addresses. Provider configuration stays disabled by default.
+- Firebase identity is bound to an opaque account/device. Every protected phone request verifies provider revocation and current local authorization. Logout revokes the full sign-in lineage, so a refresh or different device ID cannot resurrect it. Different-device replacement requires a fresh sign-in and no active call. Restricted new accounts can only reach onboarding, privacy and logout.
+- Onboarding records a real, immutable date of birth, an adult boundary in UTC, a built-in avatar, a private proposed nickname, separate interface/speaking languages and versioned development consent. An underage submission cannot retry another DOB. No initial credits or Listener entitlement are granted. Pending nicknames are not published; typed age and a sample do not establish identity, age or gender assurance.
+- Eligible adults can save a private Listener application, select supported topics/languages, consent to a review sample, upload, submit and withdraw. Private local storage must be explicitly configured. Upload leases last five minutes; raw PCM16 WAV is restricted to 2–60 seconds and 2 MiB, with exact length/digest/signature/chunk checks. The server enforces three pending leases and 20 leases/hour per account, including across replacement applications.
+- Sample access needs the owning authenticated account; no public URL is issued. Withdrawal removes access immediately and clears material without reversing a terminal review decision. A bounded internal worker retries deleted or interrupted/expired files even when the applicant never returns. Account deletion uses the same cleanup boundary.
+- Consent history and deletion are available to restricted accounts as well as onboarded accounts. Deletion requires an explicit current notice and trusted provider authentication within five minutes; token refresh alone does not qualify. The client saves a random private receipt before submitting and can recover status after sign-out. Profile/DOB, devices, sessions and private sample material are removed independently of financial holds. A narrowly scoped preexisting case hold may preserve only the submitted nickname; underage profile data is removed immediately.
+
+Deletion does **not** claim full erasure: immutable financial/dispute/consent records and a restricted identity tombstone remain pending an approved retention process. The status is `review_required` or `pending_hold`, never a false completed status. Test credits become inaccessible and illustrative Listener earnings remain nonpayable. The notice states these effects before confirmation.
+
+## Review and verification
+
+Independent review identified and corrected authentication-lineage refresh/logout races, invalid enum coercion, nullable SQL identity metadata, discovery filtering that incorrectly changed speaking preferences, missing OTP-consent cancellation, private-file retry/starvation gaps, invalid high-bit WAV tags, terminal-state material withdrawal and an account-switch race during deletion refresh. The latter is tested at the real mobile transport dispatch boundary. Tests use synthetic identities and private temporary storage; no real person was deleted or uploaded.
+
+The generated Dart SDK completed a real HTTP journey against an isolated Nest/PostgreSQL/Redis instance: restricted exchange, adult onboarding, safe public alias, application draft, raw WAV upload/download with matching digest, idempotent submission, consent history, deletion and receipt recovery without authentication. Server-side checks confirmed zero remaining profile/device/session rows and no sample files. The verifier was explicitly synthetic; no live SMS or cloud authentication occurred.
+
+Reproduce that journey after building the API and running `flutter pub get` in `apps/mobile`. Supply `NODE_ENV=test`, a dedicated `TEST_DATABASE_URL` whose database name ends in `_test`, and an isolated `REDIS_URL` privately, then run `npm run smoke:accounts`. The harness uses a fresh random schema and temporary directory and removes both afterward. On Windows it uses the standard local Flutter Dart executable; set `DART_BIN` if your SDK is elsewhere. Credentials are inherited through the environment, never command-line values or output.
+
+Final combined suite, Android artifact and CI evidence are recorded below after those checks complete. Earlier baseline counts remain historical in their original evidence documents.
+
+## Operation and remaining acceptance
+
+Migrations 006–008 are forward-only additions to the existing test foundation. Configure `PRIVATE_REVIEW_STORAGE_DIR` to an absolute private directory outside Git and outside any web/static mount. Without it, application drafts work but file operations fail closed. The local file adapter does not establish production storage durability, malware scanning, backup erasure or a retention approval. Production startup remains refused.
+
+The owner selected Firebase project `nightshift-c3e1a`; Android registration and ignored client configuration are present, billing is disabled. See [Firebase setup](Firebase_Development_Setup.md). Server credentials, MSG91/DLT/PE–TM configuration, approved SMS cap and consenting Indian-SIM tests remain necessary for live sign-in evidence. Do not infer these from project registration.
+
+Before closing the issues, complete live provider exchange/refresh/revocation and physical account journeys; device Tamil/large-text/TalkBack checks; approved consent, age-assurance and retention policy; production private-storage review; and the separate staff MFA/review workflow. No real payment, payout, public launch or complete-account-erasure claim follows from this continuation. See [all-issue status](Issue_Status.md), [dependency plan](Backlog_Completion_Plan.md) and [owner decisions](Launch_Decisions_Required.md).

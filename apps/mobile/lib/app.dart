@@ -7,6 +7,9 @@ import 'package:go_router/go_router.dart';
 import 'core/controller.dart';
 import 'features/screens.dart';
 import 'features/state_widgets.dart';
+import 'features/account_screens.dart';
+import 'features/privacy_screens.dart';
+import 'features/listener_application_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final state = ref.read(appControllerProvider);
@@ -17,9 +20,24 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, route) {
       final path = route.matchedLocation;
       if (state.initializing) return path == '/loading' ? null : '/loading';
-      if (state.user == null) return path == '/login' ? null : '/login';
+      if (state.user == null) {
+        if (path == '/privacy' && state.privacy.receipt != null) {
+          return '/deletion-status';
+        }
+        return ['/login', '/phone-login', '/deletion-status'].contains(path)
+            ? null
+            : '/login';
+      }
+      if (state.needsOnboarding) {
+        return ['/onboarding', '/privacy', '/deletion-status'].contains(path)
+            ? null
+            : '/onboarding';
+      }
       if (state.hasCall) return path == '/call' ? null : '/call';
-      if (['/login', '/loading', '/call'].contains(path)) return state.lastPath;
+      if (['/login', '/phone-login', '/onboarding', '/loading', '/call']
+          .contains(path)) {
+        return state.lastPath;
+      }
       return null;
     },
     routes: [
@@ -31,7 +49,18 @@ final routerProvider = Provider<GoRouter>((ref) {
                       label: state.text('Loading NightShift…',
                           'NightShift ஏற்றப்படுகிறது…'))))),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+      GoRoute(
+          path: '/phone-login', builder: (_, __) => const PhoneLoginScreen()),
+      GoRoute(
+          path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
       GoRoute(path: '/call', builder: (_, __) => const CallScreen()),
+      GoRoute(path: '/privacy', builder: (_, __) => const PrivacyScreen()),
+      GoRoute(
+          path: '/listener-application',
+          builder: (_, __) => const ListenerApplicationScreen()),
+      GoRoute(
+          path: '/deletion-status',
+          builder: (_, __) => const DeletionStatusScreen()),
       ShellRoute(
           builder: (_, route, child) =>
               HomeShell(path: route.matchedLocation, child: child),

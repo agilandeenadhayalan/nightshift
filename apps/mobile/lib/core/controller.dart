@@ -1,10 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'api.dart';
 import 'audio.dart';
 import 'models.dart';
 import 'session_store.dart';
+import 'firebase_identity_client.dart';
+import 'phone_sign_in.dart';
+import 'account_privacy.dart';
+import 'listener_application.dart';
+import 'review_sample_picker.dart';
 
 final appControllerProvider = ChangeNotifierProvider<AppController>((ref) {
   final controller = AppController(
@@ -20,16 +26,50 @@ class AppController extends ChangeNotifier {
       {required this.api,
       required this.store,
       required this.audio,
+      FirebaseIdentityClient? identityClient,
+      NightShiftApi? receiptApi,
+      ReviewSamplePicker? samplePicker,
       this.startTimers = true,
-      this.developmentEnabled = !kReleaseMode}) {
+      this.developmentEnabled = !kReleaseMode})
+      : firebase = identityClient ?? RestFirebaseIdentityClient() {
     audio.onChanged = _audioChanged;
     audio.onFailure = (code) => unawaited(_audioFailed(code));
+    phoneSignIn = PhoneSignIn(
+        api: api,
+        firebase: firebase,
+        deviceId: () => _deviceId,
+        onAuthenticated: _acceptPhoneSession)
+      ..addListener(_notify);
+    api.prepareSession = _ensurePhoneSession;
+    api.sessionIdentity = () => (user?.id, _identityRevision);
+    listenerApplication = ListenerApplication(
+        api: api, currentUserId: () => user?.id, picker: samplePicker)
+      ..addListener(_notify);
+    privacy = AccountPrivacy(
+        api: api,
+        store: store,
+        backendUrl: phoneSignIn.backendUrl,
+        currentUserId: () => user?.id,
+        receiptApi: receiptApi,
+        onDeleted: (owner) async {
+          if (user?.id == owner) await _clearSession();
+        })
+      ..addListener(_notify);
   }
   final NightShiftApi api;
   final SessionStore store;
   final CallAudio audio;
   final bool startTimers;
   final bool developmentEnabled;
+  final FirebaseIdentityClient firebase;
+  late final PhoneSignIn phoneSignIn;
+  late final AccountPrivacy privacy;
+  late final ListenerApplication listenerApplication;
+  FirebaseTokens? _phoneTokens;
+  Future<void>? _phoneRenewal;
+  Future<void> _phoneStorage = Future<void>.value();
+  bool needsOnboarding = false, canRestorePhoneSession = false;
+  Json? onboardingProfile;
   UserProfile? user;
   CallSession? activeCall, lastCall;
   List<ListenerProfile> listeners = [];
@@ -39,6 +79,7 @@ class AppController extends ChangeNotifier {
   ApiFailure? historyError;
   bool _historyRetryAppend = false;
   int _sessionRevision = 0, _historyRequest = 0, _snapshotRequest = 0;
+  int _identityRevision = 0;
   int balance = 0, held = 0;
   bool initializing = true, busy = false, offline = false, foreground = true;
   String locale = 'en', language = 'ta', lastPath = '/home';
@@ -193,6 +234,7 @@ class AppController extends ChangeNotifier {
       return;
     }
     try {
+      await privacy.initialize();
       locale = await store.read('locale') ?? 'en';
       language = await store.read('language') ?? 'ta';
       if (!['en', 'ta'].contains(locale)) locale = 'en';
@@ -205,8 +247,13 @@ class AppController extends ChangeNotifier {
       api.baseUrl = await store.read('baseUrl') ?? api.baseUrl;
       _deviceId = await store.read('deviceId') ?? newId();
       await store.write('deviceId', _deviceId);
-      api.token = await store.read('token');
-      if (api.token != null) {
+      canRestorePhoneSession = await store.read('phoneSession') != null;
+      if (canRestorePhoneSession) {
+        await _restorePhoneSession();
+      } else {
+        api.token = await store.read('token');
+      }
+      if (api.token != null && !needsOnboarding) {
         await refresh();
         if (user != null && !hasCall && lastPath == '/history') {
           await loadHistory();
@@ -256,6 +303,11 @@ class AppController extends ChangeNotifier {
         api.baseUrl = url.trim().replaceFirst(RegExp(r'/+$'), '');
         _invalidateSessionRequests();
         _resetHistory();
+        phoneSignIn.reset();
+        _phoneTokens = null;
+        needsOnboarding = canRestorePhoneSession = false;
+        onboardingProfile = null;
+        await store.delete('phoneSession');
         api.token = null;
         final result = await api.request('POST', '/auth/dev', body: {
           'handle': handle,
@@ -270,8 +322,189 @@ class AppController extends ChangeNotifier {
         await refresh();
       });
 
+  Future<void> _acceptPhoneSession(FirebaseTokens tokens, Json result) async {
+    final priorSession = _sessionRevision;
+    await _sessionCleanup;
+    if (_disposed || priorSession != _sessionRevision) return;
+    if (result['token'] != tokens.idToken ||
+        result['needsOnboarding'] is! bool) {
+      throw const ApiFailure('INVALID_RESPONSE', 'Invalid identity session.');
+    }
+    _invalidateSessionRequests();
+    _resetHistory();
+    _phoneTokens = tokens;
+    api.token = tokens.idToken;
+    needsOnboarding = result['needsOnboarding'] as bool;
+    user = UserProfile.fromJson(result['user'] as Json);
+    final session = _sessionRevision;
+    await _savePhoneTokens(tokens, session);
+    if (_disposed || session != _sessionRevision) return;
+    await store.write('baseUrl', api.baseUrl);
+    canRestorePhoneSession = true;
+    if (needsOnboarding) {
+      await loadOnboarding();
+    } else {
+      await refresh();
+    }
+    _notify();
+  }
+
+  Future<void> _restorePhoneSession() async {
+    api.token = null;
+    final session = _sessionRevision;
+    final raw = await store.read('phoneSession');
+    if (raw == null) return;
+    try {
+      final saved = jsonDecode(raw) as Json;
+      // Refresh credentials must not be restored against a different backend.
+      if (!phoneSignIn.safeBackend ||
+          saved['baseUrl'] != phoneSignIn.backendUrl ||
+          saved['baseUrl'] != api.baseUrl ||
+          saved['refreshToken'] is! String) {
+        throw const ApiFailure('INVALID_ID_TOKEN', 'Sign in again.',
+            status: 401);
+      }
+      final tokens = await firebase.refresh(saved['refreshToken'] as String);
+      if (_disposed || session != _sessionRevision) return;
+      final result = await api.request('POST', '/auth/exchange',
+          body: {'idToken': tokens.idToken, 'deviceId': _deviceId});
+      if (_disposed || session != _sessionRevision) return;
+      await _acceptPhoneSession(tokens, result);
+    } on ApiFailure catch (e) {
+      if (e.status == 401 && !_disposed && session == _sessionRevision) {
+        await _clearSession();
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> restorePhoneSession() => perform(_restorePhoneSession);
+
+  Future<void> _ensurePhoneSession() async {
+    final tokens = _phoneTokens;
+    if (tokens != null &&
+        (!phoneSignIn.safeBackend || api.baseUrl != phoneSignIn.backendUrl)) {
+      throw const ApiFailure('INVALID_ID_TOKEN', 'Sign in again.', status: 401);
+    }
+    if (tokens == null ||
+        tokens.expiresAt.difference(DateTime.now()).inSeconds > 60) {
+      return;
+    }
+    if (_phoneRenewal != null) return _phoneRenewal;
+    final session = _sessionRevision;
+    final renewal = Completer<void>();
+    _phoneRenewal = renewal.future;
+    try {
+      final next = await firebase.refresh(tokens.refreshToken);
+      if (_disposed || session != _sessionRevision) {
+        throw const ApiFailure('UNAUTHENTICATED', 'Sign in again.',
+            status: 401);
+      }
+      final result = await api.request('POST', '/auth/exchange',
+          body: {'idToken': next.idToken, 'deviceId': _deviceId});
+      if (_disposed || session != _sessionRevision) {
+        throw const ApiFailure('UNAUTHENTICATED', 'Sign in again.',
+            status: 401);
+      }
+      if (result['token'] != next.idToken || result['user']['id'] != user?.id) {
+        throw const ApiFailure('INVALID_ID_TOKEN', 'Sign in again.',
+            status: 401);
+      }
+      _phoneTokens = next;
+      api.token = next.idToken;
+      // In-flight responses using the predecessor token lose authority here.
+      // In particular, a delayed 401 must not erase the freshly renewed session.
+      _sessionRevision++;
+      await _savePhoneTokens(next, _sessionRevision);
+      renewal.complete();
+    } catch (e, stack) {
+      renewal.completeError(e, stack);
+    } finally {
+      _phoneRenewal = null;
+    }
+    return renewal.future;
+  }
+
+  Future<void> _savePhoneTokens(FirebaseTokens tokens, int session) {
+    final previous = _phoneStorage;
+    final baseUrl = api.baseUrl;
+    final write = (() async {
+      await previous;
+      if (_disposed || session != _sessionRevision) return;
+      await store.write(
+          'phoneSession',
+          jsonEncode(
+              {'refreshToken': tokens.refreshToken, 'baseUrl': baseUrl}));
+      if (_disposed || session != _sessionRevision) return;
+      await store.write('token', tokens.idToken);
+    })();
+    _phoneStorage = write.catchError((Object _) {});
+    return write;
+  }
+
+  Future<void> loadOnboarding() async {
+    final identity = _identityRevision, owner = user?.id, origin = api.baseUrl;
+    bool current() =>
+        !_disposed &&
+        identity == _identityRevision &&
+        user?.id == owner &&
+        api.baseUrl == origin;
+    final result = await api.privateRequest('GET', '/me/onboarding',
+        origin: origin, isCurrent: current);
+    if (!current()) return;
+    onboardingProfile = result['profile'] as Json;
+    needsOnboarding = result['required'] == true;
+    _notify();
+  }
+
+  Future<void> completeOnboarding(Json profile) => perform(() async {
+        final identity = _identityRevision,
+            owner = user?.id,
+            origin = api.baseUrl;
+        bool current() =>
+            !_disposed &&
+            identity == _identityRevision &&
+            user?.id == owner &&
+            api.baseUrl == origin;
+        final birth = profile['dateOfBirth'];
+        final parsed = birth is String ? DateTime.tryParse(birth) : null;
+        if (birth is! String ||
+            !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(birth) ||
+            parsed == null ||
+            parsed.toIso8601String().substring(0, 10) != birth) {
+          throw const ApiFailure(
+              'INVALID_BIRTH_DATE', 'Enter a valid date of birth.');
+        }
+        Json result;
+        try {
+          result = await api.privateRequest('PUT', '/me/onboarding',
+              origin: origin,
+              isCurrent: current,
+              body: {...profile, 'consentVersion': 'adult-onboarding-v1'});
+        } on ApiFailure catch (e) {
+          if (current() && ['ADULT_ONLY', 'DOB_IMMUTABLE'].contains(e.code)) {
+            try {
+              await loadOnboarding();
+            } catch (_) {/* Preserve the age-gate error. */}
+          }
+          rethrow;
+        }
+        if (!current()) return;
+        onboardingProfile = result['profile'] as Json;
+        needsOnboarding = result['required'] == true;
+        if (needsOnboarding) return;
+        await setLocale(profile['interfaceLanguage'] as String);
+        await refresh();
+      });
+
   Future<void> refresh() async {
-    if (api.token == null || !foreground || _polling || _disposed) return;
+    if (api.token == null ||
+        needsOnboarding ||
+        !foreground ||
+        _polling ||
+        _disposed) {
+      return;
+    }
     _polling = true;
     final revision = _revision;
     final session = _sessionRevision;
@@ -354,7 +587,9 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> heartbeat() async {
-    if (api.token == null || !foreground || _disposed) return;
+    if (api.token == null || needsOnboarding || !foreground || _disposed) {
+      return;
+    }
     try {
       await api.request('POST', '/presence/heartbeat', body: {});
     } catch (e) {
@@ -774,12 +1009,7 @@ class AppController extends ChangeNotifier {
     language = ['en', 'ta'].contains(value) ? value : 'ta';
     await store.write('language', language);
     if (api.token != null) {
-      await perform(() async {
-        await api.request('PUT', '/me/languages', body: {
-          'languages': [language]
-        });
-        await refresh();
-      });
+      await refresh();
     }
     _notify();
   }
@@ -815,6 +1045,12 @@ class AppController extends ChangeNotifier {
       _videoConsentCallId = null;
       await closeVideoPreview();
       api.token = null;
+      _phoneTokens = null;
+      privacy.clearPrivateView();
+      listenerApplication.clearPrivateView();
+      phoneSignIn.reset();
+      needsOnboarding = canRestorePhoneSession = false;
+      onboardingProfile = null;
       user = null;
       activeCall = null;
       lastCall = null;
@@ -825,7 +1061,9 @@ class AppController extends ChangeNotifier {
       _joinedId = '';
       lastPath = '/home';
       await audio.leave();
+      await _phoneStorage;
       await store.delete('token');
+      await store.delete('phoneSession');
       await store.write('lastPath', lastPath);
     } finally {
       // The caller still receives storage errors; this barrier only sequences
@@ -837,6 +1075,7 @@ class AppController extends ChangeNotifier {
   }
 
   void _invalidateSessionRequests() {
+    _identityRevision++;
     _sessionRevision++;
     _snapshotRequest++;
     _polling = false;
@@ -911,6 +1150,13 @@ class AppController extends ChangeNotifier {
     audio.onFailure = null;
     unawaited(audio.leave());
     api.close();
+    phoneSignIn.removeListener(_notify);
+    phoneSignIn.dispose();
+    firebase.close();
+    privacy.removeListener(_notify);
+    privacy.dispose();
+    listenerApplication.removeListener(_notify);
+    listenerApplication.dispose();
     super.dispose();
   }
 }

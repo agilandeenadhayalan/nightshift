@@ -1,16 +1,19 @@
 import { ArgumentsHost, Body, Catch, Controller, Delete, ExceptionFilter, Get, HttpException, Inject, Module,
-  Param, Post, Put, Query, Req, UseGuards, CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+  Param, Post, Put, Query, Req, Res, UseGuards, CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { Request, Response } from 'express';
+import { Request, Response, raw } from 'express';
 import { randomUUID } from 'node:crypto';
-import { Auth, Actor } from './auth';
+import { Auth, Actor, tokenHash } from './auth';
 import { NightShiftService } from './service';
-import { ApiError } from './errors';
+import { ApiError, requireThat } from './errors';
 import { Config } from './config';
 import { Database } from './db';
 import { Presence } from './presence';
 import { Server } from 'socket.io';
 import { createPhoneAuthentication, PhoneAuthentication, PhoneAuthDependencies } from './identity/phone-auth';
+import { Onboarding } from './identity/onboarding';
+import { AccountLifecycle } from './account-lifecycle';
+import { ListenerApplications, LocalReviewStorage } from './listener-applications';
 
 type AuthenticatedRequest=Request & {actor:Actor;requestId:string};
 @Injectable()
@@ -20,6 +23,15 @@ class SessionGuard implements CanActivate {
     const req=context.switchToHttp().getRequest<AuthenticatedRequest>();
     const header=req.headers.authorization;
     req.actor=await this.auth.authenticate(header?.startsWith('Bearer ')?header.slice(7):undefined);return true;
+  }
+}
+@Injectable()
+class OnboardingSessionGuard implements CanActivate {
+  constructor(@Inject(Auth) private readonly auth:Auth){}
+  async canActivate(context:ExecutionContext){
+    const req=context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const header=req.headers.authorization;
+    req.actor=await this.auth.authenticate(header?.startsWith('Bearer ')?header.slice(7):undefined,true);return true;
   }
 }
 @Catch()
@@ -39,10 +51,18 @@ class ErrorFilter implements ExceptionFilter {
 @Controller('v1')
 class PublicController {
   constructor(@Inject(Auth) private readonly auth:Auth,@Inject(NightShiftService) private readonly service:NightShiftService,
-    @Inject(PhoneAuthentication) private readonly phone:PhoneAuthentication){}
+    @Inject(PhoneAuthentication) private readonly phone:PhoneAuthentication,@Inject(AccountLifecycle) private readonly lifecycle:AccountLifecycle){}
+  @Post('account-deletion/status') async deletionStatus(@Body() body:unknown,@Req() req:Request){
+    requireThat(await this.service.presence.rateLimit(`deletion-receipt:${tokenHash(req.ip??'unknown')}`,30,60),429,'RATE_LIMITED','Wait before checking again.');
+    return this.lifecycle.status(body);
+  }
   @Post('auth/otp/request') requestOtp(@Body() body:unknown,@Req() req:Request){return this.phone.request(body,req.ip??'unknown',req.headers['idempotency-key']);}
   @Post('auth/otp/verify') verifyOtp(@Body() body:unknown,@Req() req:Request){return this.phone.verify(body,req.ip??'unknown');}
   @Post('auth/firebase/verify') verifyIdentity(@Body() body:unknown,@Req() req:Request){return this.phone.verifyIdentity(body,req.ip??'unknown');}
+  @Post('auth/exchange') async exchange(@Body() body:unknown,@Req() req:Request){
+    const result=await this.auth.exchange(body,req.ip??'unknown');
+    return {token:result.token,expiresAt:result.expiresAt,user:await this.service.user(result.userId),needsOnboarding:result.needsOnboarding,testOnly:true};
+  }
   @Post('auth/dev') async login(@Body() body:unknown,@Req() req:Request){
     const result=await this.auth.login(body,req.ip??'unknown');
     return {token:result.token,expiresAt:result.expiresAt,user:await this.service.user(result.userId),testOnly:true};
@@ -53,10 +73,33 @@ class PublicController {
   }
 }
 @Controller('v1')
+@UseGuards(OnboardingSessionGuard)
+class AccountController {
+  constructor(@Inject(Auth) private readonly auth:Auth,@Inject(NightShiftService) private readonly service:NightShiftService,
+    @Inject(Onboarding) private readonly onboarding:Onboarding,@Inject(AccountLifecycle) private readonly lifecycle:AccountLifecycle){}
+  @Post('auth/logout') async logout(@Req() req:AuthenticatedRequest){await this.service.logoutCall(req.actor);await this.auth.logout(req.actor);return {signedOut:true};}
+  @Get('me/onboarding') get(@Req() req:AuthenticatedRequest){return this.onboarding.get(req.actor);}
+  @Put('me/onboarding') complete(@Req() req:AuthenticatedRequest,@Body() body:unknown){return this.onboarding.complete(req.actor,body);}
+  @Get('me/consents') consents(@Req() req:AuthenticatedRequest){return this.lifecycle.consentHistory(req.actor);}
+  @Get('me/deletion-notice') deletionNotice(){return this.lifecycle.deletionNotice();}
+  @Post('me/deletion-requests') deletionRequest(@Req() req:AuthenticatedRequest,@Body() body:unknown){return this.lifecycle.requestDeletion(req.actor,body);}
+}
+@Controller('v1')
 @UseGuards(SessionGuard)
 class AppController {
-  constructor(@Inject(Auth) private readonly auth:Auth,@Inject(NightShiftService) private readonly service:NightShiftService){}
-  @Post('auth/logout') async logout(@Req() req:AuthenticatedRequest){await this.service.logoutCall(req.actor);await this.auth.logout(req.actor);return {signedOut:true};}
+  constructor(@Inject(Auth) private readonly auth:Auth,@Inject(NightShiftService) private readonly service:NightShiftService,
+    @Inject(ListenerApplications) private readonly applications:ListenerApplications){}
+  @Get('me/listener-application') application(@Req() req:AuthenticatedRequest){return this.applications.get(req.actor);}
+  @Post('listener-applications') createApplication(@Req() req:AuthenticatedRequest,@Body() body:unknown){return this.applications.create(req.actor,body,req.headers['idempotency-key']);}
+  @Put('listener-applications/:id') updateApplication(@Req() req:AuthenticatedRequest,@Param('id') id:string,@Body() body:unknown){return this.applications.update(req.actor,id,body);}
+  @Post('listener-applications/:id/uploads') issueReviewUpload(@Req() req:AuthenticatedRequest,@Param('id') id:string,@Body() body:unknown){return this.applications.issueUpload(req.actor,id,body,req.headers['idempotency-key']);}
+  @Put('listener-applications/:id/uploads/:uploadId') uploadSample(@Req() req:AuthenticatedRequest,@Param('id') id:string,@Param('uploadId') uploadId:string,@Body() body:Buffer){return this.applications.upload(req.actor,id,uploadId,req.headers['x-upload-token'],req.headers['content-type'],body);}
+  @Get('listener-applications/:id/uploads/:uploadId') async readSample(@Req() req:AuthenticatedRequest,@Param('id') id:string,@Param('uploadId') uploadId:string,@Res() res:Response){
+    const sample=await this.applications.readUpload(req.actor,id,uploadId);
+    res.setHeader('Content-Type',sample.contentType);res.setHeader('Content-Disposition','attachment; filename="review-sample.wav"');res.send(sample.bytes);
+  }
+  @Post('listener-applications/:id/submit') submitApplication(@Req() req:AuthenticatedRequest,@Param('id') id:string){return this.applications.submit(req.actor,id,req.headers['idempotency-key']);}
+  @Post('listener-applications/:id/withdraw') withdrawApplication(@Req() req:AuthenticatedRequest,@Param('id') id:string){return this.applications.withdraw(req.actor,id,req.headers['idempotency-key']);}
   @Get('me') me(@Req() req:AuthenticatedRequest){return this.service.user(req.actor.id);}
   @Get('snapshot') snapshot(@Req() req:AuthenticatedRequest,@Query('language') language?:string){return this.service.snapshot(req.actor,language);}
   @Put('me/mode') mode(@Req() req:AuthenticatedRequest,@Body() body:unknown){return this.service.mode(req.actor,body);}
@@ -87,13 +130,24 @@ export async function createApplication(config:Config,clock:()=>number=Date.now,
   let phone:PhoneAuthentication;
   try{phone=await createPhoneAuthentication(db,presence,config,clock,identityTestAdapters);}
   catch(error){await presence.close();await db.close();throw error;}
-  const auth=new Auth(db,presence,config),service=new NightShiftService(db,presence,config,clock);
-  @Module({controllers:[PublicController,AppController],providers:[SessionGuard,{provide:Auth,useValue:auth},{provide:NightShiftService,useValue:service},{provide:PhoneAuthentication,useValue:phone}]})
+  const auth=new Auth(db,presence,config,phone,clock),service=new NightShiftService(db,presence,config,clock);
+  const onboarding=new Onboarding(db,clock,async actor=>{await service.logoutCall(actor);await presence.clear(actor.id);});
+  const applications=new ListenerApplications(db,{storage:config.privateReviewDirectory?new LocalReviewStorage(config.privateReviewDirectory):undefined,capabilityKey:config.devAccessKey},clock);
+  const lifecycle=new AccountLifecycle(db,clock,userId=>presence.clear(userId),userId=>applications.erasePrivateMaterials(userId));
+  @Module({controllers:[PublicController,AccountController,AppController],providers:[SessionGuard,OnboardingSessionGuard,{provide:Auth,useValue:auth},{provide:NightShiftService,useValue:service},{provide:PhoneAuthentication,useValue:phone},{provide:Onboarding,useValue:onboarding},{provide:AccountLifecycle,useValue:lifecycle},{provide:ListenerApplications,useValue:applications}]})
   class AppModule{}
   const app=await NestFactory.create(AppModule,{logger:['error','warn'],bodyParser:true});
   app.use((req:AuthenticatedRequest,res:Response,next:()=>void)=>{
     req.requestId=randomUUID();res.setHeader('X-Request-Id',req.requestId);res.setHeader('Cache-Control','no-store');
     res.setHeader('X-Content-Type-Options','nosniff');next();
+  });
+  const parseReviewWave=raw({type:'audio/wav',limit:2097152,inflate:false});
+  app.use('/v1/listener-applications',(req:AuthenticatedRequest,res:Response,next:()=>void)=>{
+    parseReviewWave(req,res,(error?:{type?:string})=>{
+      if(!error){next();return;}
+      const oversized=error.type==='entity.too.large';
+      res.status(oversized?413:400).json({error:{code:oversized?'UPLOAD_TOO_LARGE':'INVALID_UPLOAD',message:oversized?'Choose a WAV sample of at most 2 MiB.':'The sample upload could not be read.'},requestId:req.requestId});
+    });
   });
   app.useGlobalFilters(new ErrorFilter());
   // The native app does not need browser CORS. No wildcard browser origin or token-bearing URL.
@@ -125,6 +179,16 @@ export async function createApplication(config:Config,clock:()=>number=Date.now,
       io.emit('service.unavailable',{code:'SERVICE_UNAVAILABLE'});
     }finally{running=false;}
   })(),1000);timer.unref();
+  // Privacy recovery is bounded and independent of the call/media control loop.
+  let privacyRunning=false;
+  const privacyTimer=setInterval(()=>void(async()=>{
+    if(privacyRunning)return;privacyRunning=true;
+    try{
+      // Each recovery pass gets a chance even when the other storage boundary fails.
+      await Promise.allSettled([lifecycle.processPending(),applications.sweepExpiredUploads()]);
+    }catch{/* Retry durable work on the next tick; never log private records. */}
+    finally{privacyRunning=false;}
+  })(),30000);privacyTimer.unref();
   await app.init();
-  return {app,db,presence,auth,service,phone,async close(){clearInterval(timer);await io.close();await app.close();await phone.close();await presence.close();await db.close();}};
+  return {app,db,presence,auth,service,phone,lifecycle,applications,async close(){clearInterval(timer);clearInterval(privacyTimer);await io.close();await app.close();await phone.close();await presence.close();await db.close();}};
 }

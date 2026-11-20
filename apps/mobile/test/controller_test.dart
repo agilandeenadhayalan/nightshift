@@ -84,11 +84,8 @@ void main() {
     expect(store.values['language'], 'en');
     expect(
         api.requests.any((r) => r['path'] == '/snapshot?language=en'), isTrue);
-    expect(
-        api.requests.any((r) =>
-            r['path'] == '/me/languages' &&
-            ((r['body'] as Json)['languages'] as List).single == 'en'),
-        isTrue);
+    expect(api.requests.any((r) => r['path'] == '/me/languages'), isFalse);
+    expect(controller.user!.languages, ['ta', 'en']);
   });
 
   test('local hangup releases capture before a slow server acknowledges',

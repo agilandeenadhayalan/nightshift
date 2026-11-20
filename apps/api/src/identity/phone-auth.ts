@@ -37,13 +37,20 @@ export class PhoneAuthentication {
   }
 
   async verifyIdentity(raw: unknown, ip: string) {
-    const dependencies = this.ready();
+    this.ready();
     const digest = createHmac('sha256', this.config!.digestKey).update(`firebase-verify-ip:${ip}`).digest('hex');
     requireThat(await this.presence.rateLimit(`identity:${digest}`, 30, 60),
       429, 'RATE_LIMITED', 'Wait before verifying another identity token.');
     const body = object(raw);
     fields(body, ['idToken']);
-    const identity = await dependencies.firebase.verifyIdToken(body.idToken);
+    const identity = await this.sessionIdentity(body.idToken);
+    const { rows } = await this.db.pool.query('SELECT adult_confirmed FROM users WHERE id=$1', [identity.uid]);
+    return { userId: identity.uid, needsOnboarding: !rows[0].adult_confirmed };
+  }
+
+  /** Every protected phone request checks provider revocation and the durable binding. */
+  async sessionIdentity(token: unknown): Promise<VerifiedFirebaseIdentity> {
+    const identity = await this.ready().firebase.verifyIdToken(token);
     // A valid JWT from this Firebase project alone cannot enroll arbitrary users.
     // It must refer to our server-verified MSG91 binding, with no caller role claims.
     const { rows } = await this.db.pool.query(`SELECT u.id,u.adult_confirmed FROM users u
@@ -51,7 +58,7 @@ export class PhoneAuthentication {
       WHERE u.id::text=$1 AND NOT u.suspended AND i.provider='phone:msg91'
         AND i.issuer=$2 AND i.state='verified'`, [identity.uid, this.config!.projectId]);
     requireThat(rows.length > 0, 401, 'INVALID_ID_TOKEN', 'Sign in again with a verified identity.');
-    return { userId: rows[0].id as string, needsOnboarding: !rows[0].adult_confirmed };
+    return identity;
   }
 
   async close() { await this.dependencies?.close?.(); }

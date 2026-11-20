@@ -2,6 +2,122 @@
 // Unknown codes deliberately use a safe fallback in the selected app language.
 String errorMessage(String? code, String locale) {
   final copy = switch (code) {
+    'PRIVATE_ORIGIN_REQUIRED' => (
+        'Private applications need a configured secure server. Reconnect using phone sign-in.',
+        'தனிப்பட்ட விண்ணப்பத்திற்கு பாதுகாப்பான சேவையகம் தேவை. தொலைபேசி உள்நுழைவு மூலம் மீண்டும் இணைக்கவும்.'
+      ),
+    'APPLICATION_OUTCOME_UNKNOWN' => (
+        'The last action may have completed. Check saved application status before retrying. Nothing is retried automatically.',
+        'கடைசி செயல் முடிந்திருக்கலாம். மீண்டும் முயற்சிக்கும் முன் சேமித்த விண்ணப்ப நிலையை சரிபார்க்கவும். தானாக மீண்டும் அனுப்பப்படாது.'
+      ),
+    'APPLICATION_EXISTS' => (
+        'An application already exists. Check its saved status.',
+        'விண்ணப்பம் ஏற்கனவே உள்ளது. சேமித்த நிலையை சரிபார்க்கவும்.'
+      ),
+    'APPLICATION_NOT_EDITABLE' => (
+        'This application cannot be edited in its current state. Refresh its status.',
+        'தற்போதைய நிலையில் விண்ணப்பத்தை மாற்ற முடியாது. நிலையை புதுப்பிக்கவும்.'
+      ),
+    'APPLICATION_INCOMPLETE' => (
+        'Save a bio, a topic, speaking languages and an accepted voice sample before submitting.',
+        'சமர்ப்பிக்கும் முன் சுயவிவரம், தலைப்பு, பேசும் மொழிகள் மற்றும் ஏற்கப்பட்ட குரல் மாதிரியை சேமிக்கவும்.'
+      ),
+    'REVIEW_CONSENT_REQUIRED' => (
+        'Save your voice review consent before uploading or submitting.',
+        'பதிவேற்றம் அல்லது சமர்ப்பிப்பிற்கு முன் குரல் ஆய்வு ஒப்புதலை சேமிக்கவும்.'
+      ),
+    'UPLOAD_LIMIT' => (
+        'Choose a WAV file no larger than 2 MiB.',
+        '2 MiB அளவுக்கு மிகாத WAV கோப்பை தேர்ந்தெடுக்கவும்.'
+      ),
+    'INVALID_WAV' ||
+    'INVALID_UPLOAD' ||
+    'UPLOAD_LENGTH_MISMATCH' ||
+    'UPLOAD_DIGEST_MISMATCH' =>
+      (
+        'Choose a 2–60 second PCM 16-bit WAV sample, mono or stereo, 8–48 kHz, without metadata.',
+        '2–60 விநாடி PCM 16-bit WAV மாதிரியை தேர்ந்தெடுக்கவும்; மோனோ அல்லது ஸ்டீரியோ, 8–48 kHz, மெட்டாடேட்டா இல்லாமல்.'
+      ),
+    'UPLOAD_EXPIRED' || 'UPLOAD_CAPABILITY_INVALID' => (
+        'This upload permission expired. Check status, then choose the sample again.',
+        'பதிவேற்ற அனுமதி காலாவதியானது. நிலையை சரிபார்த்து மாதிரியை மீண்டும் தேர்ந்தெடுக்கவும்.'
+      ),
+    'REVIEW_UPLOAD_UNAVAILABLE' => (
+        'Private sample storage is unavailable. Try again later.',
+        'தனிப்பட்ட மாதிரி சேமிப்பகம் கிடைக்கவில்லை. பின்னர் முயற்சிக்கவும்.'
+      ),
+    'SAMPLE_SELECTION_FAILED' => (
+        'The file could not be opened. Choose an accessible WAV file.',
+        'கோப்பை திறக்க முடியவில்லை. அணுகக்கூடிய WAV கோப்பை தேர்ந்தெடுக்கவும்.'
+      ),
+    'PRIVATE_SESSION_CHANGED' => (
+        'Your sign-in changed. Reopen this page before continuing.',
+        'உங்கள் உள்நுழைவு மாறிவிட்டது. தொடரும் முன் இந்தப் பக்கத்தை மீண்டும் திறக்கவும்.'
+      ),
+    'NOTICE_OUTDATED' => (
+        'Refresh the deletion notice and read it before submitting.',
+        'நீக்க அறிவிப்பை புதுப்பித்து, சமர்ப்பிக்கும் முன் படிக்கவும்.'
+      ),
+    'DELETION_CONFIRMATION_REQUIRED' => (
+        'Confirm that you understand the deletion request before submitting.',
+        'சமர்ப்பிக்கும் முன் நீக்கக் கோரிக்கையை புரிந்துகொண்டதை உறுதிசெய்யவும்.'
+      ),
+    'DELETION_STATUS_UNKNOWN' => (
+        'The request outcome is uncertain. Use your saved receipt to check status; no deletion request has been retried.',
+        'கோரிக்கையின் முடிவு உறுதியில்லை. சேமிக்கப்பட்ட ரசீது மூலம் நிலையை சரிபார்க்கவும்; நீக்கக் கோரிக்கை மீண்டும் அனுப்பப்படவில்லை.'
+      ),
+    'DELETION_RECEIPT_NOT_FOUND' => (
+        'No request was found for this receipt yet. Check again later. A deletion request has not been sent again.',
+        'இந்த ரசீதிற்கான கோரிக்கை இன்னும் கிடைக்கவில்லை. பின்னர் சரிபார்க்கவும். நீக்கக் கோரிக்கை மீண்டும் அனுப்பப்படவில்லை.'
+      ),
+    'DELETION_RECEIPT_EXISTS_LOCAL' || 'DELETION_REQUEST_EXISTS' => (
+        'A deletion receipt is already saved. Check that receipt before creating another request.',
+        'நீக்க ரசீது ஏற்கனவே சேமிக்கப்பட்டுள்ளது. மற்றொரு கோரிக்கைக்கு முன் அந்த ரசீதை சரிபார்க்கவும்.'
+      ),
+    'DELETION_RECEIPT_UNREADABLE' => (
+        'The saved receipt cannot be read. Do not clear app data while you need recovery.',
+        'சேமிக்கப்பட்ட ரசீதை படிக்க முடியவில்லை. மீட்பு தேவைப்படும்போது செயலித் தரவை அழிக்க வேண்டாம்.'
+      ),
+    'DELETION_ORIGIN_CHANGED' => (
+        'This receipt belongs to a different service address. It will not be sent to another server.',
+        'இந்த ரசீது வேறு சேவையக முகவரிக்குரியது. இது மற்றொரு சேவையகத்திற்கு அனுப்பப்படாது.'
+      ),
+    'FRESH_SIGN_IN_REQUIRED' => (
+        'Sign out and verify a new SMS code, then try again. Refreshing your existing sign-in is not enough.',
+        'வெளியேறி புதிய SMS குறியீட்டை சரிபார்த்து மீண்டும் முயற்சிக்கவும். தற்போதைய உள்நுழைவை புதுப்பிப்பது மட்டும் போதாது.'
+      ),
+    'ADULT_REQUIRED' || 'ADULT_ONLY' || 'UNDERAGE' => (
+        'NightShift is only available to adults aged 18 and over.',
+        'NightShift 18 வயது மற்றும் அதற்கு மேற்பட்ட பெரியவர்களுக்கு மட்டுமே கிடைக்கும்.'
+      ),
+    'INVALID_DATE_OF_BIRTH' || 'INVALID_BIRTH_DATE' || 'DOB_INVALID' => (
+        'Enter a valid date of birth as YYYY-MM-DD.',
+        'சரியான பிறந்த தேதியை YYYY-MM-DD வடிவில் உள்ளிடவும்.'
+      ),
+    'DOB_IMMUTABLE' => (
+        'Your saved date of birth cannot be changed here.',
+        'சேமிக்கப்பட்ட பிறந்த தேதியை இங்கு மாற்ற முடியாது.'
+      ),
+    'INVALID_PROFILE' ||
+    'INVALID_DISPLAY_NAME' ||
+    'INVALID_NICKNAME' ||
+    'INVALID_AVATAR' =>
+      (
+        'Check your nickname and choose one of the available avatars.',
+        'உங்கள் பெயரை சரிபார்த்து, கிடைக்கும் அவதாரங்களில் ஒன்றைத் தேர்வுசெய்யவும்.'
+      ),
+    'ONBOARDING_REQUIRED' => (
+        'Complete your adult profile before continuing.',
+        'தொடர்வதற்கு முன் பெரியவர்களுக்கான சுயவிவரத்தை முடிக்கவும்.'
+      ),
+    'ONBOARDING_CONSENT_REQUIRED' => (
+        'Read and accept the adult profile notice before continuing.',
+        'தொடர்வதற்கு முன் பெரியவர்களுக்கான சுயவிவர அறிவிப்பைப் படித்து ஏற்கவும்.'
+      ),
+    'SESSION_REVOKED' || 'SESSION_SUPERSEDED' || 'TOKEN_DEVICE_MISMATCH' => (
+        'This sign-in is no longer available on this device. Sign in again.',
+        'இந்தச் சாதனத்தில் இந்த உள்நுழைவு இனி கிடைக்காது. மீண்டும் உள்நுழையவும்.'
+      ),
     'OFFLINE' => (
         'Cannot reach the server. Check your connection and backend address.',
         'சேவையகத்தை அணுக முடியவில்லை. இணைப்பையும் சேவையக முகவரியையும் சரிபார்க்கவும்.'

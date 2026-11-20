@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:http/http.dart' as http;
 import 'package:nightshift_api/api.dart' as generated;
 import 'models.dart';
@@ -35,9 +37,71 @@ class NightShiftApi {
   String baseUrl = const String.fromEnvironment('API_BASE_URL',
       defaultValue: 'http://10.0.2.2:3000');
   String? token;
+  Future<void> Function()? prepareSession;
+  Object? Function()? sessionIdentity;
 
   Future<Json> request(String method, String path,
       {Json? body, String? idempotencyKey}) async {
+    // Refresh credentials before dispatch; mutations are never replayed after
+    // an uncertain response. The exchange itself cannot recursively refresh.
+    if (token != null && !path.startsWith('/auth/')) {
+      final identity = sessionIdentity?.call(), origin = baseUrl;
+      await prepareSession?.call();
+      if (identity != sessionIdentity?.call() ||
+          origin != baseUrl ||
+          token == null) {
+        throw const ApiFailure('PRIVATE_SESSION_CHANGED', 'Sign in again.');
+      }
+    }
+    return _request(method, path, body: body, idempotencyKey: idempotencyKey);
+  }
+
+  /// Private materials cannot cross an account or origin change while waiting
+  /// for credential renewal. Callers also discard responses from old owners.
+  Future<Json> privateRequest(String method, String path,
+      {required String origin,
+      required bool Function() isCurrent,
+      Json? body,
+      String? idempotencyKey,
+      Uint8List? sample,
+      String? uploadToken}) async {
+    final uri = Uri.tryParse(origin);
+    if (uri == null ||
+        uri.host.isEmpty ||
+        uri.userInfo.isNotEmpty ||
+        uri.query.isNotEmpty ||
+        uri.fragment.isNotEmpty ||
+        !(uri.scheme == 'https' ||
+            (!kReleaseMode &&
+                uri.scheme == 'http' &&
+                ['localhost', '127.0.0.1', '::1', '10.0.2.2']
+                    .contains(uri.host)))) {
+      throw const ApiFailure(
+          'PRIVATE_ORIGIN_REQUIRED', 'Private service is unavailable.');
+    }
+    if (!isCurrent() || baseUrl != origin || token == null) {
+      throw const ApiFailure('PRIVATE_SESSION_CHANGED', 'Sign in again.');
+    }
+    final identity = sessionIdentity?.call();
+    await prepareSession?.call();
+    if (!isCurrent() ||
+        baseUrl != origin ||
+        token == null ||
+        identity != sessionIdentity?.call()) {
+      throw const ApiFailure('PRIVATE_SESSION_CHANGED', 'Sign in again.');
+    }
+    return _request(method, path,
+        body: body,
+        idempotencyKey: idempotencyKey,
+        sample: sample,
+        uploadToken: uploadToken);
+  }
+
+  Future<Json> _request(String method, String path,
+      {Json? body,
+      String? idempotencyKey,
+      Uint8List? sample,
+      String? uploadToken}) async {
     final abort = Completer<void>();
     final transport = _SafeApiClient(
         _client, baseUrl.replaceFirst(RegExp(r'/+$'), ''), token, abort.future);
@@ -47,12 +111,23 @@ class NightShiftApi {
       // Phone verification includes chained provider verification/token signing.
       // Both budgets include the complete response body and send an abort signal.
       final uri = Uri.parse(path);
-      final deadline = method == 'POST' &&
-              ['/auth/otp/verify', '/auth/firebase/verify'].contains(uri.path)
+      final deadline = sample != null ||
+              (method == 'POST' &&
+                  [
+                    '/auth/otp/verify',
+                    '/auth/firebase/verify',
+                    '/auth/exchange'
+                  ].contains(uri.path))
           ? identityRequestTimeout
           : requestTimeout;
-      final response = await _dispatch(api, method, uri, body, idempotencyKey)
-          .timeout(deadline, onTimeout: () {
+      final operation = sample == null
+          ? _dispatch(api, method, uri, body, idempotencyKey)
+          : api.uploadListenerSample(
+              Uri.encodeComponent(uri.pathSegments[1]),
+              Uri.encodeComponent(uri.pathSegments[3]),
+              uploadToken!,
+              http.MultipartFile('body', Stream.value(sample), sample.length));
+      final response = await operation.timeout(deadline, onTimeout: () {
         abort.complete();
         throw const ApiFailure(
             'OFFLINE', 'The server did not respond. Check your connection.');
@@ -109,6 +184,29 @@ class NightShiftApi {
       case 'POST /auth/firebase/verify':
         return api.verifyPhoneIdentity(
             generated.FirebaseVerifyRequest.fromJson(data)!);
+      case 'POST /auth/exchange':
+        return api.exchangePhoneSession(
+            generated.PhoneSessionRequest.fromJson(data)!);
+      case 'GET /me/onboarding':
+        return api.getOnboarding();
+      case 'PUT /me/onboarding':
+        return api.completeOnboarding(
+            generated.CompleteOnboardingRequest.fromJson(data)!);
+      case 'GET /me/consents':
+        return api.getConsentHistory();
+      case 'GET /me/listener-application':
+        return api.getListenerApplication();
+      case 'POST /listener-applications':
+        return api.createListenerApplication(
+            key(), generated.ListenerApplicationInput.fromJson(data)!);
+      case 'GET /me/deletion-notice':
+        return api.getDeletionNotice();
+      case 'POST /me/deletion-requests':
+        return api
+            .requestAccountDeletion(generated.DeletionRequest.fromJson(data)!);
+      case 'POST /account-deletion/status':
+        return api.getDeletionReceipt(
+            generated.DeletionReceiptRequest.fromJson(data)!);
       case 'POST /auth/logout':
         return api.signOut();
       case 'GET /me':
@@ -146,6 +244,24 @@ class NightShiftApi {
         return api.getEvents(cursor: uri.queryParameters['cursor']);
     }
     final parts = uri.pathSegments;
+    if (parts.length >= 2 && parts[0] == 'listener-applications') {
+      final id = Uri.encodeComponent(parts[1]);
+      if (parts.length == 2 && method == 'PUT') {
+        return api.updateListenerApplication(
+            id, generated.ListenerApplicationInput.fromJson(data)!);
+      }
+      if (parts.length == 3 && method == 'POST') {
+        switch (parts[2]) {
+          case 'uploads':
+            return api.createReviewUpload(
+                id, key(), generated.ReviewUploadRequest.fromJson(data)!);
+          case 'submit':
+            return api.submitListenerApplication(id, key());
+          case 'withdraw':
+            return api.withdrawListenerApplication(id, key());
+        }
+      }
+    }
     if (parts.length >= 2 && parts[0] == 'calls') {
       final id = Uri.encodeComponent(parts[1]);
       if (parts.length == 2 && method == 'GET') return api.getCall(id);
@@ -191,7 +307,7 @@ class _SafeApiClient extends generated.ApiClient {
   _SafeApiClient(
       http.Client transport, String basePath, String? token, this.abort)
       : super(basePath: basePath) {
-    client = transport;
+    client = _NoRedirectClient(transport);
     addDefaultHeader('Accept', 'application/json');
     if (token != null) addDefaultHeader('Authorization', 'Bearer $token');
   }
@@ -232,5 +348,16 @@ class _SafeApiClient extends generated.ApiClient {
           retryAfterSeconds: retryAfterSeconds);
     }
     return response;
+  }
+}
+
+class _NoRedirectClient extends http.BaseClient {
+  _NoRedirectClient(this.transport);
+  final http.Client transport;
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    // Never forward OTPs or bearer credentials to a redirect destination.
+    request.followRedirects = false;
+    return transport.send(request);
   }
 }

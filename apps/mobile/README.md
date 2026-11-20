@@ -93,9 +93,78 @@ audible media, device routing, vendor cutoff, or background notification deliver
   and native-surface behavior still require physical-device verification.
 - Sessions are stored with Android encrypted secure storage; the developer access
   key is never persisted. The login checkbox is a development consent gate, not
-  production age assurance. MSG91/Firebase phone sign-in is not implemented here.
+  production age assurance. The separate phone sign-in flow uses server MSG91
+  verification followed by Firebase custom-token exchange and backend verification.
 - Test reports persist to the backend and blocks end/exclude a pair. Staffing,
   escalation, retention, appeals and production safety controls remain launch gates.
 
 Native RTC reference: [Agora Flutter voice quickstart](https://docs.agora.io/en/realtime-media/rtc/voice-quickstart/flutter).
 Pinned SDK: [agora_rtc_engine 6.5.3](https://pub.dev/packages/agora_rtc_engine/versions/6.5.3).
+
+## Private phone sign-in and onboarding
+
+The phone entry point stays unavailable without an explicitly configured
+`FIREBASE_WEB_API_KEY`. Configure `PHONE_API_BASE_URL` at build time for the
+intended backend, and `PHONE_AUTH_CONSENT_VERSION` to match its approved notice
+version (development default `phone-signin-v1`). The Firebase Web API key is a
+public project identifier; never substitute a service-account credential. No
+provider credentials or project files are checked into the Android app.
+
+Phone sign-in uses a fixed build origin, independently of the fictional-login
+address field. HTTPS is required except explicit debug loopback/emulator hosts
+(`localhost`, `127.0.0.1`, `::1`, `10.0.2.2`). For USB testing, build with
+`PHONE_API_BASE_URL=http://127.0.0.1:3000` and use the documented `adb reverse`
+procedure. General LAN HTTP is rejected for phone credentials. All API and
+Firebase requests refuse redirects.
+
+The official [Firebase Auth REST protocol](https://firebase.google.com/docs/reference/rest/auth)
+exchanges the one-use custom token for ID/refresh tokens. Refresh credentials and
+the backend token are stored using Android secure storage, not preferences.
+Renewal is coalesced before expiry and exchanges the new ID token with the backend;
+old request failures cannot erase a renewed session. Logout clears both stored
+credentials, and a late renewal cannot restore them. No failed mutation is
+automatically replayed. Phone numbers, OTPs and custom tokens remain ephemeral.
+
+New phone identities are routed to private adult onboarding. The backend owns the
+18+ decision and immutable birth-date rule. Public APIs use an assigned alias
+until the submitted nickname is reviewed. Interface language and speaking
+languages are separate controlled selections. Onboarding uses the development
+notice `adult-onboarding-v1`; approval of production notices, live Indian SIM
+delivery, actual Firebase project permissions and physical-device accessibility
+remain external evidence. Neither phone verification nor self-declared age grants
+Listener approval, credits, payments or production access.
+
+Privacy is available from Profile and restricted onboarding. Deletion requires
+an explicit second confirmation and server-verified recent authentication, not
+just an ID-token refresh. Before submission the app securely persists a random
+32-byte recovery capability tied to the configured backend and local account.
+It survives logout and must not be overwritten by a different account. A lost
+response is resolved through the public, tokenless status endpoint; deletion is
+never automatically resubmitted. The capability is never displayed or put in a
+URL. Receipt copy distinguishes removed profile data from retained financial,
+dispute and age-safety evidence; it does not promise full erasure or a date.
+
+Listener applications are available from Profile. Drafts, review status and
+voice consent stay private to the current account. Choosing an existing sample
+uses Android's [system document picker](https://developer.android.com/training/data-storage/shared/documents-files)
+through a [Flutter platform channel](https://docs.flutter.dev/platform-integration/platform-channels);
+no recording starts automatically. The Android adapter reads a bounded stream
+into memory without making an app-cache copy or persisting a URI permission.
+WAV samples are limited to 2 MiB and
+2–60 seconds, PCM16 mono/stereo at 8–48 kHz with only fmt/data chunks. Both client
+and server validate the format. The client computes SHA-256 using pinned
+[crypto 3.0.6](https://pub.dev/packages/crypto/versions/3.0.6), then sends raw WAV
+through the generated SDK with an owner bearer and a five-minute upload capability.
+The picker never stores or sends the source filename or path. Sample bytes and
+upload capabilities remain in memory and are discarded when the account changes.
+
+Private application requests require HTTPS or debug loopback/emulator transport;
+they recheck account ownership and origin after token renewal. Interrupted create,
+upload and submit requests require checking saved status before an explicit retry.
+Stable request keys prevent duplicate operations; expired upload permission and
+a later request for more information begin separate retry cycles. Withdrawing
+consent removes the review sample, including after an approval/rejection, while
+preserving that staff decision. Samples are never presented as proof of age,
+gender or identity. Applications are free and carry no promise of approval,
+review timing or earnings. Native file-provider behavior and accessibility still
+need physical-device evidence; tests and smoke journeys use synthetic audio only.

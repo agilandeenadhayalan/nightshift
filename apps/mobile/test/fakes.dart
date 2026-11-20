@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:nightshift/core/api.dart';
 import 'package:nightshift/core/audio.dart';
@@ -199,6 +200,24 @@ class FakeApi extends NightShiftApi {
   ApiFailure? rtcFailure;
   bool videoEnabled = true;
   Future<Json?> Function(String method, String path, Json? body)? interceptor;
+  @override
+  Future<Json> privateRequest(String method, String path,
+      {required String origin,
+      required bool Function() isCurrent,
+      Json? body,
+      String? idempotencyKey,
+      Uint8List? sample,
+      String? uploadToken}) async {
+    if (!isCurrent() || baseUrl != origin || token == null) {
+      throw const ApiFailure('PRIVATE_SESSION_CHANGED', 'Session changed.');
+    }
+    await prepareSession?.call();
+    if (!isCurrent() || baseUrl != origin || token == null) {
+      throw const ApiFailure('PRIVATE_SESSION_CHANGED', 'Session changed.');
+    }
+    return request(method, path, body: body, idempotencyKey: idempotencyKey);
+  }
+
   @override
   Future<Json> request(String method, String path,
       {Json? body, String? idempotencyKey}) async {
