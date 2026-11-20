@@ -72,15 +72,34 @@ The development sign-in screen accepts an API base URL, fictional account and th
 For each USB-attached phone:
 
 ```powershell
-adb -s DEVICE_SERIAL reverse tcp:3000 tcp:3000
 adb -s DEVICE_SERIAL install -r .\build\app\outputs\flutter-apk\app-debug.apk
+adb -s DEVICE_SERIAL reverse tcp:3000 tcp:3000
+adb -s DEVICE_SERIAL reverse --list
 ```
 
-Use API URL `http://127.0.0.1:3000`. First verify Windows can reach `http://localhost:3000/v1/health` in WSL. USB reverse transports control traffic; each phone's Wi-Fi/mobile data carries Agora media. This permits one phone on mobile data without publishing the development API.
+Use API URL `http://127.0.0.1:3000`. First verify Windows can reach `http://localhost:3000/v1/health` in WSL. Create and verify the reverse mapping after installation and again after a USB/ADB reconnect: it is temporary, and a missing mapping causes the app's connection-unavailable error even when the backend is healthy. USB reverse transports control traffic; each phone's Wi-Fi/mobile data carries Agora media. This permits one phone on mobile data without publishing the development API.
 
 Without USB, use a private LAN address. WSL mirrored networking can use the Windows LAN IP with a narrowly scoped private-network firewall rule. WSL NAT needs forwarding and firewall configuration and its IP can change. Prefer USB reverse for the first test. Never expose PostgreSQL/Redis to the LAN. A phone's own localhost works only with `adb reverse`.
 
 Only debug builds permit local cleartext HTTP; use HTTPS before an external pilot. Android emulator host forwarding normally uses `http://10.0.2.2:3000`. The prototype is foreground-only: backgrounding ends the current call and marks the Listener offline. Full background incoming calls remain #29. Follow [Two_Phone_Test.md](Two_Phone_Test.md) for manual evidence.
+
+### Vysor and physical-device debugging
+
+Ordinary debug, profile and release builds protect their screens with Android `FLAG_SECURE`, so Vysor shows a black app surface. For a local test using fictional accounts, explicitly opt a debug APK into mirroring:
+
+```powershell
+# From apps/mobile, with Flutter on PATH and both USB reverse forwards configured.
+$env:ORG_GRADLE_PROJECT_NIGHTSHIFT_ALLOW_DEBUG_SCREEN_CAPTURE = 'true'
+try {
+    flutter build apk --debug --split-per-abi --target-platform android-arm64 --dart-define=API_BASE_URL=http://127.0.0.1:3000
+} finally {
+    Remove-Item Env:ORG_GRADLE_PROJECT_NIGHTSHIFT_ALLOW_DEBUG_SCREEN_CAPTURE
+}
+```
+
+The uppercase property name is intentional: Flutter's Windows process environment uppercases keys. Only the literal value `true` enables capture, and only the `debug` variant honors it. Profile and release remain protected even when the property is set. CI and builds without the opt-in keep capture protection. The API URL above works on phones only with `adb reverse`; no access key or provider credential is compiled into this APK.
+
+Install this APK on both phones with `adb -s DEVICE_SERIAL install -r build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk`, reapply `adb -s DEVICE_SERIAL reverse tcp:3000 tcp:3000`, then launch NightShift. Vysor's mirror can now show the app for interactive QA. Keep test-account keys masked and exclude private notifications or credentials from any evidence. To restore capture protection, rebuild without the environment option and reinstall; removing the environment variable alone does not change an installed APK.
 
 ## Isolated test data
 

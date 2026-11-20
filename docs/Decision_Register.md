@@ -8,7 +8,7 @@ Related issue: [FA-001 / #1](https://github.com/agilandeenadhayalan/nightshift/i
 | ID | Decision / accountable contact | Status and current working position | Required input or evidence | Gate |
 |---|---|---|---|---|
 | D01 | Product shape — Agilan | Confirmed: one Android Flutter app, exactly Customer and Listener modes, one application ID, shared NestJS/PostgreSQL backend | None for the local milestone | Architecture |
-| D02 | First milestone — Agilan | Confirmed: online Listener, Customer discovery, invite/accept, real two-way audio, either-party end and both histories | Two consenting adult Android testers and recorded real-device result | Milestone completion |
+| D02 | First milestone — Agilan | Confirmed scope; foreground test-credit milestone passed on two phones on 20 November 2026 | Recorded results in `Device_Debug_2026-11-20.md`; broader device/release evidence remains separate | Milestone completion |
 | D03 | Development funds — Agilan | Confirmed: test credits only; credentials outside Git | No live purchases or payouts enabled | All development |
 | D04 | Product owner — Agilan | Agilan is the requesting product decision contact | Confirm who can approve future product changes and delegate if needed | Launch governance |
 | D05 | Finance accountability — Agilan | Proposed: Agilan until a named finance owner accepts; appointment unconfirmed | Name accountable owner and CA/bookkeeping support; approve reconciliation and payout controls | Real money |
@@ -22,7 +22,7 @@ Related issue: [FA-001 / #1](https://github.com/agilandeenadhayalan/nightshift/i
 | D13 | Listener pay — Agilan / finance owner | Proposed ₹500 per 3,600 paid connected seconds; not a guarantee of earnings | Contract, paid-time evidence, rounding, holds, disputes and approval of subsidy risk | Real earnings |
 | D14 | Store/payment route — Agilan / specialist | Provisional plan is Play Billing for coins; no policy exception claimed | Play account type; current billing policy review; India alternative billing eligibility; actual funds-flow review | Purchases |
 | D15 | Legal, tax and privacy — Agilan / specialists | Pending; no legal or CA review recorded | Entity, GST/TDS, listener contracts, funds flow, minor protection, privacy, retention and refunds | Public launch |
-| D16 | Agora RTC project — Agilan | Selected for development integration; feasibility still needs real devices | Own test project credentials supplied outside Git, quota/budget, two-way audio and provider-side cutoff proof | Live media / paid media |
+| D16 | Agora RTC project — Agilan | Private backend configuration enabled user-confirmed two-way audio on two phones; no credentials in Git or APK | Rotate the certificate exposed in chat and replace only the private environment value; confirm quota/budget and provider-side cutoff proof | Continued test media / paid media |
 | D17 | Identity providers — Agilan | Local fictional identities allowed; production plan MSG91 OTP + Firebase sessions + FCM | Owner projects, approved sender/template/chain, real Indian SIM delivery and abuse controls | Production sign-in |
 | D18 | Adult assurance and listener review — safety owner | Local test identities only; typed age is not strong assurance | Review process, storage/provider choice, consent, reviewer access and escalation | Public enrollment |
 | D19 | Call privacy and retention — safety/privacy owner | Do not record private call audio; logs use opaque IDs | Approved retention schedule, processor inventory, deletion exceptions and policy copy | Public launch |
@@ -35,7 +35,7 @@ Related issue: [FA-001 / #1](https://github.com/agilandeenadhayalan/nightshift/i
 
 1. Confirm or nominate the accountable product, finance and safety owners; provide staffed support hours and the intended adult listener cohort.
 2. Confirm brand/entity and the permanent Android identifier before any store registration.
-3. Supply an owner-controlled Agora test project through local environment configuration and schedule two real Android phones; do not put credentials into an issue, PR, chat or Git.
+3. Rotate the Agora certificate shared in chat and update only the private backend environment. Two-phone audio now passes; provider-side cutoff and quota/budget approval remain. Keep replacement credentials out of issues, PRs, chat and Git.
 4. Approve production pricing, budget/caps and payment route only after the documented specialist and store checks.
 
 Until then, continue local engineering with fictional identities, test credits and explicit unmet gates. No issue is closed solely because an external dependency has been deferred.

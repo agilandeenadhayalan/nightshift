@@ -52,7 +52,7 @@ class AppController extends ChangeNotifier {
   bool _polling = false, _mediaPosting = false, _disposed = false;
   bool snapshotLoaded = false;
   bool get snapshotLoading => _polling;
-  Timer? _pollTimer, _presenceTimer;
+  Timer? _pollTimer, _presenceTimer, _mediaTimer;
   DateTime? _lastServerContact;
   String text(String english, String tamil) => locale == 'ta' ? tamil : english;
   bool get isListener => user?.mode == AppMode.listener;
@@ -102,6 +102,12 @@ class AppController extends ChangeNotifier {
     if (!startTimers) return;
     _pollTimer ??=
         Timer.periodic(const Duration(seconds: 2), (_) => unawaited(refresh()));
+    // Snapshot latency must not starve the independently metered media lease.
+    _mediaTimer ??= Timer.periodic(const Duration(seconds: 2), (_) {
+      if (foreground && _joinedId == activeCall?.id) {
+        unawaited(reportMedia());
+      }
+    });
     _presenceTimer ??= Timer.periodic(
         const Duration(seconds: 15), (_) => unawaited(heartbeat()));
   }
@@ -199,7 +205,6 @@ class AppController extends ChangeNotifier {
             _joinedId != next.id) {
           unawaited(_join(next));
         }
-        if (_joinedId == next.id && !endingLocally) await reportMedia();
       }
     } catch (e) {
       if (session != _sessionRevision || _disposed) return;
@@ -333,19 +338,29 @@ class AppController extends ChangeNotifier {
 
   Future<void> reportMedia() async {
     final call = activeCall;
-    if (call == null ||
+    if (_disposed ||
+        call == null ||
         call.ringing ||
+        call.ended ||
         _mediaPosting ||
         api.token == null ||
         endingLocally) {
       return;
     }
     _mediaPosting = true;
+    final session = _sessionRevision;
     try {
       await api.request('POST', '/calls/${call.id}/media',
-          body: {'ready': foreground && audio.ready});
+          body: {'ready': foreground && _joinedId == call.id && audio.ready});
     } catch (e) {
+      if (_disposed ||
+          session != _sessionRevision ||
+          activeCall?.id != call.id ||
+          endingLocally) {
+        return;
+      }
       _showError(e);
+      _notify();
     } finally {
       _mediaPosting = false;
     }
@@ -354,7 +369,7 @@ class AppController extends ChangeNotifier {
   void _audioChanged() {
     if (_disposed) return;
     _notify();
-    // Send readiness losses immediately; periodic snapshots corroborate healthy intervals.
+    // Send readiness losses immediately; the media timer corroborates healthy intervals.
     if (!audio.ready) unawaited(reportMedia());
   }
 
@@ -660,6 +675,7 @@ class AppController extends ChangeNotifier {
     _disposed = true;
     _pollTimer?.cancel();
     _presenceTimer?.cancel();
+    _mediaTimer?.cancel();
     audio.onChanged = null;
     audio.onFailure = null;
     unawaited(audio.leave());
