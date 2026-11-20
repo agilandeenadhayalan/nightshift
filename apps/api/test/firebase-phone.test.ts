@@ -134,11 +134,15 @@ test('expired and superseded admissions reject before identity enrollment',async
 });
 
 test('admission cooldown, phone budget and fingerprint conflicts are durable without SMS calls',async()=>{
+  // Fixed-window quotas reset on the hour. Start within a fresh hour rather
+  // than letting wall-clock execution accidentally cross that boundary.
+  now=Math.ceil(now/3600000)*3600000;
   const mobile=number(),device='budget-device',key=randomUUID();await admission(mobile,device,key);
   await assert.rejects(admission(number(),device,key),{code:'IDEMPOTENCY_CONFLICT'});
   await assert.rejects(admission(mobile,device),{code:'OTP_COOLDOWN'});
   now+=61000;await admission(mobile,device);now+=61000;await admission(mobile,device);now+=61000;
   await assert.rejects(admission(mobile,device),{code:'OTP_RATE_LIMITED'});
+  now+=3600000;await admission(mobile,device);
 });
 
 test('digest-key rotation and conflicting legacy Firebase UID cannot silently create another account',async()=>{
