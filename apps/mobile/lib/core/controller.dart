@@ -46,6 +46,7 @@ class AppController extends ChangeNotifier {
   bool _errorFromSnapshot = false;
   Future<void>? _sessionCleanup;
   String _deviceId = '', _joiningId = '', _joinedId = '';
+  int _joinAttempt = 0;
   String? _abandonedCallId;
   bool _stopping = false;
   int _revision = 0;
@@ -53,6 +54,9 @@ class AppController extends ChangeNotifier {
   bool snapshotLoaded = false;
   bool get snapshotLoading => _polling;
   Timer? _pollTimer, _presenceTimer, _mediaTimer;
+  int _videoPreviewRequest = 0;
+  bool videoPreviewBusy = false, _videoPreviewRequested = false;
+  String? videoPreviewError, _videoConsentCallId;
   DateTime? _lastServerContact;
   String text(String english, String tamil) => locale == 'ta' ? tamil : english;
   bool get isListener => user?.mode == AppMode.listener;
@@ -60,6 +64,124 @@ class AppController extends ChangeNotifier {
   bool get endingLocally =>
       activeCall != null && activeCall!.id == _abandonedCallId;
   bool get canSwitch => user?.listenerApproved == true && !hasCall && !busy;
+  CallVideo? get video => audio is CallVideo ? audio as CallVideo : null;
+  bool get needsVideoConsent =>
+      hasCall &&
+      activeCall!.isVideo &&
+      !activeCall!.ringing &&
+      !endingLocally &&
+      _videoConsentCallId != activeCall!.id;
+
+  Future<void> prepareVideoPreview() async {
+    if (_disposed || !foreground || videoPreviewBusy) return;
+    final camera = video;
+    final request = ++_videoPreviewRequest;
+    final session = _sessionRevision;
+    final callId = activeCall?.id;
+    videoPreviewError = null;
+    videoPreviewBusy = true;
+    _videoPreviewRequested = true;
+    _notify();
+    bool current() =>
+        !_disposed &&
+        foreground &&
+        request == _videoPreviewRequest &&
+        session == _sessionRevision &&
+        callId == activeCall?.id;
+    try {
+      if (camera == null ||
+          api.token == null ||
+          (hasCall &&
+              (!activeCall!.isVideo ||
+                  (!activeCall!.ringing && !needsVideoConsent)))) {
+        throw const ApiFailure(
+            'VIDEO_UNAVAILABLE', 'Video preview is unavailable.');
+      }
+      final config = await api.request('GET', '/rtc/config');
+      if (!current()) return;
+      final appId = config['appId'];
+      if (config['videoEnabled'] != true || appId is! String || appId.isEmpty) {
+        throw const ApiFailure(
+            'VIDEO_UNAVAILABLE', 'Video is unavailable on this test server.');
+      }
+      await camera.startPreview(appId);
+      // closeVideoPreview invalidates SDK ownership too; never let an older
+      // completion stop a newer preview or an accepted call's media engine.
+    } catch (e) {
+      if (!current()) return;
+      videoPreviewError = e is ApiFailure ? e.code : 'VIDEO_FAILED';
+      _videoPreviewRequested = false;
+      await camera?.stopPreview();
+    } finally {
+      if (request == _videoPreviewRequest) {
+        videoPreviewBusy = false;
+        _notify();
+      }
+    }
+  }
+
+  Future<void> closeVideoPreview() async {
+    _videoPreviewRequest++;
+    videoPreviewBusy = false;
+    _videoPreviewRequested = false;
+    await video?.stopPreview();
+    _notify();
+  }
+
+  Future<void> joinConsentedVideo() => perform(() async {
+        final call = activeCall;
+        if (call == null ||
+            !needsVideoConsent ||
+            video == null ||
+            !foreground) {
+          return;
+        }
+        await closeVideoPreview();
+        if (_disposed || activeCall?.id != call.id || !foreground) return;
+        await audio.checkPermission();
+        _videoConsentCallId = call.id;
+        await _join(call);
+      });
+
+  Future<void> setCameraEnabled(bool enabled) => perform(() async {
+        final call = activeCall;
+        if (call == null ||
+            !call.isVideo ||
+            endingLocally ||
+            _joinedId != call.id ||
+            video == null ||
+            !foreground) {
+          return;
+        }
+        try {
+          await video!.setCameraEnabled(enabled);
+        } catch (_) {
+          if (_disposed || activeCall?.id != call.id || endingLocally) return;
+          rethrow;
+        }
+        await reportMedia();
+        _notify();
+      });
+
+  Future<void> switchCamera() => perform(() async {
+        final camera = video;
+        if (camera == null ||
+            !camera.cameraEnabled ||
+            !foreground ||
+            endingLocally) {
+          return;
+        }
+        if (!camera.previewing &&
+            (_joinedId != activeCall?.id || activeCall?.isVideo != true)) {
+          return;
+        }
+        await camera.switchCamera();
+        _notify();
+      });
+
+  Future<void> endVideoForAudio() async {
+    if (activeCall?.isVideo == true) await transition('end');
+  }
 
   Future<void> initialize() async {
     if (!developmentEnabled) {
@@ -117,6 +239,8 @@ class AppController extends ChangeNotifier {
         // A revoked session may still be deleting its persisted token. Never
         // let that older cleanup erase the token issued by this sign-in.
         await _sessionCleanup;
+        await closeVideoPreview();
+        _videoConsentCallId = null;
         if (!developmentEnabled) {
           throw const ApiFailure('TEST_ONLY',
               'Development sign-in is unavailable in release builds.');
@@ -188,6 +312,8 @@ class AppController extends ChangeNotifier {
         _abandonedCallId = null;
         await store.delete('abandonedCallId');
         if (previous != null && !previous.ended) {
+          _videoConsentCallId = null;
+          await closeVideoPreview();
           await audio.leave();
           _joinedId = '';
           lastPath = '/history';
@@ -201,6 +327,7 @@ class AppController extends ChangeNotifier {
         if (endingLocally) {
           if (!_stopping) await _stopOnServer(next);
         } else if (!next.ringing &&
+            (!next.isVideo || _videoConsentCallId == next.id) &&
             _joiningId != next.id &&
             _joinedId != next.id) {
           unawaited(_join(next));
@@ -257,81 +384,153 @@ class AppController extends ChangeNotifier {
         await refresh();
       });
 
-  Future<void> startCall(ListenerProfile listener) => perform(() async {
+  Future<void> startCall(ListenerProfile listener,
+          {bool video = false, bool cameraConsent = false}) =>
+      perform(() async {
+        if (video && !cameraConsent) {
+          throw const ApiFailure('VIDEO_CONSENT_REQUIRED',
+              'Review the camera and consent before calling.');
+        }
+        final rate = video ? listener.videoRate : listener.rate;
+        if (rate == null || (video && this.video == null)) {
+          throw const ApiFailure(
+              'VIDEO_UNAVAILABLE', 'Video calling is unavailable.');
+        }
+        await closeVideoPreview();
         await audio.checkPermission();
+        if (_disposed || !foreground) return;
         _revision++;
+        final session = _sessionRevision;
         final response = await api.request('POST', '/calls',
             body: {
               'listenerId': listener.id,
-              'quoteId': 'test-audio-v1',
+              'quoteId': rate.id,
+              if (video) 'mediaType': 'video',
+              if (video) 'videoConsent': true,
             },
             idempotencyKey: newId());
+        if (_disposed || session != _sessionRevision) return;
         activeCall = CallSession.fromJson(response);
+        _videoConsentCallId = video && foreground ? activeCall!.id : null;
         _revision++;
+        if (!foreground) await _endAfterFailure();
       });
 
-  Future<void> transition(String action) => perform(() async {
-        final call = activeCall;
-        if (call == null) return;
-        if (['end', 'cancel', 'decline'].contains(action)) {
-          await _stopLocally(call);
-          await _stopOnServer(call);
-          return;
+  Future<void> transition(String action, {bool cameraConsent = false}) {
+    // End must remain available while permission, token or camera operations wait.
+    if (['end', 'cancel', 'decline'].contains(action)) return _terminateCall();
+    return perform(() async {
+      final call = activeCall;
+      if (call == null) return;
+      final session = _sessionRevision;
+      if (action == 'accept') {
+        if (call.isVideo && !cameraConsent) {
+          throw const ApiFailure('VIDEO_CONSENT_REQUIRED',
+              'Review the camera and consent before accepting.');
         }
-        if (action == 'accept') await audio.checkPermission();
-        _revision++;
-        final result = await api.request('POST', '/calls/${call.id}/$action',
-            body: {'expectedVersion': call.version}, idempotencyKey: newId());
-        final updated = CallSession.fromJson(result);
-        _revision++;
-        if (updated.ended) {
-          activeCall = null;
-          await audio.leave();
-          _joinedId = '';
-          lastCall = updated;
-          activeCall = null;
-          lastPath = '/history';
-          await store.write('lastPath', lastPath);
-          await loadHistory();
-        } else {
-          activeCall = updated;
-          if (!updated.ringing) unawaited(_join(updated));
+        if (call.isVideo && video == null) {
+          throw const ApiFailure(
+              'VIDEO_UNAVAILABLE', 'Video calling is unavailable.');
         }
-        await refresh();
-      });
+        await closeVideoPreview();
+        await audio.checkPermission();
+        if (_disposed || !foreground || activeCall?.id != call.id) return;
+      }
+      _revision++;
+      final result = await api.request('POST', '/calls/${call.id}/$action',
+          body: {
+            'expectedVersion': call.version,
+            if (action == 'accept' && call.isVideo) 'videoConsent': true
+          },
+          idempotencyKey: newId());
+      if (_disposed ||
+          session != _sessionRevision ||
+          activeCall?.id != call.id ||
+          endingLocally) {
+        return;
+      }
+      final updated = CallSession.fromJson(result);
+      _revision++;
+      if (updated.ended) {
+        activeCall = null;
+        await audio.leave();
+        _joinedId = '';
+        lastCall = updated;
+        activeCall = null;
+        lastPath = '/history';
+        await store.write('lastPath', lastPath);
+        await loadHistory();
+      } else {
+        activeCall = updated;
+        if (updated.isVideo && cameraConsent && foreground) {
+          _videoConsentCallId = updated.id;
+        }
+        if (!updated.ringing) unawaited(_join(updated));
+      }
+      await refresh();
+    });
+  }
+
+  Future<void> _terminateCall() async {
+    final call = activeCall;
+    if (_disposed || call == null || endingLocally) return;
+    clearError();
+    try {
+      await _stopLocally(call);
+      await _stopOnServer(call);
+    } catch (e) {
+      if (!_disposed && activeCall?.id == call.id) _showError(e);
+    } finally {
+      _notify();
+    }
+  }
 
   Future<void> _join(CallSession call) async {
     if (_joiningId == call.id ||
         _joinedId == call.id ||
-        _abandonedCallId == call.id) {
+        _abandonedCallId == call.id ||
+        (call.isVideo && (_videoConsentCallId != call.id || video == null))) {
       return;
     }
+    final attempt = ++_joinAttempt;
     _joiningId = call.id;
+    final session = _sessionRevision;
+    bool authorized() =>
+        !_disposed &&
+        foreground &&
+        session == _sessionRevision &&
+        activeCall?.id == call.id &&
+        !activeCall!.ended &&
+        _abandonedCallId != call.id &&
+        (!call.isVideo || _videoConsentCallId == call.id);
     try {
       Future<RtcCredentials> token() async => RtcCredentials.fromJson(
           await api.request('POST', '/calls/${call.id}/rtc-token', body: {}));
       final credentials = await token();
-      if (!foreground ||
-          activeCall?.id != call.id ||
-          _disposed ||
-          _abandonedCallId == call.id) {
-        return;
+      if (!authorized()) return;
+      if (credentials.mediaType != call.mediaType) {
+        throw const ApiFailure(
+            'INVALID_RESPONSE', 'Media authorization does not match the call.');
       }
-      await audio.join(credentials, token);
-      if (!foreground ||
-          activeCall?.id != call.id ||
-          _disposed ||
-          _abandonedCallId == call.id) {
-        await audio.leave();
+      if (call.isVideo) {
+        await video!.joinVideo(credentials, token);
+      } else {
+        await audio.join(credentials, token);
+      }
+      if (!authorized()) {
+        // An older SDK join can finish after End and a new call has joined.
+        // Only the current attempt may tear down the shared media adapter.
+        if (attempt == _joinAttempt) await audio.leave();
       } else {
         _joinedId = call.id;
       }
     } catch (e) {
+      if (!authorized()) return;
       _showError(e);
       await audio.leave();
       if (activeCall?.id == call.id) await _endAfterFailure();
     } finally {
-      _joiningId = '';
+      if (attempt == _joinAttempt) _joiningId = '';
       _notify();
     }
   }
@@ -350,8 +549,14 @@ class AppController extends ChangeNotifier {
     _mediaPosting = true;
     final session = _sessionRevision;
     try {
-      await api.request('POST', '/calls/${call.id}/media',
-          body: {'ready': foreground && _joinedId == call.id && audio.ready});
+      await api.request('POST', '/calls/${call.id}/media', body: {
+        'ready': foreground && _joinedId == call.id && audio.ready,
+        if (call.isVideo)
+          'videoReady': foreground &&
+              _joinedId == call.id &&
+              _videoConsentCallId == call.id &&
+              video?.videoReady == true
+      });
     } catch (e) {
       if (_disposed ||
           session != _sessionRevision ||
@@ -370,13 +575,27 @@ class AppController extends ChangeNotifier {
     if (_disposed) return;
     _notify();
     // Send readiness losses immediately; the media timer corroborates healthy intervals.
-    if (!audio.ready) unawaited(reportMedia());
+    if (!audio.ready ||
+        (activeCall?.isVideo == true && video?.videoReady != true)) {
+      unawaited(reportMedia());
+    }
   }
 
   Future<void> _audioFailed(String code) async {
+    if (!_disposed &&
+        (_videoPreviewRequested ||
+            videoPreviewBusy ||
+            video?.previewing == true)) {
+      _videoPreviewRequest++;
+      _videoPreviewRequested = videoPreviewBusy = false;
+      videoPreviewError = 'VIDEO_FAILED';
+      await video?.stopPreview();
+      _notify();
+      return;
+    }
     if (_disposed || activeCall == null || endingLocally) return;
     error = 'Audio connection failed. Try another call.';
-    errorCode = 'AUDIO_FAILED';
+    errorCode = activeCall!.isVideo ? 'VIDEO_FAILED' : 'AUDIO_FAILED';
     diagnosticId = null;
     _errorFromSnapshot = false;
     await audio.leave();
@@ -398,8 +617,10 @@ class AppController extends ChangeNotifier {
   Future<void> _stopLocally(CallSession call) async {
     // Release capture before any network or disk operation, including offline hangup.
     _abandonedCallId = call.id;
+    _videoConsentCallId = null;
     _revision++;
     _joinedId = '';
+    await closeVideoPreview();
     await audio.leave();
     _notify();
     await store.write('abandonedCallId', call.id);
@@ -525,6 +746,9 @@ class AppController extends ChangeNotifier {
     if (foreground == value) return;
     foreground = value;
     if (!value) {
+      _revision++;
+      _videoConsentCallId = null;
+      await closeVideoPreview();
       // First milestone is foreground-only; never imply unsupported background calling.
       await audio.leave();
       if (hasCall) await _endAfterFailure();
@@ -570,6 +794,8 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> logout() => perform(() async {
+        _videoConsentCallId = null;
+        await closeVideoPreview();
         await audio.leave();
         if (hasCall) await _endAfterFailure();
         try {
@@ -586,6 +812,8 @@ class AppController extends ChangeNotifier {
     _sessionCleanup = cleanup.future;
     try {
       _invalidateSessionRequests();
+      _videoConsentCallId = null;
+      await closeVideoPreview();
       api.token = null;
       user = null;
       activeCall = null;
@@ -673,6 +901,9 @@ class AppController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _videoPreviewRequest++;
+    _videoPreviewRequested = videoPreviewBusy = false;
+    _videoConsentCallId = null;
     _pollTimer?.cancel();
     _presenceTimer?.cancel();
     _mediaTimer?.cancel();

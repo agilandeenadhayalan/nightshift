@@ -14,18 +14,29 @@ class ReportMediaReadyRequest {
   /// Returns a new [ReportMediaReadyRequest] instance.
   ReportMediaReadyRequest({
     required this.ready,
+    this.videoReady,
   });
 
   bool ready;
 
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  bool? videoReady;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is ReportMediaReadyRequest &&
-    other.ready == ready;
+    other.ready == ready &&
+    other.videoReady == videoReady;
 
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
-    (ready.hashCode);
+    (ready.hashCode) +
+    (videoReady == null ? 0 : videoReady!.hashCode);
 
   @override
   // Never include tokens, access keys or private fields in diagnostics.
@@ -34,6 +45,9 @@ class ReportMediaReadyRequest {
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
       json[r'ready'] = this.ready;
+    if (this.videoReady != null) {
+      json[r'videoReady'] = this.videoReady;
+    }
     return json;
   }
 
@@ -57,9 +71,13 @@ class ReportMediaReadyRequest {
       if (json[r'ready'] != null && json[r'ready'] is! bool) {
         throw const FormatException('Invalid ReportMediaReadyRequest.ready boolean');
       }
+      if (json[r'videoReady'] != null && json[r'videoReady'] is! bool) {
+        throw const FormatException('Invalid ReportMediaReadyRequest.videoReady boolean');
+      }
 
       return ReportMediaReadyRequest(
         ready: mapValueOfType<bool>(json, r'ready')!,
+        videoReady: mapValueOfType<bool>(json, r'videoReady'),
       );
     }
     return null;

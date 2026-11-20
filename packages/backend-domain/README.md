@@ -1,7 +1,7 @@
 # Backend domain
 
 `@nightshift/backend-domain` owns the pure server-side test-credit billing policy:
-the frozen rate snapshot, customer charge calculation, and illustrative listener
+the frozen audio/video rate snapshots, customer charge calculation, and illustrative listener
 earnings calculation. Its public entry is compiled CommonJS with TypeScript
 declarations. Consumers import `@nightshift/backend-domain`; they do not import
 another workspace's source files.
@@ -13,13 +13,17 @@ NestJS remains in `apps/api`, where PostgreSQL transactions, verified connected
 intervals, authorization, call lifecycle, and settlement idempotency belong.
 Flutter displays server results and never computes a charge or earning.
 
-These rules preserve the existing development policy, not an approved paid
-tariff. Customer charges match `audio/billing.mjs`: free through 40 seconds,
+These rules use development fixtures, not approved paid
+tariffs. Audio customer charges match `audio/billing.mjs`: free through 40 seconds,
 then a 60-second minimum and cumulative whole-second rounding. Listener earnings
 use delivered milliseconds at the illustrative rate, independently of customer
 charges, and round once per settlement. Inputs are the nonnegative, finite
-connected durations established by the API; the extraction adds no new input
-validation or pricing behavior.
+connected durations established by the API. `test-video-v1` has its own frozen
+120-coin/minute rate, twice the audio rate, with the same threshold and duration
+rounding. Its illustrative listener rate remains unchanged. Call creation fixes
+the selected snapshot; a fallback to audio requires ending video and accepting
+a new audio invitation. Omitting the optional rate argument preserves audio
+calculation compatibility.
 
 From the repository root, the task graph builds this package before its tests or
 API consumers. To work on it directly:

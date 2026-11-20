@@ -1,5 +1,6 @@
 // Real HTTP control-plane verification through the generated Dart SDK.
-// This never reports RTC readiness or claims that microphones/audio were tested.
+// SMOKE_MEDIA_TYPE=video opts into the separately priced test video contract.
+// This only reports media NOT ready and never requests RTC tokens or tests media.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -40,7 +41,37 @@ class _Session {
 class _Smoke {
   String step = 'configuration';
   String? callId;
+  String mediaType = 'audio';
   final sessions = <_Session>[];
+
+  bool get isVideo => mediaType == 'video';
+
+  void checkRate(sdk.Rate rate) {
+    _check(
+        rate.id ==
+                (isVideo
+                    ? sdk.RateIdEnum.testVideoV1
+                    : sdk.RateIdEnum.testAudioV1) &&
+            rate.coinsPerMinute == (isVideo ? 120 : 60) &&
+            rate.microcreditsPerCoin == 60000 &&
+            rate.microcreditsPerSecond == (isVideo ? 120000 : 60000) &&
+            rate.freeThroughSeconds == 40 &&
+            rate.minimumChargedSeconds == 60 &&
+            rate.listenerPaisePerHour == 50000 &&
+            rate.testOnly.toJson() == true,
+        'MEDIA_RATE_MISMATCH');
+  }
+
+  void checkTerms(sdk.Call call) {
+    _check(
+        call.mediaType ==
+            (isVideo
+                ? sdk.CallMediaTypeEnum.video
+                : sdk.CallMediaTypeEnum.audio),
+        'CALL_MEDIA_TYPE_MISMATCH');
+    _check(call.testOnly.toJson() == true, 'NON_TEST_CALL');
+    checkRate(call.rate);
+  }
 
   Future<T> request<T>(
       String name, Future<T?> Function(Future<void>) operation) async {
@@ -56,6 +87,8 @@ class _Smoke {
   }
 
   Future<void> run() async {
+    mediaType = Platform.environment['SMOKE_MEDIA_TYPE'] ?? 'audio';
+    _check(['audio', 'video'].contains(mediaType), 'INVALID_SMOKE_MEDIA_TYPE');
     final key = Platform.environment['DEV_ACCESS_KEY'];
     _check(key != null && key.length >= 24, 'MISSING_DEVELOPMENT_ACCESS_KEY');
     final baseUrl =
@@ -93,6 +126,15 @@ class _Smoke {
       session.login = login;
       session.authentication.accessToken = login.token;
       _check(login.testOnly.toJson() == true, 'NON_TEST_IDENTITY');
+      if (isVideo) {
+        final config = await request('${session.role}_video_config',
+            (abort) => session.api.getRtcConfig(abortTrigger: abort));
+        _check(
+            config.testOnly.toJson() == true &&
+                config.videoEnabled &&
+                RegExp(r'^[a-fA-F0-9]{32}$').hasMatch(config.appId ?? ''),
+            'VIDEO_TEST_CONFIG_REQUIRED');
+      }
     }
 
     await request(
@@ -120,40 +162,76 @@ class _Smoke {
     _check(
         directory.items.any((item) => item.id == listenerId && item.available),
         'ONLINE_LISTENER_NOT_DISCOVERABLE');
+    final discovered =
+        directory.items.singleWhere((item) => item.id == listenerId);
+    final quote = isVideo ? discovered.videoRate : discovered.rate;
+    _check(quote != null, 'MEDIA_QUOTE_MISSING');
+    checkRate(quote!);
 
     final invitationKey = _newId();
     final body = sdk.CreateCallRequest(
         listenerId: listenerId,
-        quoteId: sdk.CreateCallRequestQuoteIdEnum.testAudioV1);
+        quoteId: isVideo
+            ? sdk.CreateCallRequestQuoteIdEnum.testVideoV1
+            : sdk.CreateCallRequestQuoteIdEnum.testAudioV1,
+        // Audio deliberately preserves the original payload without new fields.
+        mediaType: isVideo ? sdk.CreateCallRequestMediaTypeEnum.video : null,
+        videoConsent: isVideo ? true : null);
     var call = await request(
         'invite',
         (abort) =>
             customer.api.createCall(invitationKey, body, abortTrigger: abort));
     callId = call.id;
     _check(call.state == sdk.CallStateEnum.ringing, 'INVITATION_NOT_RINGING');
+    checkTerms(call);
     final replay = await request(
         'invitation_replay',
         (abort) =>
             customer.api.createCall(invitationKey, body, abortTrigger: abort));
     _check(replay.id == callId, 'INVITATION_REPLAY_CHANGED_CALL');
+    checkTerms(replay);
     final incoming = await request('listener_snapshot',
         (abort) => listener.api.getSnapshot(abortTrigger: abort));
     _check(incoming.activeCall?.id == callId, 'LISTENER_INVITATION_MISSING');
 
     call = await request(
         'accept',
-        (abort) => listener.api.acceptCall(call.id, _newId(),
-            sdk.AcceptCallRequest(expectedVersion: call.version),
+        (abort) => listener.api.acceptCall(
+            call.id,
+            _newId(),
+            sdk.AcceptCallRequest(
+                expectedVersion: call.version,
+                videoConsent: isVideo ? true : null),
             abortTrigger: abort));
     _check(call.state == sdk.CallStateEnum.connecting, 'ACCEPT_NOT_CONNECTING');
-    // No media-ready report is sent. Acceptance alone must not create billable time.
+    checkTerms(call);
+    // Exercise generated optional-field serialization without claiming that any
+    // microphone, camera or remote stream is ready. Never fetch an RTC token.
+    for (final session in sessions) {
+      call = await request(
+          '${session.role}_media_not_ready',
+          (abort) => session.api.reportMediaReady(
+              call.id,
+              sdk.ReportMediaReadyRequest(
+                  ready: false, videoReady: isVideo ? false : null),
+              abortTrigger: abort));
+      _check(call.state == sdk.CallStateEnum.connecting,
+          'FALSE_READINESS_CONNECTED_CALL');
+      _check(call.connectedMs == 0 && call.chargeMicrocredits == 0,
+          'FALSE_READINESS_WAS_METERED');
+      checkTerms(call);
+    }
     call = await request(
         'end',
         (abort) => customer.api.endCall(call.id, _newId(),
-            sdk.DeclineCallRequest(expectedVersion: call.version),
+            sdk.CancelCallRequest(expectedVersion: call.version),
             abortTrigger: abort));
     _check(call.state == sdk.CallStateEnum.ended, 'CALL_NOT_ENDED');
-    _check(call.chargeMicrocredits == 0 && call.connectedMs == 0,
+    checkTerms(call);
+    _check(
+        call.chargeMicrocredits == 0 &&
+            call.connectedMs == 0 &&
+            call.earningPaise == 0,
         'UNJOINED_CALL_WAS_METERED');
 
     for (final session in sessions) {
@@ -162,9 +240,11 @@ class _Smoke {
       final matches = history.items.where((item) => item.id == callId).toList();
       _check(matches.length == 1, 'COMPLETED_HISTORY_MISSING_OR_DUPLICATED');
       final receipt = matches.single;
+      checkTerms(receipt);
       _check(
           receipt.state == sdk.CallStateEnum.ended &&
               receipt.chargeMicrocredits == 0 &&
+              receipt.earningPaise == 0 &&
               receipt.connectedMs == 0,
           'COMPLETED_HISTORY_MISMATCH');
       final snapshot = await request('${session.role}_released',
@@ -215,10 +295,13 @@ Future<void> main() async {
         'online listener discovery',
         'idempotent invitation',
         'listener accepts',
+        'both participants report media NOT ready',
         'customer ends',
         'zero charge without media',
-        'same completed call in both histories',
+        'same completed call and immutable media rate in both histories',
         'claims released',
+        if (smoke.isVideo)
+          'authenticated video config and explicit mutual consent',
       ],
     });
   } catch (error) {
@@ -250,5 +333,6 @@ Future<void> main() async {
   }
   result['mediaVerification'] =
       'NOT performed: two phones and Agora test credentials required';
+  result['mediaType'] = smoke.mediaType;
   stdout.writeln(const JsonEncoder.withIndent('  ').convert(result));
 }

@@ -140,8 +140,7 @@ class {{{classname}}} {
     {{^isNullable}}
       {{^required}}
         {{^defaultValue}}
-    } else {
-      json[r'{{{baseName}}}'] = null;
+    {{! Omitted optional non-nullable properties must remain absent on the wire. }}
     }
         {{/defaultValue}}
       {{/required}}

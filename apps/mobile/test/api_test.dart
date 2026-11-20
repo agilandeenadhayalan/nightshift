@@ -49,6 +49,111 @@ void main() {
     api.close();
   });
 
+  const callBodies = <(String, String, Map<String, dynamic>)>[
+    (
+      'video create consent true',
+      '/calls',
+      {
+        'listenerId': 'listener-id',
+        'quoteId': 'test-video-v1',
+        'mediaType': 'video',
+        'videoConsent': true,
+      }
+    ),
+    (
+      'video create consent false',
+      '/calls',
+      {
+        'listenerId': 'listener-id',
+        'quoteId': 'test-video-v1',
+        'mediaType': 'video',
+        'videoConsent': false,
+      }
+    ),
+    (
+      'audio accept omits video consent',
+      '/calls/call-id/accept',
+      {
+        'expectedVersion': 1,
+      }
+    ),
+    (
+      'video accept consent true',
+      '/calls/call-id/accept',
+      {
+        'expectedVersion': 1,
+        'videoConsent': true,
+      }
+    ),
+    (
+      'video accept consent false',
+      '/calls/call-id/accept',
+      {
+        'expectedVersion': 1,
+        'videoConsent': false,
+      }
+    ),
+    (
+      'audio ready omits video readiness',
+      '/calls/call-id/media',
+      {
+        'ready': true,
+      }
+    ),
+    (
+      'audio stopped omits video readiness',
+      '/calls/call-id/media',
+      {
+        'ready': false,
+      }
+    ),
+    (
+      'both video media ready',
+      '/calls/call-id/media',
+      {
+        'ready': true,
+        'videoReady': true,
+      }
+    ),
+    (
+      'video camera stopped retains false',
+      '/calls/call-id/media',
+      {
+        'ready': true,
+        'videoReady': false,
+      }
+    ),
+    (
+      'both video media stopped retain false',
+      '/calls/call-id/media',
+      {
+        'ready': false,
+        'videoReady': false,
+      }
+    ),
+  ];
+  for (final (label, path, body) in callBodies) {
+    test('generated call wire body: $label', () async {
+      late http.Request sent;
+      final api = NightShiftApi(client: MockClient((request) async {
+        sent = request;
+        final video = body['mediaType'] == 'video' ||
+            body.containsKey('videoConsent') ||
+            body.containsKey('videoReady');
+        return http.Response(
+            jsonEncode(callJson(state: 'connecting', video: video)), 200);
+      }));
+      addTearDown(api.close);
+      await api.request('POST', path,
+          body: body, idempotencyKey: 'wire-body-attempt');
+      expect(sent.method, 'POST');
+      expect(sent.url.path, '/v1$path');
+      expect(jsonDecode(sent.body), body,
+          reason:
+              'Omitted fields must stay absent; explicit booleans must survive serialization.');
+    });
+  }
+
   test('structured failure preserves a bounded positive integer retry hint',
       () async {
     final api = NightShiftApi(
