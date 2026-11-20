@@ -60,11 +60,16 @@ test('expired session response cannot replace a newer denied result', async ({pa
   await page.waitForTimeout(350);
   await expect(page.getByText('Your access is confirmed')).toHaveCount(0);
 });
-test('narrow screen and 200% text keep access controls reachable by keyboard', async ({page, request}) => {
+for (const font of [
+  {name: 'system fonts', css: ''},
+  {name: 'sans-serif fallback', css: 'body, .brand {font-family: Arial, sans-serif}'},
+]) test(`narrow screen and 200% text keep access controls reachable by keyboard with ${font.name}`, async ({page, request}) => {
   await mode(request, 'unavailable'); await page.setViewportSize({width: 360, height: 800}); await page.goto('/');
-  await page.addStyleTag({content: 'html {font-size: 200%}'});
+  await page.addStyleTag({content: `html {font-size: 200%} ${font.css}`});
   const action = page.getByRole('button', {name: 'Check access again'});
   await action.focus(); await expect(action).toBeFocused();
   await action.press('Enter'); await expect(page.getByText('Access not configured')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(await page.locator('.brand, nav, .access-panel, .access-panel h2').evaluateAll(elements =>
+    elements.every(element => element.scrollWidth <= element.clientWidth))).toBe(true);
 });

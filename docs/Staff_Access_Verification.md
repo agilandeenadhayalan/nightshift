@@ -24,7 +24,7 @@ The review entry is unavailable because this slice has no review/evidence/decisi
 | Fresh/upgrade schemas | 10/10 including migration012; `staff-authority-schema-tests.log` |
 | Independent staff/schema review | 27/27 before the final contract assertion; `staff-schema-independent.log` |
 | Admin transport/contracts/build | 15/15, typecheck and production build; `staff-admin-final.log` |
-| Chromium | 6/6 with schema-validated synthetic responses; `staff-admin-browser.log` |
+| Chromium | Initial local 6/6 passed, then Linux CI exposed a fallback-font overflow at 200% text. The layout fix reproduces and covers that case: 7/7 pass locally with strict document/element width checks; `staff-overflow-fix-browser.log`. |
 | Repository guards/tooling | Secret/contract/boundary checks and 11/11 tooling tests; `staff-repo-final.log` |
 | Dependency audit | Zero reported vulnerabilities; `staff-dependency-audit.log` |
 
