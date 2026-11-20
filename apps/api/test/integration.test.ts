@@ -55,6 +55,18 @@ async function request(path:string,method='GET',token?:string,body?:unknown){
   const response=await fetch(`${base}/v1/${path}`,{method,headers:{...(token?{Authorization:`Bearer ${token}`}:{}) ,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
   return {status:response.status,body:await response.json() as any};
 }
+async function recoverCall(id:string,expectedState:string){
+  // The real HTTP worker can own the row while this recovery pass uses SKIP
+  // LOCKED. Observe its committed result rather than assuming one pass owns it.
+  const deadline=Date.now()+5000;
+  while(true){
+    await runtime.service.recover();
+    const call=await runtime.service.call(customer.id,id);
+    if(call.state===expectedState)return call;
+    assert.ok(Date.now()<deadline,`Recovery did not reach ${expectedState}; observed ${call.state}`);
+    await new Promise<void>(resolve=>setTimeout(resolve,10));
+  }
+}
 test('health and HTTP guards reject missing credentials and client-forged roles',async()=>{
   assert.equal((await request('health')).status,200);
   assert.equal((await request('snapshot')).status,401);
@@ -94,7 +106,9 @@ test('only invited listener can accept; history and tokens are participant-only'
   await assert.rejects(()=>runtime.service.call(customer2.id,call.id),{code:'CALL_NOT_FOUND'});
   await assert.rejects(()=>runtime.service.rtcToken(customer2,call.id),{code:'CALL_NOT_FOUND'});
   await assert.rejects(()=>runtime.service.rtcToken(customer,call.id),{code:'CALL_NOT_ACTIVE'});
-  assert.equal((await request(`calls/${call.id}`,'GET',(await runtime.auth.login({handle:'customer2',accessKey:config.devAccessKey,deviceId:'other'},schema)).token)).status,404);
+  const otherLogin=await runtime.auth.login({handle:'customer2',accessKey:config.devAccessKey,deviceId:'other'},schema);
+  customer2=await runtime.auth.authenticate(otherLogin.token);
+  assert.equal((await request(`calls/${call.id}`,'GET',otherLogin.token)).status,404);
   await accept(call);
   if(!config.agoraAppId)await assert.rejects(()=>runtime.service.rtcToken(customer,call.id),{code:'RTC_UNAVAILABLE'});
   await end(listener,call);
@@ -123,13 +137,17 @@ test('short healthy calls match free reference tariff and untrusted duration is 
 test('decline, cancelled acceptance, missed invite, failed join and stale media recover with no fabricated time',async()=>{
   const declined=await invite();await runtime.service.action(listener,declined.id,'decline',{expectedVersion:1},idem());
   await assert.rejects(()=>runtime.service.action(listener,declined.id,'accept',{expectedVersion:1},idem()),{code:'CALL_ALREADY_ENDED'});
-  const missed=await invite();now+=30001;await runtime.service.recover();assert.equal((await runtime.service.call(customer.id,missed.id)).reason,'timeout');
-  const failed=await invite();await accept(failed);now+=45001;await runtime.service.recover();
-  assert.equal((await runtime.service.call(customer.id,failed.id)).chargeMicrocredits,0);
+  const missed=await invite();now+=30001;assert.equal((await recoverCall(missed.id,'ended')).reason,'timeout');
+  const failed=await invite();await accept(failed);now+=45001;
+  const failedResult=await recoverCall(failed.id,'ended');
+  assert.equal(failedResult.reason,'connection_timeout');assert.equal(failedResult.chargeMicrocredits,0);
   const killed=await invite();await accept(killed);await bothReady(killed.id);await healthy(killed.id,10);
-  now+=6000;await runtime.service.recover();assert.equal((await runtime.service.call(customer.id,killed.id)).state,'reconnecting');
-  now+=45001;await runtime.service.recover();const result=await runtime.service.call(customer.id,killed.id);
-  assert.equal(result.state,'ended');assert.equal(result.connectedMs,10000);assert.equal(result.chargeMicrocredits,0);
+  now+=6000;await recoverCall(killed.id,'reconnecting');
+  now+=45001;const result=await recoverCall(killed.id,'ended');
+  assert.equal(result.reason,'connection_timeout');assert.equal(result.connectedMs,10000);assert.equal(result.chargeMicrocredits,0);
+  await runtime.service.recover();
+  const settled=await runtime.db.pool.query('SELECT count(*) FROM journal_batches WHERE call_id=$1',[killed.id]);
+  assert.equal(settled.rows[0].count,'1','Retry must not repeat the one test earning settlement');
 });
 test('journal cannot be rewritten or left unbalanced at transaction commit',async()=>{
   await assert.rejects(()=>runtime.db.pool.query('UPDATE journal_lines SET amount=amount+1'),/append-only/);

@@ -4,6 +4,7 @@ import { Config } from './config';
 import { Presence } from './presence';
 import { requireThat, fields, object, string } from './errors';
 import { PhoneAuthentication } from './identity/phone-auth';
+import { PoolClient } from 'pg';
 export const tokenHash = (token: string) => createHash('sha256').update(token).digest('hex');
 export interface Actor { id: string; sessionHash: string; identityAuthTime?: number; }
 export class Auth {
@@ -20,16 +21,19 @@ export class Auth {
     const userId = result.rows[0].id;
     const token = randomBytes(32).toString('base64url');
     const expiresAt = new Date(this.clock() + 12*60*60*1000);
-    await this.db.tx(async c => {
-      await c.query('SELECT id FROM users WHERE id=$1 FOR NO KEY UPDATE', [userId]);
+    const presenceVersion = await this.db.tx(async c => {
+      const owner = await c.query('SELECT suspended,adult_confirmed,test_handle FROM users WHERE id=$1 FOR NO KEY UPDATE', [userId]);
+      requireThat(owner.rows.length && !owner.rows[0].suspended && owner.rows[0].adult_confirmed && owner.rows[0].test_handle===handle,
+        401, 'INVALID_CREDENTIALS', 'Invalid test credentials');
       const busy = await c.query('SELECT call_id FROM active_participant_claims WHERE user_id=$1', [userId]);
       requireThat(!busy.rowCount, 409, 'CALL_ACTIVE', 'End the active call before signing in on another device');
       await c.query('UPDATE auth_sessions SET revoked_at=now() WHERE user_id=$1 AND revoked_at IS NULL', [userId]);
       await c.query('UPDATE devices SET active=false,revoked_at=now() WHERE user_id=$1 AND active', [userId]);
-      await c.query('UPDATE users SET desired_online=false WHERE id=$1', [userId]);
+      const updated = await c.query('UPDATE users SET desired_online=false,presence_version=presence_version+1 WHERE id=$1 RETURNING presence_version', [userId]);
       await c.query('INSERT INTO auth_sessions(token_hash,user_id,device_id,expires_at) VALUES($1,$2,$3,$4)', [tokenHash(token),userId,device,expiresAt]);
+      return String(updated.rows[0].presence_version);
     });
-    await this.presence.clear(userId);
+    await this.presence.clear(userId, presenceVersion);
     return { token, userId, expiresAt: expiresAt.toISOString() };
   }
   async exchange(raw: unknown, ip: string) {
@@ -41,7 +45,7 @@ export class Auth {
     requireThat(device.trim() === device && !/[\x00-\x1f\x7f]/.test(device),400,'INVALID_FIELD','Invalid deviceId');
     const identity=await this.phone.exchangeIdentity(token,device,body.attemptId), hash=tokenHash(token);
     const expiresAt=new Date(identity.expiresAt*1000);
-    let switchingDevice=false;
+    let switchingDevice=false, presenceVersion:string|undefined;
     await this.db.tx(async c=>{
       const account=await c.query('SELECT suspended,identity_revoked_before,identity_last_issued_at,identity_last_auth_time FROM users WHERE id=$1 FOR NO KEY UPDATE',[identity.userId]);
       requireThat(account.rows.length && !account.rows[0].suspended,401,'UNAUTHENTICATED','Sign in again.');
@@ -81,11 +85,14 @@ export class Auth {
         revoked_at=NULL,updated_at=now()`,[deviceRecord,identity.userId,device,identity.issuedAt,hash]);
       await c.query(`INSERT INTO auth_sessions(token_hash,user_id,device_id,expires_at,auth_kind,device_record_id,identity_issued_at)
         VALUES($1,$2,$3,$4,'firebase',$5,$6)`,[hash,identity.userId,device,expiresAt,deviceRecord,identity.issuedAt]);
-      await c.query('UPDATE users SET identity_last_issued_at=$2,identity_last_auth_time=$3 WHERE id=$1',[identity.userId,identity.issuedAt,identity.authTime]);
-      if(switchingDevice)await c.query('UPDATE users SET desired_online=false WHERE id=$1',[identity.userId]);
+      const updated = await c.query(`UPDATE users SET identity_last_issued_at=$2,identity_last_auth_time=$3,
+        desired_online=CASE WHEN $4 THEN false ELSE desired_online END,
+        presence_version=presence_version+CASE WHEN $4 THEN 1 ELSE 0 END WHERE id=$1 RETURNING presence_version`,
+      [identity.userId,identity.issuedAt,identity.authTime,switchingDevice]);
+      presenceVersion=String(updated.rows[0].presence_version);
     });
     // A same-device refresh must not interrupt its active call or availability.
-    if(switchingDevice)await this.presence.clear(identity.userId);
+    if(switchingDevice)await this.presence.clear(identity.userId,presenceVersion!);
     const account=await this.db.pool.query('SELECT adult_confirmed FROM users WHERE id=$1',[identity.userId]);
     return {token,userId:identity.userId,expiresAt:expiresAt.toISOString(),needsOnboarding:!account.rows[0].adult_confirmed};
   }
@@ -112,15 +119,31 @@ export class Auth {
     requireThat(allowOnboarding || rows[0].adult_confirmed,403,'ONBOARDING_REQUIRED','Complete adult onboarding first.');
     return { id: rows[0].id, sessionHash: hash, ...(identityAuthTime===undefined?{}:{identityAuthTime}) };
   }
-  async logout(actor: Actor) {
-    await this.db.tx(async c=>{
-      await c.query('SELECT id FROM users WHERE id=$1 FOR NO KEY UPDATE',[actor.id]);
+  async logout(actor: Actor, beforeRevoke?: (c:PoolClient)=>Promise<void>) {
+    const presenceVersion = await this.db.tx(async c=>{
+      const account=(await c.query('SELECT * FROM users WHERE id=$1 FOR NO KEY UPDATE',[actor.id])).rows[0];
+      requireThat(account && !account.suspended,401,'UNAUTHENTICATED','Sign in again');
+      const session=(await c.query('SELECT * FROM auth_sessions WHERE user_id=$1 AND token_hash=$2 AND expires_at>$3',
+        [actor.id,actor.sessionHash,new Date(this.clock())])).rows[0];
+      requireThat(session,401,'UNAUTHENTICATED','Sign in again');
+      const device=session.auth_kind==='firebase'
+        ? (await c.query('SELECT id FROM devices WHERE id=$1 AND user_id=$2 AND active AND revoked_at IS NULL',
+          [session.device_record_id,actor.id])).rows[0] : undefined;
+      // A logout already admitted before a same-device token refresh may still
+      // revoke that lineage. It must never revoke a later fresh sign-in/device.
+      const sameLineage=session.auth_kind==='firebase' && device && actor.identityAuthTime!==undefined
+        && actor.identityAuthTime===Number(account.identity_last_auth_time)
+        && (account.identity_revoked_before===null || actor.identityAuthTime>Number(account.identity_revoked_before));
+      requireThat((session.revoked_at===null && (session.auth_kind==='development' || device)) || sameLineage,
+        401,'UNAUTHENTICATED','Sign in again');
+      await beforeRevoke?.(c);
       await c.query('UPDATE auth_sessions SET revoked_at=$2 WHERE user_id=$1 AND revoked_at IS NULL',[actor.id,new Date(this.clock())]);
       await c.query(`UPDATE devices SET active=false,revoked_at=$2,updated_at=now()
         WHERE user_id=$1 AND active`,[actor.id,new Date(this.clock())]);
-      await c.query('UPDATE users SET desired_online=false,identity_revoked_before=GREATEST(COALESCE(identity_revoked_before,0),$2) WHERE id=$1',
+      const updated=await c.query('UPDATE users SET desired_online=false,presence_version=presence_version+1,identity_revoked_before=GREATEST(COALESCE(identity_revoked_before,0),$2) WHERE id=$1 RETURNING presence_version',
         [actor.id,Math.floor(this.clock()/1000)]);
+      return String(updated.rows[0].presence_version);
     });
-    await this.presence.clear(actor.id);
+    await this.presence.clear(actor.id,presenceVersion);
   }
 }

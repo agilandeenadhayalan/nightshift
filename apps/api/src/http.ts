@@ -78,7 +78,7 @@ class PublicController {
 class AccountController {
   constructor(@Inject(Auth) private readonly auth:Auth,@Inject(NightShiftService) private readonly service:NightShiftService,
     @Inject(Onboarding) private readonly onboarding:Onboarding,@Inject(AccountLifecycle) private readonly lifecycle:AccountLifecycle){}
-  @Post('auth/logout') async logout(@Req() req:AuthenticatedRequest){await this.service.logoutCall(req.actor);await this.auth.logout(req.actor);return {signedOut:true};}
+  @Post('auth/logout') async logout(@Req() req:AuthenticatedRequest){await this.auth.logout(req.actor,c=>this.service.logoutCall(req.actor,c));return {signedOut:true};}
   @Get('me/onboarding') get(@Req() req:AuthenticatedRequest){return this.onboarding.get(req.actor);}
   @Put('me/onboarding') complete(@Req() req:AuthenticatedRequest,@Body() body:unknown){return this.onboarding.complete(req.actor,body);}
   @Get('me/consents') consents(@Req() req:AuthenticatedRequest){return this.lifecycle.consentHistory(req.actor);}
@@ -132,9 +132,9 @@ export async function createApplication(config:Config,clock:()=>number=Date.now,
   try{phone=await createPhoneAuthentication(db,presence,config,clock,identityTestAdapters);}
   catch(error){await presence.close();await db.close();throw error;}
   const auth=new Auth(db,presence,config,phone,clock),service=new NightShiftService(db,presence,config,clock);
-  const onboarding=new Onboarding(db,clock,async actor=>{await service.logoutCall(actor);await presence.clear(actor.id);});
+  const onboarding=new Onboarding(db,clock,async actor=>{await service.logoutCall(actor);await service.withdrawPresence(actor.id);});
   const applications=new ListenerApplications(db,{storage:config.privateReviewDirectory?new LocalReviewStorage(config.privateReviewDirectory):undefined,capabilityKey:config.devAccessKey},clock);
-  const lifecycle=new AccountLifecycle(db,clock,userId=>presence.clear(userId),userId=>applications.erasePrivateMaterials(userId));
+  const lifecycle=new AccountLifecycle(db,clock,userId=>service.withdrawPresence(userId),userId=>applications.erasePrivateMaterials(userId));
   @Module({controllers:[PublicController,AccountController,AppController],providers:[SessionGuard,OnboardingSessionGuard,{provide:Auth,useValue:auth},{provide:NightShiftService,useValue:service},{provide:PhoneAuthentication,useValue:phone},{provide:Onboarding,useValue:onboarding},{provide:AccountLifecycle,useValue:lifecycle},{provide:ListenerApplications,useValue:applications}]})
   class AppModule{}
   const app=await NestFactory.create(AppModule,{logger:['error','warn'],bodyParser:true});

@@ -26,12 +26,53 @@ export class NightShiftService {
   }
   rates() { return {items: this.videoAvailable() ? [TEST_RATE, TEST_VIDEO_RATE] : [TEST_RATE]}; }
 
+  /** Revalidate after taking the same owner lock used by login and revocation.
+   * An HTTP guard can have completed before a queued account mutation. */
+  private async liveOwner(c: PoolClient, actor: Actor, requireAdult = true) {
+    const { rows } = await c.query('SELECT * FROM users WHERE id=$1 FOR NO KEY UPDATE', [actor.id]);
+    requireThat(rows.length && !rows[0].suspended, 401, 'UNAUTHENTICATED', 'Sign in again');
+    const session = await c.query(`SELECT 1 FROM auth_sessions s LEFT JOIN devices d ON d.id=s.device_record_id
+      WHERE s.user_id=$1 AND s.token_hash=$2 AND s.revoked_at IS NULL AND s.expires_at>$3
+      AND (s.auth_kind='development' OR (d.active AND d.revoked_at IS NULL AND d.last_token_hash=s.token_hash))`,
+    [actor.id, actor.sessionHash, new Date(this.clock())]);
+    requireThat(session.rows.length, 401, 'UNAUTHENTICATED', 'Sign in again');
+    requireThat(!requireAdult || rows[0].adult_confirmed, 403, 'ONBOARDING_REQUIRED', 'Complete adult onboarding first.');
+    return rows[0];
+  }
+
+  /** A Redis value alone never establishes reachability. A stale writer after
+   * cache loss must match the durable intent and a current authorized session. */
+  private async reachable(ids: string[], c: Query = this.db.pool): Promise<Set<string>> {
+    if (!ids.length) return new Set();
+    const { rows } = await c.query(`SELECT u.id,u.presence_version FROM users u
+      WHERE u.id=ANY($1::uuid[]) AND u.desired_online AND u.listener_approved AND u.adult_confirmed
+      AND NOT u.suspended AND u.mode='listener' AND EXISTS (
+        SELECT 1 FROM auth_sessions s LEFT JOIN devices d ON d.id=s.device_record_id
+        WHERE s.user_id=u.id AND s.revoked_at IS NULL AND s.expires_at>$2
+        AND (s.auth_kind='development' OR (d.active AND d.revoked_at IS NULL AND d.last_token_hash=s.token_hash)))`,
+    [ids, new Date(this.clock())]);
+    return new Set(await this.presence.online(rows.map(row => row.id),
+      new Map(rows.map(row => [row.id, String(row.presence_version)]))));
+  }
+
+  async withdrawPresence(userId: string) {
+    const version = await this.db.tx(async c => {
+      const { rows } = await c.query('SELECT * FROM users WHERE id=$1 FOR NO KEY UPDATE', [userId]);
+      const user = rows[0];
+      // Restriction/deletion recovery may be delayed. Never clear a later
+      // eligible availability intent just because an older callback resumed.
+      return user && (!user.desired_online || !user.listener_approved || !user.adult_confirmed
+        || user.suspended || user.mode !== 'listener') ? String(user.presence_version) : undefined;
+    });
+    if (version !== undefined) await this.presence.clear(userId, version);
+  }
+
   async user(id: string, c: Query = this.db.pool) {
     const { rows } = await c.query('SELECT * FROM users WHERE id=$1', [id]);
     requireThat(rows.length, 404, 'NOT_FOUND', 'Account not found');
     const u = rows[0];
     return { id: u.id, displayName: u.display_name, languages: u.languages, mode: u.mode,
-      listenerApproved: u.listener_approved, online: u.desired_online && await this.presence.isOnline(id) };
+      listenerApproved: u.listener_approved, online: (await this.reachable([id], c)).has(id) };
   }
   async wallet(id: string, c: Query = this.db.pool) {
     const balance = await c.query('SELECT coalesce(sum(amount),0)::text total FROM journal_lines WHERE account_id=$1', [`customer:${id}`]);
@@ -46,32 +87,38 @@ export class NightShiftService {
       listeners: (await this.listeners(actor.id, language)).items, wallet: await this.wallet(actor.id), serverTime: new Date(this.clock()).toISOString() };
   }
   async heartbeat(actor: Actor) {
-    const { rows } = await this.db.pool.query('SELECT desired_online,listener_approved,mode FROM users WHERE id=$1', [actor.id]);
-    if (rows[0]?.desired_online && rows[0].listener_approved && rows[0].mode === 'listener') await this.presence.heartbeat(actor.id, actor.sessionHash);
+    const version = await this.db.tx(async c => {
+      const user = await this.liveOwner(c, actor);
+      return user.desired_online && user.listener_approved && user.mode === 'listener'
+        ? String(user.presence_version) : undefined;
+    });
+    if (version !== undefined) await this.presence.heartbeat(actor.id, version);
     return { serverTime: new Date(this.clock()).toISOString() };
   }
   async mode(actor: Actor, raw: unknown) {
     const body = object(raw); fields(body, ['mode']);
-    requireThat(['customer','listener'].includes(String(body.mode)), 400, 'INVALID_MODE', 'Choose Customer or Listener');
-    await this.db.tx(async c => {
-      const { rows } = await c.query('SELECT listener_approved FROM users WHERE id=$1 FOR NO KEY UPDATE', [actor.id]);
-      requireThat(body.mode !== 'listener' || rows[0].listener_approved, 403, 'LISTENER_NOT_APPROVED', 'Listener approval is required');
+    requireThat(typeof body.mode==='string' && ['customer','listener'].includes(body.mode), 400, 'INVALID_MODE', 'Choose Customer or Listener');
+    const version = await this.db.tx(async c => {
+      const user = await this.liveOwner(c, actor);
+      requireThat(body.mode !== 'listener' || user.listener_approved, 403, 'LISTENER_NOT_APPROVED', 'Listener approval is required');
       const active = await c.query('SELECT 1 FROM active_participant_claims WHERE user_id=$1', [actor.id]);
       requireThat(!active.rowCount, 409, 'CALL_ACTIVE', 'End the call before switching modes');
-      await c.query('UPDATE users SET mode=$2,desired_online=false WHERE id=$1', [actor.id,body.mode]);
+      const updated = await c.query('UPDATE users SET mode=$2,desired_online=false,presence_version=presence_version+1 WHERE id=$1 RETURNING presence_version', [actor.id,body.mode]);
+      return String(updated.rows[0].presence_version);
     });
-    await this.presence.clear(actor.id);
+    await this.presence.clear(actor.id, version);
     return this.user(actor.id);
   }
   async availability(actor: Actor, raw: unknown) {
     const body = object(raw); fields(body, ['online']);
     requireThat(typeof body.online === 'boolean', 400, 'INVALID_FIELD', 'online must be a boolean');
-    await this.db.tx(async c => {
-      const { rows } = await c.query('SELECT * FROM users WHERE id=$1 FOR NO KEY UPDATE', [actor.id]);
-      requireThat(rows[0].listener_approved && rows[0].mode === 'listener', 403, 'LISTENER_NOT_APPROVED', 'Use approved Listener mode');
-      await c.query('UPDATE users SET desired_online=$2 WHERE id=$1', [actor.id, body.online]);
+    const version = await this.db.tx(async c => {
+      const user = await this.liveOwner(c, actor);
+      requireThat(user.listener_approved && user.mode === 'listener', 403, 'LISTENER_NOT_APPROVED', 'Use approved Listener mode');
+      const updated = await c.query('UPDATE users SET desired_online=$2,presence_version=presence_version+1 WHERE id=$1 RETURNING presence_version', [actor.id, body.online]);
+      return String(updated.rows[0].presence_version);
     });
-    if (body.online) await this.presence.heartbeat(actor.id, actor.sessionHash); else await this.presence.clear(actor.id);
+    if (body.online) await this.presence.heartbeat(actor.id, version); else await this.presence.clear(actor.id, version);
     return this.user(actor.id);
   }
   async languages(actor: Actor, raw: unknown) {
@@ -91,7 +138,7 @@ export class NightShiftService {
       AND u.mode='listener' AND u.desired_online AND $2=ANY(u.languages)
       AND ($3::uuid IS NULL OR u.id>$3) AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
         (b.actor_id=$1 AND b.target_id=u.id) OR (b.target_id=$1 AND b.actor_id=u.id)) ORDER BY u.id LIMIT 21`, [actorId,language,cursor??null]);
-    const slice = rows.slice(0,20); const online = new Set(await this.presence.online(slice.map(r=>r.id)));
+    const slice = rows.slice(0,20); const online = await this.reachable(slice.map(r=>r.id));
     return { items: slice.filter(r=>online.has(r.id)).map(r=>({id:r.id,displayName:r.display_name,languages:r.languages,
       online:true,available:!r.busy,busy:r.busy,favorite:r.favorite,testOnly:true,rate:TEST_RATE,
       videoRate:this.videoAvailable()?TEST_VIDEO_RATE:null})), nextCursor: rows.length>20 ? slice.at(-1)!.id : null };
@@ -156,9 +203,12 @@ export class NightShiftService {
         requireThat(body.videoConsent===true,400,'VIDEO_CONSENT_REQUIRED','Review the camera preview and consent before starting video');
       }
       const users=await c.query('SELECT * FROM users WHERE id=ANY($1::uuid[]) ORDER BY id FOR NO KEY UPDATE',[[actor.id,listenerId]]);
+      // Recheck after both ordered locks: a request admitted before logout may
+      // have waited behind it and must not create a new post-logout encounter.
+      await this.liveOwner(c,actor);
       const customer=users.rows.find(u=>u.id===actor.id),listener=users.rows.find(u=>u.id===listenerId);
       requireThat(customer?.mode==='customer'&&!customer.suspended&&customer.adult_confirmed,403,'CUSTOMER_MODE_REQUIRED','Switch to Customer mode');
-      requireThat(listener?.listener_approved&&listener.adult_confirmed&&!listener.suspended&&listener.mode==='listener'&&listener.desired_online&&await this.presence.isOnline(listenerId),409,'LISTENER_OFFLINE','Listener is unavailable');
+      requireThat(listener?.listener_approved&&listener.adult_confirmed&&!listener.suspended&&listener.mode==='listener'&&listener.desired_online&&(await this.reachable([listenerId],c)).has(listenerId),409,'LISTENER_OFFLINE','Listener is unavailable');
       requireThat(customer.languages.some((language:string)=>listener.languages.includes(language)),409,'LANGUAGE_MISMATCH','Choose a listener who speaks one of your conversation languages');
       const blocked=await c.query('SELECT 1 FROM blocks WHERE (actor_id=$1 AND target_id=$2) OR (actor_id=$2 AND target_id=$1)',[actor.id,listenerId]);
       requireThat(!blocked.rowCount,403,'PAIR_BLOCKED','This listener is unavailable');
@@ -305,11 +355,13 @@ export class NightShiftService {
       for(const r of rows)await this.advance(c,r,this.clock());
     });
   }
-  async logoutCall(actor:Actor) {
-    await this.db.tx(async c=>{
+  async logoutCall(actor:Actor, transaction?:PoolClient) {
+    const end = async (c:PoolClient) => {
       const {rows}=await c.query("SELECT * FROM call_sessions WHERE (customer_id=$1 OR listener_id=$1) AND state<>'ended' FOR UPDATE",[actor.id]);
       for(const r of rows)await this.finish(c,r,'signed_out',this.clock());
-    });
+    };
+    if(transaction) await end(transaction);
+    else await this.db.tx(async c=>{await this.liveOwner(c,actor,false);await end(c);});
   }
   async block(actor:Actor,target:string) {
     uuid(target);requireThat(target!==actor.id,400,'SELF_BLOCK','Cannot block yourself');

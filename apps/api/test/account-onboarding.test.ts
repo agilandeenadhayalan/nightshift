@@ -177,7 +177,7 @@ test('same token retries are idempotent, cannot move devices, and logout cannot 
 test('same-device token refresh preserves availability, rejects stale tokens and invalidates predecessor', async () => {
   const id = await account(), first = await exchange(id);
   await request('me/onboarding', 'PUT', first.token, profile());
-  await runtime.presence.heartbeat(id, 'prior-lease');
+  await runtime.presence.heartbeat(id, String((await runtime.db.pool.query('SELECT presence_version FROM users WHERE id=$1',[id])).rows[0].presence_version));
   now += 2000;
   const newer = tokenFor(id), refreshed = await exchange(id, 'phone-a', newer);
   assert.equal(refreshed.result.status, 201); assert.equal(await runtime.presence.isOnline(id), true);
@@ -258,7 +258,7 @@ test('database protects the recorded age and consent against mutation',async()=>
 test('underage declaration removes legacy adult entitlement and Listener availability',async()=>{
   const id=await account();
   await runtime.db.pool.query("UPDATE users SET adult_confirmed=true,listener_approved=true,mode='listener',desired_online=true WHERE id=$1",[id]);
-  const {token}=await exchange(id);await runtime.presence.heartbeat(id,'legacy');
+  const {token}=await exchange(id);await runtime.presence.heartbeat(id,String((await runtime.db.pool.query('SELECT presence_version FROM users WHERE id=$1',[id])).rows[0].presence_version));
   const denied=await request('me/onboarding','PUT',token,profile('2008-11-21'));
   assert.equal(denied.status,403);assert.equal(denied.body.error.code,'ADULT_ONLY');
   assert.equal((await request('snapshot','GET',token)).status,403);

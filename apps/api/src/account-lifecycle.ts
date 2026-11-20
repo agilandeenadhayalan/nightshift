@@ -110,7 +110,7 @@ export class AccountLifecycle {
         await c.query(`INSERT INTO consents(id,user_id,purpose,notice_version,granted,created_at)
           VALUES($1,$2,'account_deletion',$3,true,$4) ON CONFLICT DO NOTHING`, [randomUUID(),actor.id,DELETION_NOTICE_VERSION,new Date(now)]);
         await this.event(c,id,'requested',[],now);
-        await c.query(`UPDATE users SET suspended=true,desired_online=false,listener_approved=false,adult_confirmed=false,
+        await c.query(`UPDATE users SET suspended=true,desired_online=false,presence_version=presence_version+1,listener_approved=false,adult_confirmed=false,
           mode='customer',display_name='Deleted account',languages=ARRAY['en'],test_handle=NULL,
           identity_revoked_before=GREATEST(COALESCE(identity_revoked_before,0),$2),identity_last_issued_at=NULL,identity_last_auth_time=NULL WHERE id=$1`,
         [actor.id,Math.floor(now/1000)]);

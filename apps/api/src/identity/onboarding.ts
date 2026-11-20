@@ -70,7 +70,7 @@ export class Onboarding {
       // Commit the first valid self-declaration even when the age gate fails;
       // changing the date on a retry must not bypass the adult boundary.
       if(!adult){
-        await c.query('UPDATE users SET adult_confirmed=false,listener_approved=false,desired_online=false WHERE id=$1',[actor.id]);
+        await c.query('UPDATE users SET adult_confirmed=false,listener_approved=false,desired_online=false,presence_version=presence_version+1 WHERE id=$1',[actor.id]);
         return;
       }
       const active = await c.query('SELECT 1 FROM active_participant_claims WHERE user_id=$1',[actor.id]);

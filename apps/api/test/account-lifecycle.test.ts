@@ -32,6 +32,7 @@ const code = (expected: string) => (error: unknown) => error instanceof ApiError
 before(async () => {
   process.env.NODE_ENV = 'test';
   assert.ok(process.env.TEST_DATABASE_URL, 'Use a dedicated test database');
+  assert.ok(process.env.REDIS_URL, 'Use an explicit Redis URL for the isolated HTTP tests');
   const url = new URL(process.env.TEST_DATABASE_URL!);
   admin = new Database(url.toString()); await admin.pool.query(`CREATE SCHEMA ${schema}`);
   url.searchParams.set('options', `-csearch_path=${schema}`);
@@ -306,7 +307,7 @@ test('private-storage cleanup failure stays durable and retries without delaying
 
 async function startHttp() {
   if(runtime)return;
-  const config: Config = { databaseUrl,redisUrl:process.env.TEST_REDIS_URL??'redis://127.0.0.1:56379/15',port:0,
+  const config: Config = { databaseUrl,redisUrl:process.env.REDIS_URL!,port:0,
     devAccessKey:'synthetic-lifecycle-key-only',phoneAuth:{projectId:'lifecycle-fixture',digestKey:secret(),
       consentVersion:'phone-signin-v1',msg91WidgetId:'fixture-widget',msg91AuthKey:'fixture-key',dailySendLimit:10} };
   const dependencies: PhoneAuthDependencies = {otp:{

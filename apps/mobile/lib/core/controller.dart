@@ -85,6 +85,8 @@ class AppController extends ChangeNotifier {
   bool _historyRetryAppend = false;
   int _sessionRevision = 0, _historyRequest = 0, _snapshotRequest = 0;
   int _identityRevision = 0;
+  int _availabilityIntent = 0;
+  Future<void> _availabilityWork = Future<void>.value();
   int balance = 0, held = 0;
   bool initializing = true, busy = false, offline = false, foreground = true;
   String locale = 'en', language = 'ta', lastPath = '/home';
@@ -669,17 +671,67 @@ class AppController extends ChangeNotifier {
     if (api.token == null || needsOnboarding || !foreground || _disposed) {
       return;
     }
+    final session = _sessionRevision, intent = _availabilityIntent;
+    final owner = user?.id, origin = api.baseUrl;
     try {
       await api.request('POST', '/presence/heartbeat', body: {});
     } catch (e) {
+      if (_disposed ||
+          !foreground ||
+          session != _sessionRevision ||
+          intent != _availabilityIntent ||
+          owner != user?.id ||
+          origin != api.baseUrl ||
+          api.token == null) {
+        return;
+      }
       _showError(e);
       _notify();
     }
   }
 
+  Future<Json?> _writeAvailability(bool online,
+      {required bool Function() isCurrent}) {
+    final previous = _availabilityWork;
+    final operation = (() async {
+      await previous;
+      if (!isCurrent()) return null;
+      return api.request('PUT', '/me/availability', body: {'online': online});
+    })();
+    // Serialize withdrawal after any dispatched enable. A newer explicit enable
+    // then follows withdrawal, so an old background completion cannot undo it.
+    _availabilityWork = operation.then<void>((_) {}, onError: (Object _) {});
+    return operation;
+  }
+
   Future<void> setOnline(bool value) => perform(() async {
-        await api.request('PUT', '/me/availability', body: {'online': value});
+        if (value && !foreground) return;
+        final identity = _identityRevision, intent = ++_availabilityIntent;
+        final owner = user?.id, origin = api.baseUrl;
+        bool current() =>
+            !_disposed &&
+            identity == _identityRevision &&
+            intent == _availabilityIntent &&
+            owner == user?.id &&
+            origin == api.baseUrl &&
+            api.token != null;
+        final Json? result;
+        try {
+          result = await _writeAvailability(value, isCurrent: current);
+        } catch (_) {
+          if (!current()) return;
+          rethrow;
+        }
+        if (!current() || result == null) return;
+        final profile = UserProfile.fromJson(result);
+        if (profile.id != owner) {
+          throw const ApiFailure(
+              'INVALID_RESPONSE', 'Invalid account response.');
+        }
+        _revision++;
+        user = profile;
         if (value) await heartbeat();
+        if (!current()) return;
         await refresh();
       });
 
@@ -688,13 +740,35 @@ class AppController extends ChangeNotifier {
             !(busy && user?.listenerApproved == true && !hasCall)) {
           return;
         }
-        final result = await api.request('PUT', '/me/mode',
-            body: {'mode': isListener ? 'customer' : 'listener'});
+        final identity = _identityRevision;
+        final owner = user?.id, origin = api.baseUrl;
+        bool current() =>
+            !_disposed &&
+            identity == _identityRevision &&
+            owner == user?.id &&
+            origin == api.baseUrl &&
+            api.token != null;
+        final Json result;
+        try {
+          result = await api.request('PUT', '/me/mode',
+              body: {'mode': isListener ? 'customer' : 'listener'});
+        } catch (_) {
+          if (!current()) return;
+          rethrow;
+        }
+        if (!current()) return;
+        final profile = UserProfile.fromJson(result);
+        if (profile.id != owner) {
+          throw const ApiFailure(
+              'INVALID_RESPONSE', 'Invalid account response.');
+        }
         // A poll already in flight must not undo the server-approved mode.
         _revision++;
-        user = UserProfile.fromJson(result);
+        _availabilityIntent++;
+        user = profile;
         lastPath = '/home';
         await store.write('lastPath', lastPath);
+        if (!current()) return;
         await refresh();
       });
 
@@ -1060,16 +1134,42 @@ class AppController extends ChangeNotifier {
     if (foreground == value) return;
     foreground = value;
     if (!value) {
+      final identity = _identityRevision, intent = ++_availabilityIntent;
+      final owner = user?.id, origin = api.baseUrl;
+      final backgroundCall = activeCall;
+      bool current() =>
+          !_disposed &&
+          identity == _identityRevision &&
+          intent == _availabilityIntent &&
+          owner == user?.id &&
+          origin == api.baseUrl &&
+          api.token != null;
+      // Cached online=false can hide an enable still in flight. Queue withdrawal
+      // now, for this owner only, and retain it across a quick foreground return.
+      final withdrawal = isListener && user?.listenerApproved == true
+          ? _writeAvailability(false, isCurrent: current)
+              .catchError((Object _) {
+              // Presence TTL expires when the control connection is unavailable.
+              return null;
+            })
+          : Future<Json?>.value();
       _revision++;
       _videoConsentCallId = null;
       await closeVideoPreview();
       // First milestone is foreground-only; never imply unsupported background calling.
       await audio.leave();
-      if (hasCall) await _endAfterFailure();
-      if (user?.online == true) {
-        try {
-          await api.request('PUT', '/me/availability', body: {'online': false});
-        } catch (_) {/* Presence TTL expires even when network is gone. */}
+      if (current() &&
+          backgroundCall != null &&
+          activeCall?.id == backgroundCall.id &&
+          hasCall) {
+        await _endAfterFailure();
+      }
+      final result = await withdrawal;
+      if (current() && result != null && result['id'] == owner) {
+        // A quick foreground return can have read online before withdrawal
+        // committed. Publish this authoritative result and reject that old poll.
+        _revision++;
+        user = UserProfile.fromJson(result);
       }
     } else {
       await heartbeat();
@@ -1163,6 +1263,7 @@ class AppController extends ChangeNotifier {
   void _invalidateSessionRequests() {
     _identityRevision++;
     _sessionRevision++;
+    _availabilityIntent++;
     _snapshotRequest++;
     _polling = false;
     snapshotLoaded = false;
