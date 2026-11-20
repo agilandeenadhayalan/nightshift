@@ -69,3 +69,9 @@ Run the root `npm run test:integration` with a dedicated `TEST_DATABASE_URL`. `a
 Local verification on 20 November 2026: all ten schema tests passed against PostgreSQL 17.7. The REPEATABLE READ regression first reproduced over-reservation with a lock-only implementation, then passed after the parent-row write was added. These are synthetic sandbox records. No provider request, real payment/payout or physical-device verification was performed.
 
 Owner-controlled provider setup, budget/caps, finance/safety appointments, retention, permanent application ID and release approvals remain in the existing [decision register](Decision_Register.md). This document introduces no approved production tariff, payout threshold or identity-review policy.
+
+## Presence authority extension
+
+Migration `010_presence_versions.sql` adds a nonnegative `bigint` presence version to each user. Availability/mode changes, device replacement, logout, underage restriction and deletion advance this durable version. Redis stores only a 45-second lease for a version; directory and call eligibility also require matching database intent, adult/Listener eligibility and a current authorized session. Same-device identity-token refresh preserves the version so it does not interrupt reachability.
+
+Redis writes occur after database commit. Conditional lease publication and cleanup prevent delayed requests from replacing or deleting a newer intent; a stale write after Redis loses its key still fails the database-version check. The version is internal authorization metadata and is not added to the public profile or app modes. This additive migration does not approve new Listeners or enable production authentication. Physical network/process interruption evidence remains separate from database/cache race tests.

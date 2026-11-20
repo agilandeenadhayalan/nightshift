@@ -71,7 +71,7 @@
 - Reuse the clean existing linked worktree at C:/Users/agila/.codex/worktrees/fa008-ui-foundation/NightShift, branching codex/backlog-completion from PR #72. The original D:/Learning/NightShift owner edits remain untouched.
 - User requested completion of all issues, authorizing implementation now. Continue with independent work while external decisions are pending; no separate plan-approval pause.
 - New nicknames stay private pending moderation; public aliases remain safe until the review workflow is implemented.
-- Owner subsequently selected Firebase project nightshift-c3e1a; Android registration is complete, billing disabled, private client configuration ignored. The initially created separate project is unused. See Firebase_Development_Setup.md.
+- Owner subsequently selected Firebase project nightshift-c3e1a; Android registration and Blaze setup are complete, private client configuration ignored. The saved monthly alerts-only budget is ₹5,000; the approved daily SMS maximum is 1,000. The initially created separate project is unused. See Firebase_Development_Setup.md.
 - Account code and 19 backend regressions passed an 86-test integration run. Independent review found and corrected authentication-lineage logout/refresh races, invalid enum types and nullable SQL identity metadata. Mobile account implementation passed with new regression coverage; final combined branch checks remain below.
 
 ### Task 5: Consent and deletion foundation (#16)
@@ -105,6 +105,8 @@
 - [x] Run 140 database/HTTP/schema checks, 43 API unit checks and exact 69-file SDK drift verification; build the initial native ARM64 APK.
 - [x] Finish mobile cancellation/partial-storage-failure and stalled-SDK review regressions; all 235 Flutter tests and analyzer pass, final APK rebuilt, independent focused review passed 21 tests.
 - [x] Publish the original Task 4 evidence/PR package and start remote CI tracking on #73. Remote pass/failure remains the live Checks result.
-- [ ] Configure billing and private Admin permissions and complete consented real-SIM tests after the billing account and monthly budget are supplied. The owner approved 1,000 SMS/day as an operating limit; no hard provider cap is implied.
+- [x] Verify Blaze and the saved ₹5,000 monthly alerts-only budget. My Billing Account 3 is linked after Account 2 reached its linked-project quota; actual-spend alerts are 50%/90%/100%. Console displays a 1,000 sent-SMS/day quota, matching the owner's daily operating maximum.
+- [x] Create the owner-authorized dedicated Firebase verifier identity with only `firebaseauth.users.get` and service-account-scoped short-lived access-token permission. The owner will test on their own Indian SIM.
+- [ ] Complete isolated server credential authorization and verify Admin access, then complete consented real-SIM tests within both approved limits. Budget alerts and app admissions do not enforce an SMS spending cutoff.
 
 The earlier account checkpoint is committed as `9e853bb`; its preserved APK and 213 Flutter tests are historical evidence. Current native-flow evidence is recorded in Account_Application_Verification.md. No product issue is closed solely because its local engineering subset passes.
