@@ -207,16 +207,25 @@ export class StaffAuthority {
   }
   async authenticate(cookie:unknown):Promise<StaffActor>{
     this.ready();if(!validSecret(cookie))throw unauthenticated();
+    const row=(await this.db.pool.query('SELECT id,principal_id FROM staff_sessions WHERE token_hash=$1',[hash(cookie)])).rows[0];
+    if(!row)throw unauthenticated();
+    const actor={staffId:row.principal_id,sessionId:row.id,sessionHash:hash(cookie)};
+    await this.revalidate(actor);return actor;
+  }
+  /** Repeat provider validation after external evidence I/O, outside locks.
+   * Call authorize again in the final action transaction for local races. */
+  async revalidate(actor:StaffActor):Promise<void>{
+    this.ready();
     const row=(await this.db.pool.query(`SELECT s.*,p.issuer,p.audience,p.tenant,p.provider_subject,p.subject_digest FROM staff_sessions s
       JOIN staff_principals p ON p.id=s.principal_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>$2
-      AND NOT p.disabled AND s.authority_version=p.authority_version AND s.auth_time>p.revoked_before`,[hash(cookie),new Date(this.clock())])).rows[0];
+      AND s.id=$3 AND s.principal_id=$4 AND NOT p.disabled AND s.authority_version=p.authority_version AND s.auth_time>p.revoked_before`,
+      [actor.sessionHash,new Date(this.clock()),actor.sessionId,actor.staffId])).rows[0];
     if(!row||!this.configuredPrincipal(row))throw unauthenticated();
     const identity={issuer:row.issuer,audience:row.audience,tenant:row.tenant,subject:row.provider_subject};
     const current=await this.verifier!.run(v=>v.currentIdentity(identity));
     this.current(identity,Number(row.auth_time),current);
     if(this.appBinding&&(!row.app_binding||current.phoneDigest!==row.app_binding.phoneDigest))throw unauthenticated();
-    const actor={staffId:row.principal_id,sessionId:row.id,sessionHash:hash(cookie)};
-    await this.db.tx(c=>this.authorize(c,actor));return actor;
+    await this.db.tx(c=>this.authorize(c,actor));
   }
   /** Always call inside the action transaction, before applicant/application
    * locks. A guard that completed before revocation is not sufficient. */

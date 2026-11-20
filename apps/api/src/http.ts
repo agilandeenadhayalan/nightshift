@@ -18,6 +18,8 @@ import { DirectorySubscription } from './directory';
 import { StaffAuthority } from './staff/authority';
 import { StaffController } from './staff/http';
 import { createStaffAuthority } from './staff/factory';
+import { StaffReviewQueries } from './staff/review-queries';
+import { StaffReviewController } from './staff/review-http';
 
 type AuthenticatedRequest=Request & {actor:Actor;requestId:string};
 @Injectable()
@@ -143,12 +145,16 @@ export async function createApplication(config:Config,clock:()=>number=Date.now,
   catch(error){await presence.close();await db.close();throw error;}
   const auth=new Auth(db,presence,config,phone,clock),service=new NightShiftService(db,presence,config,clock);
   const onboarding=new Onboarding(db,clock,async actor=>{await service.logoutCall(actor);await service.withdrawPresence(actor.id);});
-  const applications=new ListenerApplications(db,{storage:config.privateReviewDirectory?new LocalReviewStorage(config.privateReviewDirectory):undefined,capabilityKey:config.devAccessKey},clock);
+  const reviewStorage=config.privateReviewDirectory?new LocalReviewStorage(config.privateReviewDirectory):undefined;
+  const applications=new ListenerApplications(db,{storage:reviewStorage,capabilityKey:config.devAccessKey},clock);
   const lifecycle=new AccountLifecycle(db,clock,userId=>service.withdrawPresence(userId),userId=>applications.erasePrivateMaterials(userId));
   let staffRuntime:ReturnType<typeof createStaffAuthority>;
   try{staffRuntime=createStaffAuthority(db,auth,config,clock);}catch(error){await phone.close();await presence.close();await db.close();throw error;}
   const staff=staffRuntime.authority;
-  @Module({controllers:[PublicController,AccountController,AppController,StaffController],providers:[SessionGuard,OnboardingSessionGuard,{provide:Auth,useValue:auth},{provide:NightShiftService,useValue:service},{provide:PhoneAuthentication,useValue:phone},{provide:Onboarding,useValue:onboarding},{provide:AccountLifecycle,useValue:lifecycle},{provide:ListenerApplications,useValue:applications},{provide:StaffAuthority,useValue:staff}]})
+  // The fallback key cannot enable a disabled staff authority; it only keeps
+  // the read service constructible in the existing default-off bootstrap.
+  const reviews=new StaffReviewQueries(db,staff,{storage:reviewStorage,cursorKey:config.staffAuth?.digestKey??tokenHash(config.devAccessKey)},clock);
+  @Module({controllers:[PublicController,AccountController,AppController,StaffController,StaffReviewController],providers:[SessionGuard,OnboardingSessionGuard,{provide:Auth,useValue:auth},{provide:NightShiftService,useValue:service},{provide:PhoneAuthentication,useValue:phone},{provide:Onboarding,useValue:onboarding},{provide:AccountLifecycle,useValue:lifecycle},{provide:ListenerApplications,useValue:applications},{provide:StaffAuthority,useValue:staff},{provide:StaffReviewQueries,useValue:reviews}]})
   class AppModule{}
   const app=await NestFactory.create(AppModule,{logger:['error','warn'],bodyParser:true});
   app.use((req:AuthenticatedRequest,res:Response,next:()=>void)=>{

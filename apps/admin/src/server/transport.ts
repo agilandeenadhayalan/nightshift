@@ -12,7 +12,7 @@ const paths: Record<Operation | NativeOperation, string> = {
 const cookieNames = ['__Host-nightshift_staff', '__Host-nightshift_staff_challenge'];
 const baseHeaders = {'Cache-Control': 'no-store, private', 'Pragma': 'no-cache', 'Vary': 'Cookie', 'Content-Type': 'application/json; charset=utf-8'};
 function response(body: unknown, status = 200): Response {return new Response(JSON.stringify(body), {status, headers: baseHeaders});}
-function fail(code: string, status: number): Response {return response({error: {code, message: 'Staff access could not be completed.'}, requestId: randomUUID()}, status);}
+export function fail(code: string, status: number): Response {return response({error: {code, message: 'Staff access could not be completed.'}, requestId: randomUUID()}, status);}
 export function configuration(api: string | undefined, console: string | undefined): Configuration | null {
   if (!api || !console) return null;
   const valid = (value: string) => {
@@ -23,7 +23,7 @@ export function configuration(api: string | undefined, console: string | undefin
   };
   try {return {apiOrigin: valid(api), consoleOrigin: valid(console)};} catch {return null;}
 }
-async function boundedJson(body: ReadableStream<Uint8Array> | null, limit: number, signal: AbortSignal): Promise<unknown> {
+export async function boundedBytes(body: ReadableStream<Uint8Array> | null, limit: number, signal: AbortSignal): Promise<Uint8Array<ArrayBuffer>> {
   if (!body) throw Error('Missing body');
   const reader = body.getReader();
   const abort = () => {void reader.cancel().catch(() => {});};
@@ -41,10 +41,13 @@ async function boundedJson(body: ReadableStream<Uint8Array> | null, limit: numbe
     }
     const data = new Uint8Array(total); let offset = 0;
     for (const chunk of chunks) {data.set(chunk, offset); offset += chunk.length;}
-    return JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(data));
+    return data;
   } finally {signal.removeEventListener('abort', abort); void reader.cancel().catch(() => {});}
 }
-function requestCookies(value: string | null): string {
+export async function boundedJson(body: ReadableStream<Uint8Array> | null, limit: number, signal: AbortSignal): Promise<unknown> {
+  return JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(await boundedBytes(body, limit, signal)));
+}
+export function requestCookies(value: string | null): string {
   const selected = new Map<string, string>();
   for (const part of (value ?? '').split(';')) {
     const [name, ...rest] = part.trim().split('=');

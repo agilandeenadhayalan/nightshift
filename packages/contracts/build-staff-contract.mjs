@@ -5,6 +5,9 @@ const ref = name => ({$ref:`#/components/schemas/${name}`});
 const timestamp = {type:'string',format:'date-time'};
 const csrf = {type:'string',pattern:'^[0-9a-f]{64}$'};
 const permission = {type:'string',enum:['listener.review.read','listener.review.evidence.read','listener.review.decide','staff.access.manage']};
+const reviewCursor = {type:'string',pattern:'^[A-Za-z0-9_-]+\\.[a-f0-9]{64}$',maxLength:2048};
+const languages = {type:'array',items:{type:'string',enum:['ta','en']},minItems:1,maxItems:2,uniqueItems:true};
+const reviewCard = {id:{type:'string',format:'uuid'},alias:{type:'string',minLength:1,maxLength:80},state:{type:'string',const:'submitted'},languages,submittedAt:timestamp};
 const schemas = {
   StaffAuthStatus: object({configured:{type:'boolean'},available:{type:'boolean'},reasonCode:{type:['string','null'],enum:['STAFF_AUTH_UNAVAILABLE',null]}}),
   StaffChallenge: object({csrfToken:csrf,expiresAt:timestamp}),
@@ -13,6 +16,9 @@ const schemas = {
   StaffAccessRequest: object({requestId:{type:'string',format:'uuid'},accountReference:{type:'string',format:'uuid'},status:{type:'string',enum:['pending','provisioned']},expiresAt:timestamp}),
   StaffLogout: object({signedOut:{type:'boolean',const:true}}),
   StaffEmptyBody: object({}),
+  StaffReviewQueue: object({items:{type:'array',maxItems:20,items:object({...reviewCard,voiceSampleAvailable:{type:'boolean'}})},nextCursor:{anyOf:[reviewCursor,{type:'null'}]},decisionsEnabled:{type:'boolean',const:false}}),
+  StaffReviewDetail: object({application:object({...reviewCard,bio:{type:'string',maxLength:1000},topics:{type:'array',items:{type:'string',enum:['everyday','work','study','hobbies','language-practice']},maxItems:5,uniqueItems:true},
+    materialVersion:csrf,adultStatus:{type:'string',const:'self_declared'},voiceSample:{anyOf:[object({contentType:{type:'string',const:'audio/wav'},byteLength:{type:'integer',minimum:44,maximum:2097152}}),{type:'null'}]}}),decisionsEnabled:{type:'boolean',const:false}}),
   StaffError: object({error:object({code:{type:'string'},message:{type:'string'},retryAfterSeconds:{type:'integer',minimum:1}},['code','message']),requestId:{type:'string',format:'uuid'}}),
 };
 const json = schema => ({'application/json':{schema}});
@@ -25,6 +31,17 @@ const responses = schema => ({
     .map(([status,description]) => [status,{description,headers:noStore,content:json(ref('StaffError'))}]))
 });
 const body = schema => ({required:true,content:json(schema)});
+const reviewHeaders = {'Cache-Control':{schema:{type:'string',const:'no-store, private'}},Vary:{schema:{type:'string',const:'Cookie'}},'X-Content-Type-Options':{schema:{type:'string',const:'nosniff'}}};
+const reviewResponses = schema => ({
+  200:{description:'Submitted material only. No decisions or entitlements are changed.',headers:reviewHeaders,content:json(schema)},
+  ...Object.fromEntries(Object.entries({400:'Invalid fields or owner/filter-bound cursor',401:'Staff or source app authority is revoked or expired',403:'Required read/evidence permission denied',404:'Application or sample is unavailable, restricted or known self',409:'Review material changed; reload detail',410:'Queue cursor expired; refresh queue',503:'Staff provider or private sample storage is unavailable or busy'})
+    .map(([status,description])=>[status,{description,headers:noStore,content:json(ref('StaffError'))}]))
+});
+const applicationId = {name:'id',in:'path',required:true,schema:{type:'string',format:'uuid'}};
+const sampleResponses = reviewResponses(ref('StaffError'));
+sampleResponses[200] = {description:'Complete WAV at most2MiB. Range is ignored; no partial responses. Material version is a consistency value, never an authorization credential.',
+  headers:{...reviewHeaders,'Content-Length':{schema:{type:'integer',minimum:44,maximum:2097152}},'Content-Disposition':{schema:{type:'string',const:'inline; filename="review-sample.wav"'}},'X-Review-Material-Version':{schema:csrf}},
+  content:{'audio/wav':{schema:{type:'string',format:'binary'}}}};
 const contract = {
   openapi:'3.1.0',
   info:{title:'NightShift separate staff authority',version:'0.1.0',description:'Owner-selected single-factor SMS OTP with explicit staff grants. Customer and Listener remain the only application modes. Staff pages are intended for the in-app browser; live access is unavailable until a real verifier and approved principal are configured. No provider proof, cookie or CSRF token belongs in a URL or browser storage.'},
@@ -38,6 +55,9 @@ const contract = {
     '/v1/admin/access-requests/current':{get:{operationId:'getCurrentStaffAccessRequest',security:[{nativeAppSession:[]}],parameters:[origin],responses:responses(ref('StaffAccessRequest')),description:'Returns only the current account/device authentication-lineage request. Missing or expired requests return404 STAFF_ACCESS_REQUEST_NOT_FOUND.'}},
     '/v1/admin/session':{get:{operationId:'getStaffSession',responses:responses(ref('StaffSession')),description:'Revalidates the provider identity and local principal/session/grants. Returns minimal staff authority plus a session-bound CSRF token.'}},
     '/v1/admin/auth/logout':{post:{operationId:'logoutStaffSession',parameters:[origin,csrfHeader],requestBody:body(ref('StaffEmptyBody')),responses:responses(ref('StaffLogout')),description:'Revokes every session for this staff principal and clears the presented cookie. Customer authentication and modes remain separate.'}},
+    '/v1/admin/listener-applications':{get:{operationId:'getStaffReviewQueue',parameters:[{name:'language',in:'query',schema:{type:'string',enum:['ta','en']}},{name:'cursor',in:'query',schema:reviewCursor}],responses:reviewResponses(ref('StaffReviewQueue')),description:'Requires listener.review.read. Twenty submitted applications ordered by exact submitted timestamp and ID. Signed cursor binds staff session, language and five-minute cutoff; later removal may produce short pages. Known self and editable needs_information applications are excluded.'}},
+    '/v1/admin/listener-applications/{id}':{get:{operationId:'getStaffReviewDetail',parameters:[applicationId],responses:reviewResponses(ref('StaffReviewDetail')),description:'Requires both listener.review.read and listener.review.evidence.read. No query fields accepted. Only current submitted private material and self-declared adult status; no DOB, phone, provider identity or financial fields.'}},
+    '/v1/admin/listener-applications/{id}/voice-sample':{get:{operationId:'getStaffReviewSample',parameters:[applicationId,{name:'version',in:'query',required:true,schema:csrf}],responses:sampleResponses,description:'Requires both listener.review.read and listener.review.evidence.read. Reads private storage outside locks, then rechecks provider identity, local staff/app authority, applicant state/consent and byte integrity. One targeted access event records successful authorized access.'}},
   },
   components:{securitySchemes:{
     nativeAppSession:{type:'http',scheme:'bearer',description:'Current registered Firebase phone app session. Native HTTP only; never supplied to the embedded browser.'},
