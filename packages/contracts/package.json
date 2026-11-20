@@ -1,0 +1,14 @@
+{
+  "name": "@nightshift/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Public versioned HTTP and event schemas shared by clients and server",
+  "exports": {
+    "./openapi.json": "./openapi.json",
+    "./events.schema.json": "./events.schema.json"
+  },
+  "scripts": {
+    "build": "node build-contract.mjs --check",
+    "generate": "node build-contract.mjs"
+  }
+}

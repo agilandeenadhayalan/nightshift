@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { Auth, Actor } from './auth';
 import { NightShiftService } from './service';
 import { ApiError } from './errors';
-import { TEST_RATE } from './billing';
+import { TEST_RATE } from '@nightshift/backend-domain';
 import { Config } from './config';
 import { Database } from './db';
 import { Presence } from './presence';

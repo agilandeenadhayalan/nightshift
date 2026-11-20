@@ -1,0 +1,15 @@
+{
+  "name": "@nightshift/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Task metadata only; Flutter dependencies belong in pubspec.yaml",
+  "scripts": {
+    "setup": "flutter pub get",
+    "typecheck": "flutter analyze",
+    "test": "flutter test",
+    "build:android": "flutter build apk --debug --split-per-abi --target-platform android-arm64"
+  },
+  "devDependencies": {
+    "@nightshift/contracts": "0.1.0"
+  }
+}

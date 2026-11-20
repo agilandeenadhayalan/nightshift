@@ -4,9 +4,9 @@ This is the first **test-credit** Android milestone. One install serves Customer
 
 ## WSL 2 backend
 
-Use Flutter 3.27.4 / Dart 3.6.2 on Windows, Node 24.13.0 in WSL 2, Docker Desktop with Ubuntu WSL integration enabled, and the Android SDK/JDK selected by Flutter. PostgreSQL 17.7 and Redis 7.4.7 are pinned in Compose. Check `flutter doctor -v`; accept SDK licenses yourself if Android tooling prompts.
+Use Flutter 3.27.4 / Dart 3.6.2 on Windows, Node 24.13.0 with its bundled npm 11.6.2 in WSL 2, Docker Desktop with Ubuntu WSL integration enabled, and the Android SDK/JDK selected by Flutter. PostgreSQL 17.7 and Redis 7.4.7 are pinned in Compose. Check `flutter doctor -v`; accept SDK licenses yourself if Android tooling prompts.
 
-A Windows checkout at `D:\Learning\NightShift` is `/mnt/d/Learning/NightShift` in Ubuntu. A clone in the Linux filesystem is faster. Do not run Windows and Linux `npm ci` against the same `node_modules` concurrently.
+A Windows checkout at `D:\Learning\NightShift` is `/mnt/d/Learning/NightShift` in Ubuntu. A clone in the Linux filesystem is faster. Do not share one installed `node_modules` between Windows and Linux: Turbo has a native executable for each platform. Run `npm ci` in each separate checkout or use the backend container below, which installs Linux dependencies in its own image. See [monorepo ownership and task commands](Monorepo.md).
 
 From Ubuntu in the repo root:
 
@@ -46,6 +46,8 @@ Set `AGORA_APP_ID` and `AGORA_APP_CERTIFICATE` in the ignored root `.env` using 
 Unit/integration tests need no provider credentials. They check control-plane behavior, not audible media, provider connectivity or provider-side cutoff. Voice travels directly through Agora, not NestJS.
 
 ## Windows build and two devices
+
+The root commands `npm run check:mobile` and `npm run build:android` run Flutter dependency setup, contract checks and the native checks/build in order. Install Node 24.13.0/npm 11.6.2 and run `npm ci` at the root first; these commands do not require a local API or database. `build:android` produces the ARM64 variant. The following native Flutter commands are also supported and produce a universal APK:
 
 ```powershell
 Set-Location D:\Learning\NightShift\apps\mobile

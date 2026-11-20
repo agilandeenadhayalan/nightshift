@@ -43,6 +43,8 @@ Universal local output: `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk
 - Debug build only; no production signing, embedded test access key or Agora certificate.
 - Both modes share this single package. CI builds the smaller ARM64 variant from the same project.
 
+The subsequent workspace/task-graph refactor was revalidated separately; see [Monorepo_Verification.md](Monorepo_Verification.md) for its 73 tests, packaged API smoke run and APK rebuild.
+
 ## Evidence still required
 
 The first Android milestone is **not yet verified complete**: no physical phones were connected and no owner-controlled Agora test credentials were supplied. The SDK integration compiles, but audible voice, provider/network behavior, audio routing, microphone/capture shutdown on actual hardware, and the two-phone histories must be tested with [Two_Phone_Test.md](Two_Phone_Test.md).

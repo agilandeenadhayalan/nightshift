@@ -1,5 +1,42 @@
-# Backend domain boundary
+# Backend domain
 
-The first Android milestone executes domain rules in `apps/api/src/service.ts` and `billing.ts`, inside the NestJS process and PostgreSQL transactions. Flutter never computes a charge or earning. This directory is the planned extraction boundary for a separately deployed worker; it is intentionally not a duplicate implementation.
+`@nightshift/backend-domain` owns the pure server-side test-credit billing policy:
+the frozen rate snapshot, customer charge calculation, and illustrative listener
+earnings calculation. Its public entry is compiled CommonJS with TypeScript
+declarations. Consumers import `@nightshift/backend-domain`; they do not import
+another workspace's source files.
 
-The current one-process recovery worker in `createApplication` scans durable calls and the transactional outbox every second. PostgreSQL locks/constraints, not a JavaScript map, authorize calls and settlement. Run only one API replica until shared Socket.IO fan-out and worker ownership have been load-tested. Snapshot/history recovery remains authoritative after a lost notification.
+The package has no runtime dependencies, framework, database, network, or mobile
+APIs. `check:boundaries` rejects runtime dependencies and source imports outside
+this package. The TypeScript configuration excludes ambient Node/browser APIs.
+NestJS remains in `apps/api`, where PostgreSQL transactions, verified connected
+intervals, authorization, call lifecycle, and settlement idempotency belong.
+Flutter displays server results and never computes a charge or earning.
+
+These rules preserve the existing development policy, not an approved paid
+tariff. Customer charges match `audio/billing.mjs`: free through 40 seconds,
+then a 60-second minimum and cumulative whole-second rounding. Listener earnings
+use delivered milliseconds at the illustrative rate, independently of customer
+charges, and round once per settlement. Inputs are the nonnegative, finite
+connected durations established by the API; the extraction adds no new input
+validation or pricing behavior.
+
+From the repository root, the task graph builds this package before its tests or
+API consumers. To work on it directly:
+
+```sh
+npm run build --workspace @nightshift/backend-domain
+npm run typecheck --workspace @nightshift/backend-domain
+npm run test --workspace @nightshift/backend-domain
+npm run check:boundaries --workspace @nightshift/backend-domain
+```
+
+Tests resolve the public package entry and compare customer charges with the
+browser reference. Changing the browser tariff must invalidate this test task's
+cache, even though the reference is not a production dependency.
+
+The one-process recovery worker remains in `apps/api` and scans durable calls and
+the transactional outbox. A future separately deployed worker can consume this
+package; it is not implemented by this extraction. PostgreSQL locks and
+constraints remain authoritative. Run only one API replica until shared
+Socket.IO fan-out and worker ownership have been load-tested.

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Database } from './db';
 import { loadConfig } from './config';
-import { TEST_RATE, MICRO } from './billing';
+import { TEST_RATE, MICRO } from '@nightshift/backend-domain';
 
 export async function seed(db: Database) {
   await db.tx(async c => {

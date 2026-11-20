@@ -4,6 +4,7 @@
 .env.*
 !.env.example
 node_modules/
+.turbo/
 __pycache__/
 *.log
 *.hprof

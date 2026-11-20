@@ -1,0 +1,12 @@
+{
+  "name": "@nightshift/audio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Independent browser reference using test credits",
+  "type": "module",
+  "engines": {"node": ">=24.13.0 <25"},
+  "scripts": {
+    "test": "node --test",
+    "start": "node server.mjs"
+  }
+}

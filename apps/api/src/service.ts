@@ -5,7 +5,7 @@ import { Presence } from './presence';
 import { Actor } from './auth';
 import { Config } from './config';
 import { ApiError, requireThat, fields, object, string, uuid } from './errors';
-import { MICRO, TEST_RATE, testCharge, testEarning } from './billing';
+import { MICRO, TEST_RATE, testCharge, testEarning } from '@nightshift/backend-domain';
 
 type Row = Record<string, any>;
 type Query = Pick<PoolClient, 'query'>;

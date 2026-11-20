@@ -9,7 +9,7 @@ import { Config, loadConfig } from '../src/config';
 import { NightShiftService } from '../src/service';
 import { createApplication } from '../src/http';
 import { Actor } from '../src/auth';
-import { MICRO } from '../src/billing';
+import { MICRO } from '@nightshift/backend-domain';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import Ajv from 'ajv/dist/2020';
