@@ -5,19 +5,21 @@
 | Path | Ownership |
 |---|---|
 | `apps/mobile/` | Flutter application with customer and listener feature modules |
-| `apps/web/` | Next.js public website and external deletion/support entry |
-| `apps/admin/` | Next.js protected operator UI |
+| `apps/web/` | Reserved Next.js public website and external deletion/support entry |
+| `apps/admin/` | Reserved Next.js protected operator UI |
 | `apps/api/` | NestJS controllers, gateway and domain modules |
-| `apps/worker/` | Queue consumers, schedulers, outbox delivery and reconciliation entrypoint |
+| `apps/worker/` | Reserved queue consumers, schedulers, outbox delivery and reconciliation entrypoint |
 | `packages/contracts/` | Versioned OpenAPI and event JSON schemas; generated clients |
-| `packages/backend-domain/` | Shared backend use cases only; no cross-language business-rule duplication |
-| `packages/config/` | Typed config, validation, environment templates without secrets |
+| `packages/backend-domain/` | Pure server-side billing rules; no runtime dependencies or cross-language duplication |
+| `packages/config/` | Reserved typed-config boundary; current environment templates contain no secrets |
 | `db/migrations/` | Ordered SQL migrations and constraint definitions |
 | `infra/` | Local Docker Compose and reviewed cloud IaC |
 | `docs/` | Architecture decisions, runbooks, pricing model, policy decisions and release evidence |
 | `tests/` | Integration, concurrency, E2E and load scenarios |
 
-Use a JS package workspace for TypeScript apps and the Flutter toolchain for Dart. Generate the Dart client from contracts; do not attempt to import TypeScript into Flutter. Financial rules execute only on the server. Local mock provider adapters are explicitly test-only; CI checks they cannot be enabled with production configuration.
+Use npm workspaces and Turborepo for the explicit task graph, retaining Flutter's own package manager and lockfile. Only runnable applications and real shared packages are registered: API, mobile task adapter, browser reference, contracts and backend-domain. Reserved web/admin/worker/config directories are not empty build targets. See [monorepo rules](Monorepo.md) and [ADR-0002](adr/0002-monorepo-task-graph.md).
+
+API code consumes backend-domain and contracts through declared package boundaries. Mobile depends on contracts as task metadata only; do not import TypeScript or server packages into Flutter. Apps do not import other apps. Backend-domain exports pure financial rules with no framework, provider or database dependency; the API owns authorization and durable transactions. Financial calculations execute only on the server. Contracts contain public schemas and no private configuration. Generate the Dart client as the endpoint surface grows; adoption remains tracked in #7. Local mock provider adapters are explicitly test-only; CI checks they cannot be enabled with production configuration.
 
 ## Main durable entities
 

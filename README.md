@@ -14,34 +14,35 @@ Follow [Windows Flutter + WSL 2 backend setup](docs/Local_Development.md) for Po
 | `apps/api` | Shared NestJS sessions, presence, calls, test billing and history |
 | `db/migrations` | PostgreSQL schema and constraints |
 | `packages/contracts` | Versioned API/event contracts |
+| `packages/backend-domain` | Pure billing rules imported by the backend |
 | `infra` | Local PostgreSQL/Redis Compose stack |
 | `apps/admin`, `apps/web`, `apps/worker` | Boundaries for subsequent staff/public/worker work |
 | `audio` | Preserved independent browser reference |
 
 ## Checks
 
-Use Node 24.13.0 (`.node-version` / `.nvmrc`) and Flutter 3.27.4. From the repository root:
+The monorepo uses **npm workspaces + Turborepo** for task dependencies and local TypeScript build caching. Flutter keeps its native pub/Gradle toolchain. See [monorepo commands and boundaries](docs/Monorepo.md).
+
+Use Node 24.13.0 (`.node-version` / `.nvmrc`), its bundled npm 11.6.2, and Flutter 3.27.4. From the repository root:
 
 ```sh
 npm ci
-npm run check:secrets
+npm run check:repo
 npm run typecheck
 npm run build
 npm test
 npm run test:integration
-npm run test:audio
+npm run test:economics
 ```
 
-Integration tests require a separate test database; see the setup runbook. From `apps/mobile`:
+`npm test` includes backend, domain and browser-reference tests. Integration tests require a separate test database; see the setup runbook. From the root with Flutter on PATH:
 
 ```sh
-flutter pub get
-flutter analyze
-flutter test
-flutter build apk --debug
+npm run check:mobile
+npm run build:android
 ```
 
-See [verification evidence](docs/Verification.md), [two-phone procedure](docs/Two_Phone_Test.md), and [contributor checks](docs/Contributor_Guide.md). An APK build does not establish audible two-way media on physical phones.
+The Android command builds the ARM64 debug APK. Native Flutter commands from `apps/mobile` remain supported, including `flutter build apk --debug` for a universal APK. See [verification evidence](docs/Verification.md), [two-phone procedure](docs/Two_Phone_Test.md), and [contributor checks](docs/Contributor_Guide.md). An APK build does not establish audible two-way media on physical phones.
 
 ## Browser reference
 
