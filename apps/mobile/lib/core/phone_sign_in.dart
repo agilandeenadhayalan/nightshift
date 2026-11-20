@@ -29,6 +29,7 @@ class PhoneSignIn extends ChangeNotifier {
   String _phone = '', _requestKey = '';
   String? challengeId, errorCode;
   DateTime? expiresAt, retryAt;
+  DateTime? _cooldownWarningUntil;
   bool busy = false, consent = false, _disposed = false;
   int _generation = 0;
   String? _attemptId;
@@ -78,6 +79,7 @@ class PhoneSignIn extends ChangeNotifier {
     challengeId = null;
     expiresAt = null;
     retryAt = null;
+    _cooldownWarningUntil = null;
     _requestKey = '';
     errorCode = null;
     consent = false;
@@ -100,6 +102,12 @@ class PhoneSignIn extends ChangeNotifier {
   }
 
   void tick() {
+    if (_cooldownWarningUntil != null &&
+        !_cooldownWarningUntil!.isAfter(_clock()) &&
+        (errorCode == 'OTP_COOLDOWN' || errorCode == 'OTP_RATE_LIMITED')) {
+      errorCode = null;
+      _cooldownWarningUntil = null;
+    }
     if (nativePhone && expired && busy && !_completing) {
       busy = false;
       errorCode = 'PHONE_ADMISSION_EXPIRED';
@@ -115,6 +123,7 @@ class PhoneSignIn extends ChangeNotifier {
     _phone = '';
     challengeId = null;
     expiresAt = retryAt = null;
+    _cooldownWarningUntil = null;
     busy = consent = false;
     errorCode = null;
     _requestKey = '';
@@ -150,6 +159,7 @@ class PhoneSignIn extends ChangeNotifier {
     }
     if (retrySeconds > 0) {
       errorCode = 'OTP_COOLDOWN';
+      _cooldownWarningUntil = retryAt;
       _notify();
       return;
     }
@@ -396,8 +406,12 @@ class PhoneSignIn extends ChangeNotifier {
 
   void _failure(Object error) {
     errorCode = error is ApiFailure ? error.code : 'IDENTITY_UNAVAILABLE';
+    _cooldownWarningUntil = null;
     if (error is ApiFailure && error.retryAfterSeconds != null) {
       retryAt = _clock().add(Duration(seconds: error.retryAfterSeconds!));
+      if (errorCode == 'OTP_COOLDOWN' || errorCode == 'OTP_RATE_LIMITED') {
+        _cooldownWarningUntil = retryAt;
+      }
     }
   }
 

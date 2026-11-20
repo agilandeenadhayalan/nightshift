@@ -140,6 +140,33 @@ export class NightShiftService {
     const { rows } = await c.query(`SELECT * FROM call_sessions WHERE id=$1 AND (customer_id=$2 OR listener_id=$2) ${lock?'FOR UPDATE':''}`, [id,actorId]);
     requireThat(rows.length,404,'CALL_NOT_FOUND','Call not found'); return rows[0];
   }
+  private async lockParticipants(c: PoolClient, actor: Actor, ids: string[], requireAdult = true): Promise<Row[]> {
+    const {rows}=await c.query('SELECT * FROM users WHERE id=ANY($1::uuid[]) ORDER BY id FOR NO KEY UPDATE',[ids]);
+    // Login, logout, blocking and account restriction use these same user locks.
+    // Never take the actor lock alone before a pair: opposite participants can
+    // issue concurrent requests, and both must acquire users in the same order.
+    await this.liveOwner(c,actor,requireAdult);
+    return rows;
+  }
+  private async authorizedCall(c: PoolClient, actor: Actor, id: string, requireAdult = true): Promise<Row> {
+    const initial=await this.row(c,actor.id,id);
+    await this.lockParticipants(c,actor,[initial.customer_id,initial.listener_id],requireAdult);
+    const locked=await this.row(c,actor.id,id,true);
+    requireThat(locked.customer_id===initial.customer_id&&locked.listener_id===initial.listener_id,
+      409,'CALL_CHANGED','Refresh the call and try again');
+    return locked;
+  }
+  /** Call users are already locked by authorizedCall. Unlike discovery, an
+   * existing invitation/call does not require online intent or Listener mode. */
+  private async eligibleCall(c: PoolClient, r: Row) {
+    const eligible=await c.query('SELECT id,listener_approved,adult_confirmed,suspended FROM users WHERE id=ANY($1::uuid[])',[[r.customer_id,r.listener_id]]);
+    requireThat(eligible.rows.length===2&&eligible.rows.every(u=>u.adult_confirmed&&!u.suspended)&&eligible.rows.find(u=>u.id===r.listener_id)?.listener_approved,
+      403,'CALL_NOT_ELIGIBLE','This call is no longer eligible for media');
+    const blocked=await c.query('SELECT 1 FROM blocks WHERE (actor_id=$1 AND target_id=$2) OR (actor_id=$2 AND target_id=$1)',[r.customer_id,r.listener_id]);
+    const hold=await c.query('SELECT amount FROM spend_holds WHERE call_id=$1 AND released_at IS NULL',[r.id]);
+    requireThat(!blocked.rowCount&&hold.rowCount&&Number(hold.rows[0].amount)>=Number(r.charge_microcredits),
+      403,'CALL_NOT_AUTHORIZED','Media authorization has ended');
+  }
   private async view(c: Query, r: Row) {
     const names=await c.query('SELECT id,display_name FROM users WHERE id=ANY($1::uuid[])',[[r.customer_id,r.listener_id]]);
     return { id:r.id,customerId:r.customer_id,listenerId:r.listener_id,mediaType:r.media_type??'audio',
@@ -159,15 +186,20 @@ export class NightShiftService {
     const selected=rows.slice(0,20);
     return { items:await Promise.all(selected.map(r=>this.view(this.db.pool,r))),nextCursor:rows.length>20?selected.at(-1)!.id:null };
   }
-  private async idempotent<T>(actor: Actor,operation: string,key: unknown,body: unknown,fn:(c:PoolClient)=>Promise<T>):Promise<T> {
+  private async idempotent<T,A>(actor: Actor,operation: string,key: unknown,body: unknown,
+    authorize:(c:PoolClient)=>Promise<A>,fn:(c:PoolClient,authorization:A)=>Promise<T>):Promise<T> {
     const safeKey=string(key,'Idempotency-Key',128);
     const fingerprint=createHash('sha256').update(JSON.stringify(body)).digest('hex');
     try {
       return await this.db.tx(async c=>{
+        // Cached responses are private results too. Authorization acquires the
+        // operation's user/call locks before the key lock and remains valid
+        // through either the cache return or the mutation's commit.
+        const authorization=await authorize(c);
         await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[`${actor.id}:${operation}:${safeKey}`]);
         const old=await c.query('SELECT fingerprint,response FROM idempotency_keys WHERE actor_id=$1 AND operation=$2 AND key=$3',[actor.id,operation,safeKey]);
         if(old.rowCount){ requireThat(old.rows[0].fingerprint===fingerprint,409,'IDEMPOTENCY_CONFLICT','Use a new key for a different request'); return old.rows[0].response as T; }
-        const result=await fn(c);
+        const result=await fn(c,authorization);
         await c.query('INSERT INTO idempotency_keys(actor_id,operation,key,fingerprint,response) VALUES($1,$2,$3,$4,$5)',[actor.id,operation,safeKey,fingerprint,JSON.stringify(result)]);
         return result;
       });
@@ -189,16 +221,13 @@ export class NightShiftService {
     const rate=mediaType==='video'?TEST_VIDEO_RATE:TEST_RATE;
     requireThat(actor.id!==listenerId,400,'SELF_CALL','You cannot call yourself');
     requireThat(body.quoteId===rate.id,409,'QUOTE_EXPIRED','Refresh the test rate before calling');
-    return this.idempotent(actor,'create-call',key,body,async c=>{
+    return this.idempotent(actor,'create-call',key,body,
+      c=>this.lockParticipants(c,actor,[actor.id,listenerId]),async(c,users)=>{
       if(mediaType==='video'){
         requireThat(this.videoAvailable(),503,'VIDEO_UNAVAILABLE','Private test video is not available');
         requireThat(body.videoConsent===true,400,'VIDEO_CONSENT_REQUIRED','Review the camera preview and consent before starting video');
       }
-      const users=await c.query('SELECT * FROM users WHERE id=ANY($1::uuid[]) ORDER BY id FOR NO KEY UPDATE',[[actor.id,listenerId]]);
-      // Recheck after both ordered locks: a request admitted before logout may
-      // have waited behind it and must not create a new post-logout encounter.
-      await this.liveOwner(c,actor);
-      const customer=users.rows.find(u=>u.id===actor.id),listener=users.rows.find(u=>u.id===listenerId);
+      const customer=users.find(u=>u.id===actor.id),listener=users.find(u=>u.id===listenerId);
       requireThat(customer?.mode==='customer'&&!customer.suspended&&customer.adult_confirmed,403,'CUSTOMER_MODE_REQUIRED','Switch to Customer mode');
       requireThat(listener?.listener_approved&&listener.adult_confirmed&&!listener.suspended&&listener.mode==='listener'&&listener.desired_online&&(await this.reachable([listenerId],c)).has(listenerId),409,'LISTENER_OFFLINE','Listener is unavailable');
       requireThat(customer.languages.some((language:string)=>listener.languages.includes(language)),409,'LANGUAGE_MISMATCH','Choose a listener who speaks one of your conversation languages');
@@ -276,8 +305,9 @@ export class NightShiftService {
     requireThat(Number.isSafeInteger(body.expectedVersion),400,'VERSION_REQUIRED','Expected call version is required');
     requireThat(body.videoConsent===undefined||typeof body.videoConsent==='boolean',400,'INVALID_FIELD','videoConsent must be a boolean');
     requireThat(['accept','decline','cancel','end'].includes(action),404,'NOT_FOUND','Unknown action');
-    return this.idempotent(actor,`call:${id}:${action}`,key,body,async c=>{
-      const r=await this.row(c,actor.id,id,true);await this.advance(c,r,this.clock());
+    return this.idempotent(actor,`call:${id}:${action}`,key,body,
+      c=>this.authorizedCall(c,actor,id,action==='accept'),async(c,r)=>{
+      await this.advance(c,r,this.clock());
       if(r.state==='ended') {
         requireThat(action!=='accept',409,'CALL_ALREADY_ENDED','The invitation has ended');
         return this.view(c,r);
@@ -286,6 +316,7 @@ export class NightShiftService {
       if(action==='accept'||action==='decline')requireThat(actor.id===r.listener_id&&r.state==='ringing',409,'INVALID_TRANSITION','Only the invited listener may respond');
       if(action==='cancel')requireThat(actor.id===r.customer_id&&r.state==='ringing',409,'INVALID_TRANSITION','Only the caller may cancel an invitation');
       if(action==='accept'){
+        await this.eligibleCall(c,r);
         if(r.media_type==='video'){
           requireThat(body.videoConsent===true,400,'VIDEO_CONSENT_REQUIRED','Review the camera preview and consent before accepting video');
           r.listener_video_consent_at=new Date(this.clock());
@@ -300,9 +331,10 @@ export class NightShiftService {
     const body=object(raw);fields(body,['ready','videoReady']);requireThat(typeof body.ready==='boolean',400,'INVALID_FIELD','ready must be a boolean');
     requireThat(body.videoReady===undefined||typeof body.videoReady==='boolean',400,'INVALID_FIELD','videoReady must be a boolean');
     return this.db.tx(async c=>{
-      const r=await this.row(c,actor.id,id,true);const now=this.clock();await this.advance(c,r,now);
+      const r=await this.authorizedCall(c,actor,id);const now=this.clock();await this.advance(c,r,now);
       requireThat(r.state!=='ringing',409,'INVALID_TRANSITION','Accept before joining media');
       if(r.state==='ended')return this.view(c,r);
+      await this.eligibleCall(c,r);
       if(r.media_type==='video')requireThat(typeof body.videoReady==='boolean',400,'VIDEO_READINESS_REQUIRED','Video readiness must include camera capture and the remote video');
       const role=actor.id===r.customer_id?'customer':'listener';
       r[`${role}_ready`]=body.ready&&(r.media_type!=='video'||body.videoReady===true);r[`${role}_media_at`]=new Date(now);
@@ -321,14 +353,10 @@ export class NightShiftService {
   }
   async rtcToken(actor:Actor,id:string) {
     return this.db.tx(async c=>{
-      const r=await this.row(c,actor.id,id,true);await this.advance(c,r,this.clock());
+      const r=await this.authorizedCall(c,actor,id);await this.advance(c,r,this.clock());
       requireThat(['connecting','connected','reconnecting'].includes(r.state),409,'CALL_NOT_ACTIVE','This call cannot join media');
       if(r.media_type==='video')requireThat(r.customer_video_consent_at&&r.listener_video_consent_at,403,'VIDEO_CONSENT_REQUIRED','Both participants must consent before joining video');
-      const eligible=await c.query('SELECT id,listener_approved,adult_confirmed,suspended FROM users WHERE id=ANY($1::uuid[])',[[r.customer_id,r.listener_id]]);
-      requireThat(eligible.rows.length===2&&eligible.rows.every(u=>u.adult_confirmed&&!u.suspended)&&eligible.rows.find(u=>u.id===r.listener_id)?.listener_approved,403,'CALL_NOT_ELIGIBLE','This call is no longer eligible for media');
-      const blocked=await c.query('SELECT 1 FROM blocks WHERE (actor_id=$1 AND target_id=$2) OR (actor_id=$2 AND target_id=$1)',[r.customer_id,r.listener_id]);
-      const hold=await c.query('SELECT amount FROM spend_holds WHERE call_id=$1 AND released_at IS NULL',[r.id]);
-      requireThat(!blocked.rowCount&&hold.rowCount&&Number(hold.rows[0].amount)>=Number(r.charge_microcredits),403,'CALL_NOT_AUTHORIZED','Media authorization has ended');
+      await this.eligibleCall(c,r);
       const appId=this.config.agoraAppId,certificate=this.config.agoraAppCertificate;
       requireThat(appId&&certificate&&/^[a-f\d]{32}$/i.test(appId)&&/^[a-f\d]{32}$/i.test(certificate),503,'RTC_UNAVAILABLE','Configure an Agora test project on the backend before calling');
       // AccessToken2 expiration uses relative seconds, not an absolute epoch.
@@ -383,7 +411,7 @@ export class NightShiftService {
   }
   async report(actor:Actor,raw:unknown,key:unknown) {
     const body=object(raw);fields(body,['callId','reason']);const id=uuid(body.callId),reason=string(body.reason,'reason',1000);
-    return this.idempotent(actor,'report',key,body,async c=>{
+    return this.idempotent(actor,'report',key,body,c=>this.liveOwner(c,actor),async c=>{
       await this.row(c,actor.id,id);const reportId=randomUUID();
       await c.query('INSERT INTO reports(id,actor_id,call_id,reason) VALUES($1,$2,$3,$4)',[reportId,actor.id,id,reason]);
       return {id:reportId,status:'open'};

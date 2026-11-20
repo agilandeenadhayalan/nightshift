@@ -236,9 +236,8 @@ test('blocking while the peer ends cannot deadlock on user foreign-key locks',as
   let signalCall!:()=>void,signalUsers!:()=>void;
   const callLocked=new Promise<void>(resolve=>{signalCall=resolve;});
   const usersLocked=new Promise<void>(resolve=>{signalUsers=resolve;});
-  // Gate the real service transactions at their actual lock acquisition points.
-  // End owns the call; block then owns user rows and waits for that call. The FK
-  // insert performed by end must remain compatible with those user-row locks.
+  // End pauses after its nonlocking participant lookup. Block then acquires
+  // the ordered user locks; both operations must finish without lock inversion.
   concurrentDb.tx=fn=>ordinaryTx(async c=>{
     const client=c as any,original=client.query;
     client.query=async(sql:string,...args:unknown[])=>{
@@ -263,7 +262,9 @@ test('blocking while the peer ends cannot deadlock on user foreign-key locks',as
 });
 test('reports require participation; blocking ends call and excludes discovery and future pairs',async()=>{
   const call=await invite();await accept(call);
-  await assert.rejects(()=>runtime.service.report(customer2,{callId:call.id,reason:'test'},idem()),{code:'CALL_NOT_FOUND'});
+  const outsiderLogin=await runtime.auth.login({handle:'customer2',accessKey:config.devAccessKey,deviceId:'report-participation'},`${schema}:report-participation`);
+  const outsider=await runtime.auth.authenticate(outsiderLogin.token);
+  await assert.rejects(()=>runtime.service.report(outsider,{callId:call.id,reason:'test'},idem()),{code:'CALL_NOT_FOUND'});
   const key=idem(),body={callId:call.id,reason:'Synthetic report'};
   assert.deepEqual(await runtime.service.report(customer,body,key),await runtime.service.report(customer,body,key));
   await runtime.service.block(customer,listener.id);

@@ -219,7 +219,7 @@ test('accept racing logout cannot leave a surviving reservation or duplicate ter
     auth.logout(listener,c=>service.logoutCall(listener,c)),
   ]);
   assert.equal(results[1]!.status,'fulfilled');
-  if(results[0]!.status==='rejected')assert.equal(results[0]!.reason.code,'CALL_ALREADY_ENDED');
+  if(results[0]!.status==='rejected')assert.equal(results[0]!.reason.code,'UNAUTHENTICATED');
   assert.equal((await service.call(customer.id,call.id)).state,'ended');
   assert.equal((await db.pool.query("SELECT count(*) FROM call_events WHERE call_id=$1 AND payload->>'state'='ended'",[call.id])).rows[0].count,'1');
   assert.equal((await db.pool.query('SELECT count(*) FROM active_participant_claims WHERE call_id=$1',[call.id])).rows[0].count,'0');
