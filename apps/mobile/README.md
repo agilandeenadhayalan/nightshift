@@ -115,8 +115,9 @@ Phone sign-in uses a fixed build origin, independently of the fictional-login
 address field. HTTPS is required except explicit debug loopback/emulator hosts
 (`localhost`, `127.0.0.1`, `::1`, `10.0.2.2`). For USB testing, build with
 `PHONE_API_BASE_URL=http://127.0.0.1:3000` and use the documented `adb reverse`
-procedure. General LAN HTTP is rejected for phone credentials. All API and
-Firebase requests refuse redirects.
+procedure. General LAN HTTP is rejected for phone credentials. Backend API
+requests refuse redirects; Firebase SDK app verification manages its own
+provider endpoints and browser fallback.
 
 The official [Firebase Flutter phone SDK](https://firebase.google.com/docs/auth/flutter/phone-auth)
 handles SMS and Android app verification. Pinned `firebase_auth 6.5.7` and
@@ -139,9 +140,11 @@ including the Firebase SDK's private authentication state.
 Renewal is coalesced using `getIdTokenResult(true)` before expiry and exchanges
 the resulting ID token with the backend. Owner and origin checks run after
 renewal and before protected requests dispatch. Old request failures cannot erase
-a renewed session. Logout signs out the SDK and clears the accepted-session
-marker and token; a late credential completion is discarded before another
-sign-in can run. No failed mutation is automatically replayed. SMS codes and
+a renewed session. Logout clears app access, the accepted-session marker and
+token independently of native SDK cleanup. SDK callers wait at most 20 seconds;
+an unfinished operation retains exclusive ownership until it settles and its
+coalesced cleanup succeeds. A late credential completion cannot authorize a new
+session while cleanup is pending. No failed mutation is automatically replayed. SMS codes and
 verification identifiers remain ephemeral, and Firebase UID is never used as
 the public application user ID. The former REST custom-token adapter remains
 only for isolated legacy fixtures; the app's default phone entry uses Firebase SMS.

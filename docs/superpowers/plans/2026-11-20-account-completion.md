@@ -64,7 +64,7 @@
 - [x] Review backend and mobile boundaries independently; resolve security and correctness findings.
 - [x] Run repository gates, full unit/integration/economics suites, exact client regeneration and Android build.
 - [x] Record actual evidence and remaining provider/device/owner gates without closing incomplete issues.
-- [ ] Commit a reviewable change and open a stacked PR; monitor required CI to completion.
+- [x] Commit a reviewable change and open a stacked PR: [#73](https://github.com/agilandeenadhayalan/nightshift/pull/73), runtime `77932d1`. Monitor its required checks before reporting remote success; the live Checks tab records run status without treating this checkbox as a CI pass.
 
 ## Execution decisions
 
@@ -104,7 +104,7 @@
 - [x] Register the debug signing fingerprints. After explicit owner approval, enable Phone/Play Integrity and save the India-only SMS allowlist.
 - [x] Run 140 database/HTTP/schema checks, 43 API unit checks and exact 69-file SDK drift verification; build the initial native ARM64 APK.
 - [x] Finish mobile cancellation/partial-storage-failure and stalled-SDK review regressions; all 235 Flutter tests and analyzer pass, final APK rebuilt, independent focused review passed 21 tests.
-- [ ] Complete the original Task 4 evidence/PR/CI package.
+- [x] Publish the original Task 4 evidence/PR package and start remote CI tracking on #73. Remote pass/failure remains the live Checks result.
 - [ ] Configure billing and private Admin permissions and complete consented real-SIM tests after the billing account and monthly budget are supplied. The owner approved 1,000 SMS/day as an operating limit; no hard provider cap is implied.
 
 The earlier account checkpoint is committed as `9e853bb`; its preserved APK and 213 Flutter tests are historical evidence. Current native-flow evidence is recorded in Account_Application_Verification.md. No product issue is closed solely because its local engineering subset passes.
