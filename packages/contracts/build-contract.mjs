@@ -123,3 +123,6 @@ for(const [file,value] of [['openapi.json',contract],['events.schema.json',event
   if(process.argv.includes('--check')){if(await readFile(url,'utf8')!==content)throw new Error(`${file} needs regeneration`);}
   else await writeFile(url,content);
 }
+// Staff remains a separate cookie-authenticated contract and is deliberately
+// excluded from the Customer/Listener Dart client generation input.
+await import('./build-staff-contract.mjs');

@@ -71,6 +71,23 @@
       "dependsOn": ["build"],
       "cache": false,
       "passThroughEnv": ["JAVA_HOME", "LOCALAPPDATA", "APPDATA", "USERPROFILE", "SystemRoot"]
+    },
+    "@nightshift/admin#build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**"],
+      "env": ["NEXT_TELEMETRY_DISABLED"]
+    },
+    "@nightshift/admin#typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@nightshift/admin#test": {
+      "cache": false
+    },
+    "@nightshift/admin#test:e2e": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "passThroughEnv": ["PLAYWRIGHT_BROWSERS_PATH", "SystemRoot", "LOCALAPPDATA", "TEMP", "TMP"]
     }
   }
 }

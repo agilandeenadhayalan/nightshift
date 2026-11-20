@@ -20,6 +20,7 @@ function fixture(t) {
   const manifests = {
     'apps/api': { name: '@nightshift/api', dependencies: { '@nightshift/backend-domain': '0.1.0' }, devDependencies: { '@nightshift/contracts': '0.1.0' } },
     'apps/mobile': { name: '@nightshift/mobile', devDependencies: { '@nightshift/contracts': '0.1.0' } },
+    'apps/admin': { name: '@nightshift/admin', dependencies: { '@nightshift/contracts': '0.1.0' } },
     'packages/backend-domain': { name: '@nightshift/backend-domain' },
     'packages/contracts': { name: '@nightshift/contracts' },
     audio: { name: '@nightshift/audio' },
@@ -35,6 +36,20 @@ test('declared public dependencies, local imports, and reference-only tests are 
   write('apps/mobile/lib/main.dart', "import 'package:flutter/material.dart'; import 'screens/home.dart';");
   write('packages/backend-domain/test/parity.test.mjs', "import '../../../audio/billing.mjs';");
   assert.deepEqual(checkBoundaries(root), []);
+});
+
+test('staff console consumes only public contracts and cannot import API implementation', (t) => {
+  const { root, write, manifests } = fixture(t);
+  manifests['packages/contracts'].exports = { './staff.openapi.json': './staff.openapi.json' };
+  write('packages/contracts/package.json', manifests['packages/contracts']);
+  write('packages/contracts/staff.openapi.json', {});
+  write('apps/admin/src/session.ts', "import schema from '@nightshift/contracts/staff.openapi.json';");
+  assert.deepEqual(checkBoundaries(root), []);
+  write('apps/admin/src/session.ts', "import schema from '@nightshift/contracts/staff.openapi.json'; import '../../api/src/service';");
+  assert.ok(checkBoundaries(root).some(item => item.includes('apps/admin/src/session.ts')));
+  manifests['apps/admin'].dependencies['@nightshift/api'] = '0.1.0';
+  write('apps/admin/package.json', manifests['apps/admin']);
+  assert.ok(checkBoundaries(root).some(item => item.includes('application workspace @nightshift/api')));
 });
 
 test('client/server, application/application, and domain/contract dependency edges fail', (t) => {

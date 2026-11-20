@@ -6,7 +6,7 @@
 |---|---|
 | `apps/mobile/` | Flutter application with customer and listener feature modules |
 | `apps/web/` | Reserved Next.js public website and external deletion/support entry |
-| `apps/admin/` | Reserved Next.js protected operator UI |
+| `apps/admin/` | Next.js protected staff session UI; intended for the in-app browser |
 | `apps/api/` | NestJS controllers, gateway and domain modules |
 | `apps/worker/` | Reserved queue consumers, schedulers, outbox delivery and reconciliation entrypoint |
 | `packages/contracts/` | Versioned OpenAPI and event JSON schemas; generated clients |
@@ -17,7 +17,7 @@
 | `docs/` | Architecture decisions, runbooks, pricing model, policy decisions and release evidence |
 | `tests/` | Integration, concurrency, E2E and load scenarios |
 
-Use npm workspaces and Turborepo for the explicit task graph, retaining Flutter's own package manager and lockfile. Only runnable applications and real shared packages are registered: API, mobile task adapter, browser reference, contracts and backend-domain. Reserved web/admin/worker/config directories are not empty build targets. See [monorepo rules](Monorepo.md) and [ADR-0002](adr/0002-monorepo-task-graph.md).
+Use npm workspaces and Turborepo for the explicit task graph, retaining Flutter's own package manager and lockfile. Only runnable applications and real shared packages are registered: API, mobile task adapter, staff web session shell, browser reference, contracts and backend-domain. Reserved web/worker/config directories are not empty build targets. See [monorepo rules](Monorepo.md) and [ADR-0002](adr/0002-monorepo-task-graph.md).
 
 API code consumes backend-domain and contracts through declared package boundaries. Mobile uses the generated public Dart SDK in `packages/contracts/dart` and declares the contracts dependency in the task graph; do not import TypeScript or server packages into Flutter. Apps do not import other apps. Backend-domain exports pure financial rules with no framework, provider or database dependency; the API owns authorization and durable transactions. Financial calculations execute only on the server. Contracts contain public schemas and no private configuration. Generate the Dart client with `npm run generate:client` and reject drift with `npm run check:client`; generated code is never hand-edited. Local mock provider adapters are explicitly test-only; CI checks they cannot be enabled with production configuration.
 
@@ -52,7 +52,7 @@ The implemented schema and its dormant sandbox commerce records are documented i
 | `POST /v1/reports`, `PUT /v1/blocks/{id}` | Reports and blocking | Immediate pair exclusion; safe evidence handling |
 | `POST/GET /v1/support-tickets` | Customer/listener support | Ownership, attachment limits, internal notes excluded |
 | `POST /v1/me/deletion-requests` | Deletion workflow | Step-up auth, balances/disputes/retention rules |
-| `/v1/admin/...` | Review, finance, safety and operational actions | MFA, explicit permissions, audit and reason codes |
+| `/v1/admin/...` | Review, finance, safety and operational actions | Owner-selected SMS OTP (D26), explicit permissions, audit and reason codes |
 
 Use structured validation errors, `request_id`, UTC timestamps and stable error codes such as `LISTENER_BUSY`, `QUOTE_EXPIRED`, `INSUFFICIENT_BALANCE`, `CALL_ALREADY_ENDED`. Side-effecting requests carry an idempotency key scoped to actor and operation; conflicting request content with the same key is rejected. HTTP status and app copy must agree.
 

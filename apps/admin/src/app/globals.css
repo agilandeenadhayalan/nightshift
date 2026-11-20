@@ -1,0 +1,51 @@
+:root {color-scheme: light; --paper: #f3f1ec; --ink: #1d2937; --blue: #254d73; --line: #d1d5d6; --muted: #52606c; --white: #fff;}
+* {box-sizing: border-box;}
+body {margin: 0; background: var(--paper); color: var(--ink); font: 1rem/1.6 "Segoe UI", "Trebuchet MS", sans-serif;}
+a {color: var(--blue);}
+button, a {-webkit-tap-highlight-color: transparent;}
+button {font: inherit; font-weight: 600; min-height: 48px; padding: .7rem 1.15rem; background: var(--blue); border: 2px solid var(--blue); border-radius: 6px; color: white; cursor: pointer;}
+button:hover {background: #163954;}
+button.secondary {background: transparent; color: var(--blue);}
+:focus-visible {outline: 3px solid #9a5f12; outline-offset: 4px;}
+h1,h2,p {margin: 0;}
+h1 {font-size: clamp(2rem, 4vw, 2.7rem); font-weight: 650; line-height: 1.15; letter-spacing: -.035em;}
+h2 {font-size: 1.55rem; font-weight: 650; line-height: 1.3; letter-spacing: -.018em;}
+p {max-width: 66ch;}
+.skip-link {position: fixed; top: -100px; left: 1rem; padding: 1rem; z-index: 3; background: white;}
+.skip-link:focus {top: 1rem;}
+.workspace {display: grid; grid-template-columns: 238px minmax(0, 1fr); min-height: 100dvh;}
+.workspace-rail {padding: 2.5rem 1.7rem; background: #e7e7e2; border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: start;}
+.brand {display: flex; align-items: center; gap: .65rem; font: 700 1.5rem/1 "Trebuchet MS", sans-serif; text-decoration: none; color: var(--ink);}
+.brand-mark {display: block; width: 24px; height: 24px; border-radius: 50%; background: var(--blue); box-shadow: inset -7px 3px #e7e7e2;}
+.rail-description {margin-top: .7rem; color: var(--muted); font-size: .9rem;}
+nav {width: 100%; margin-top: 3.5rem; display: grid; gap: 1.1rem;}
+nav a {display: block; font-weight: 650; border-left: 3px solid var(--blue); padding: .4rem 0 .4rem .8rem; text-decoration: none;}
+.nav-unavailable {padding-left: 1rem; color: var(--muted);}
+.nav-unavailable small {display: block; font-size: .75rem;}
+.rail-note {font-size: .85rem; color: var(--muted); margin-top: auto; padding-top: 3rem;}
+main {width: 100%; max-width: 1080px; padding: 4.25rem clamp(1.25rem, 5vw, 5rem);}
+.page-heading p {color: var(--muted); margin-top: 1rem;}
+.access-panel {background: var(--white); border: 1px solid var(--line); border-top: 5px solid var(--blue); border-radius: 6px; padding: clamp(1.4rem, 3vw, 2.6rem); margin-top: 2.6rem;}
+.access-panel p {margin-top: 1rem;}
+.access-panel button {margin-top: 1.7rem;}
+.status-label {display: inline-block; padding: .15rem .65rem; background: #edf1f5; color: #385268; font-size: .85rem; margin-bottom: 1.3rem; border-radius: 4px;}
+.status-label.approved {background: #eaf3ec; color: #2d644e;}
+.status-dot {display: block; width: .8rem; height: .8rem; border-radius: 50%; background: var(--blue); margin-bottom: 1.5rem;}
+.session-reference span {display: block; overflow-wrap: anywhere; color: var(--muted);}
+.permissions {margin-top: 2.5rem;}
+.permissions h2 {font-size: 1.2rem;}
+.permissions ul {padding-left: 1.3rem;}
+.permissions li {margin-block: .45rem;}
+.muted {color: var(--muted); font-size: .9rem;}
+footer {border-top: 1px solid var(--line); margin-top: 3rem; padding-top: 1.5rem; color: var(--muted); font-size: .85rem;}
+footer strong {color: var(--ink); font-weight: 600;}
+footer p {margin-top: .3rem;}
+@media (max-width: 700px) {
+  .workspace {display: block;}
+  .workspace-rail {padding: 1.2rem 1.25rem; border-right: 0; border-bottom: 1px solid var(--line);}
+  .rail-description {margin-top: .4rem;}
+  nav {margin-top: 1.2rem; grid-template-columns: auto 1fr; gap: 1.5rem;}
+  .rail-note {display: none;}
+  main {padding-top: 2.4rem;}
+  .access-panel {margin-top: 1.8rem;}
+}

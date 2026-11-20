@@ -289,7 +289,7 @@
     "acceptance": [
       "Backend maps provider identity to opaque user and device records",
       "Logout/revocation and suspension invalidate sensitive actions",
-      "Admin access uses MFA and role permissions distinct from ordinary app users"
+      "Admin access uses owner-approved SMS OTP authentication and role permissions distinct from ordinary app users"
     ],
     "verification": [
       "Attempt forged role claims and cross-user resource access",
@@ -303,7 +303,7 @@
       "release:android-audio-mvp"
     ],
     "milestone": "P1 — Identity and listeners",
-    "body": "<!-- nightshift-id: FA-010 -->\n# FA-010 — Implement sessions, devices and role authorization\n\nPhase: **P1** · Area: **security** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nEnforce customer/listener/admin permissions and session lifecycle on every endpoint and socket action.\n\n## Dependencies\n\nFA-009\n\n## Acceptance criteria\n\n- [ ] Backend maps provider identity to opaque user and device records\n- [ ] Logout/revocation and suspension invalidate sensitive actions\n- [ ] Admin access uses MFA and role permissions distinct from ordinary app users\n\n## Verification\n\n- [ ] Attempt forged role claims and cross-user resource access\n- [ ] Test revoked socket and API session behavior\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
+    "body": "<!-- nightshift-id: FA-010 -->\n# FA-010 — Implement sessions, devices and role authorization\n\nPhase: **P1** · Area: **security** · Size: **M** · Release: **android-audio-mvp**\n\n## Outcome\n\nEnforce customer/listener/admin permissions and session lifecycle on every endpoint and socket action.\n\n## Dependencies\n\nFA-009\n\n## Acceptance criteria\n\n- [ ] Backend maps provider identity to opaque user and device records\n- [ ] Logout/revocation and suspension invalidate sensitive actions\n- [ ] Admin access uses owner-approved SMS OTP authentication and role permissions distinct from ordinary app users\n\n## Verification\n\n- [ ] Attempt forged role claims and cross-user resource access\n- [ ] Test revoked socket and API session behavior\n\n## Implementation handoff\n\nRead `NightShift_Master_Plan.md`, `docs/Engineering_Contracts.md`, `docs/UI_Screen_Specification.md` and the relevant source/policy records. Use `prompts/02_Single_Issue_Implementation.md` with this issue ID. Keep changes within this outcome. Record tests, provider limitations, migrations and unresolved decisions in the PR. Do not mark external approval or real-device checks complete from mocks.\n"
   },
   {
     "id": "FA-011",

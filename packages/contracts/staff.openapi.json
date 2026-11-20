@@ -1,0 +1,866 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NightShift separate staff authority",
+    "version": "0.1.0",
+    "description": "Owner-selected single-factor SMS OTP with explicit staff grants. Customer and Listener remain the only application modes. Staff pages are intended for the in-app browser; live access is unavailable until a real verifier and approved principal are configured. No provider proof, cookie or CSRF token belongs in a URL or browser storage."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "staffSession": []
+    }
+  ],
+  "paths": {
+    "/v1/admin/auth/status": {
+      "get": {
+        "operationId": "getStaffAuthStatus",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Staff response; never grants ordinary application modes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffAuthStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Staff session is missing, expired or revoked",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Staff permission, origin or CSRF denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Staff request rate limit",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Staff authentication is unavailable",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/auth/challenge": {
+      "post": {
+        "operationId": "createStaffChallenge",
+        "security": [],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "Must exactly match the configured staff origin."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffEmptyBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Staff response; never grants ordinary application modes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffChallenge"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Staff session is missing, expired or revoked",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Staff permission, origin or CSRF denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Staff request rate limit",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Staff authentication is unavailable",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Issues a short-lived Secure HttpOnly host-only challenge cookie. The response CSRF token stays in memory and is required for exchange."
+      }
+    },
+    "/v1/admin/auth/exchange": {
+      "post": {
+        "operationId": "exchangeStaffProof",
+        "security": [
+          {
+            "staffChallenge": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "Must exactly match the configured staff origin."
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffExchange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Staff response; never grants ordinary application modes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffSession"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Staff session is missing, expired or revoked",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Staff permission, origin or CSRF denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Staff request rate limit",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Staff authentication is unavailable",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Consumes the challenge, verifies current provider phone authentication and an explicitly provisioned staff principal, and issues the separate opaque staff session cookie. Provider/customer role claims do not grant permissions."
+      }
+    },
+    "/v1/admin/session": {
+      "get": {
+        "operationId": "getStaffSession",
+        "responses": {
+          "200": {
+            "description": "Staff response; never grants ordinary application modes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffSession"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Staff session is missing, expired or revoked",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Staff permission, origin or CSRF denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Staff request rate limit",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Staff authentication is unavailable",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Revalidates the provider identity and local principal/session/grants. Returns minimal staff authority plus a session-bound CSRF token."
+      }
+    },
+    "/v1/admin/auth/logout": {
+      "post": {
+        "operationId": "logoutStaffSession",
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "Must exactly match the configured staff origin."
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffEmptyBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Staff response; never grants ordinary application modes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffLogout"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Staff session is missing, expired or revoked",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Staff permission, origin or CSRF denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Staff request rate limit",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Staff authentication is unavailable",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Revokes every session for this staff principal and clears the presented cookie. Customer authentication and modes remain separate."
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "staffSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-nightshift_staff",
+        "description": "Random opaque credential; Secure, HttpOnly, SameSite=Strict, Path=/, no Domain."
+      },
+      "staffChallenge": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-nightshift_staff_challenge",
+        "description": "Short-lived opaque challenge; Secure, HttpOnly, SameSite=Strict, Path=/, no Domain."
+      }
+    },
+    "schemas": {
+      "StaffAuthStatus": {
+        "type": "object",
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "reasonCode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "STAFF_AUTH_UNAVAILABLE",
+              null
+            ]
+          }
+        },
+        "required": [
+          "configured",
+          "available",
+          "reasonCode"
+        ],
+        "additionalProperties": false
+      },
+      "StaffChallenge": {
+        "type": "object",
+        "properties": {
+          "csrfToken": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "csrfToken",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "StaffExchange": {
+        "type": "object",
+        "properties": {
+          "proof": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16384
+          }
+        },
+        "required": [
+          "proof"
+        ],
+        "additionalProperties": false
+      },
+      "StaffSession": {
+        "type": "object",
+        "properties": {
+          "staff": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "listener.review.read",
+                "listener.review.evidence.read",
+                "listener.review.decide"
+              ]
+            },
+            "maxItems": 3,
+            "uniqueItems": true
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "csrfToken": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "staff",
+          "permissions",
+          "expiresAt",
+          "csrfToken"
+        ],
+        "additionalProperties": false
+      },
+      "StaffLogout": {
+        "type": "object",
+        "properties": {
+          "signedOut": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "signedOut"
+        ],
+        "additionalProperties": false
+      },
+      "StaffEmptyBody": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "StaffError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "retryAfterSeconds": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "error",
+          "requestId"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

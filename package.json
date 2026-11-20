@@ -3,8 +3,18 @@
   "private": true,
   "version": "0.1.0",
   "packageManager": "npm@11.6.2",
-  "workspaces": ["apps/api", "apps/mobile", "packages/backend-domain", "packages/contracts", "audio"],
-  "engines": {"node": ">=24.13.0 <25", "npm": ">=11.6.2 <12"},
+  "workspaces": [
+    "apps/api",
+    "apps/admin",
+    "apps/mobile",
+    "packages/backend-domain",
+    "packages/contracts",
+    "audio"
+  ],
+  "engines": {
+    "node": ">=24.13.0 <25",
+    "npm": ">=11.6.2 <12"
+  },
   "scripts": {
     "build": "turbo run build --filter=@nightshift/api...",
     "typecheck": "turbo run typecheck --filter=@nightshift/api...",
@@ -28,7 +38,10 @@
     "check:client": "turbo run check:client --filter=@nightshift/contracts",
     "smoke:api": "node --env-file-if-exists=.env scripts/smoke-api.mjs",
     "smoke:accounts": "node --env-file-if-exists=.env scripts/smoke-account-client.cjs",
-    "smoke:client": "node --env-file-if-exists=.env scripts/smoke-generated-client.mjs"
+    "smoke:client": "node --env-file-if-exists=.env scripts/smoke-generated-client.mjs",
+    "dev:admin": "npm run dev --workspace @nightshift/admin",
+    "check:admin": "turbo run build typecheck test --filter=@nightshift/admin",
+    "test:admin:e2e": "turbo run test:e2e --filter=@nightshift/admin"
   },
   "devDependencies": {
     "turbo": "2.11.13",
