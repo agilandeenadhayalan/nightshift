@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nightshift/core/api.dart';
 import 'package:nightshift/core/controller.dart';
 import 'package:nightshift/core/staff_session.dart';
+import 'package:nightshift/core/staff_transport.dart';
 import 'package:nightshift/core/staff_workspace.dart';
 import 'package:nightshift/features/staff_workspace_screen.dart';
 import 'fakes.dart';
@@ -87,36 +88,49 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     expect(model.accessRequest, null);
   });
-  testWidgets('fresh SMS sign-in error offers explicit check and no browser',
-      (tester) async {
-    final transport = FakeStaffTransport()
-      ..handler = (_) async => throw const ApiFailure(
-          'STAFF_FRESH_SIGN_IN_REQUIRED', '',
-          status: 403);
-    final model = StaffWorkspace(
-        identity: () => staffOwner,
-        ownerId: () => staffOwner,
-        enabled: () => true,
-        proof: () async => 'fixture-proof',
-        cookies: FakeStaffCookies(),
-        transport: transport,
-        now: () => staffNow,
-        startTimer: false);
-    final app = AppController(
-        api: FakeApi(),
-        store: MemoryStore(),
-        audio: FakeAudio(),
-        staffWorkspace: model,
-        startTimers: false);
-    await tester.pumpWidget(ProviderScope(
-        overrides: [appControllerProvider.overrideWith((_) => app)],
-        child: const MaterialApp(home: StaffWorkspaceScreen())));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('new SMS code'), findsOneWidget);
-    expect(find.text('Request staff access'), findsNothing);
-    expect(find.byType(StaffBrowser), findsNothing);
-    await tester.pump(const Duration(minutes: 1));
-    expect(transport.calls.length, 1);
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
+  for (final code in [
+    'STAFF_FRESH_SIGN_IN_REQUIRED',
+    'STAFF_UNAUTHENTICATED'
+  ]) {
+    testWidgets('$code explains fresh SMS sign-in without automatic retry',
+        (tester) async {
+      final transport = FakeStaffTransport();
+      transport.handler = (operation) async {
+        if (operation == StaffOperation.exchange) {
+          throw ApiFailure(code, '',
+              status: code == 'STAFF_UNAUTHENTICATED' ? 401 : 403);
+        }
+        return transport.response(operation);
+      };
+      final model = StaffWorkspace(
+          identity: () => staffOwner,
+          ownerId: () => staffOwner,
+          enabled: () => true,
+          proof: () async => 'fixture-proof',
+          cookies: FakeStaffCookies(),
+          transport: transport,
+          now: () => staffNow,
+          startTimer: false);
+      final app = AppController(
+          api: FakeApi(),
+          store: MemoryStore(),
+          audio: FakeAudio(),
+          staffWorkspace: model,
+          startTimers: false);
+      await tester.pumpWidget(ProviderScope(
+          overrides: [appControllerProvider.overrideWith((_) => app)],
+          child: const MaterialApp(home: StaffWorkspaceScreen())));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('new SMS code'), findsOneWidget);
+      expect(find.text('Request staff access'), findsNothing);
+      expect(find.byType(StaffBrowser), findsNothing);
+      await tester.pump(const Duration(minutes: 1));
+      expect(transport.calls, [
+        StaffOperation.currentRequest,
+        StaffOperation.challenge,
+        StaffOperation.exchange
+      ]);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
 }

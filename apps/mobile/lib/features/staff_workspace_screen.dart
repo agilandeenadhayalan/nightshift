@@ -53,6 +53,7 @@ class _StaffWorkspaceScreenState extends ConsumerState<StaffWorkspaceScreen> {
     final code = model.error?.code;
     final fresh = [
       'STAFF_FRESH_SIGN_IN_REQUIRED',
+      'STAFF_UNAUTHENTICATED',
       'UNAUTHENTICATED',
       'STAFF_PHONE_SIGN_IN_REQUIRED'
     ].contains(code);
