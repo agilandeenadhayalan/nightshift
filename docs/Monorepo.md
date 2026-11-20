@@ -11,9 +11,9 @@ Actual local checks and artifact details are recorded in [monorepo verification]
 | Workspace/path | Responsibility | Allowed internal dependencies |
 |---|---|---|
 | `apps/api` | NestJS HTTP/socket adapters, authorization, PostgreSQL transactions, provider adapters and recovery | `backend-domain`, `contracts` |
-| `apps/mobile` | One Flutter Android app; its npm manifest is a task adapter | `contracts` as task metadata only |
+| `apps/mobile` | One Flutter Android app; its npm manifest is a task adapter | Public Dart SDK from `contracts`, plus task metadata |
 | `packages/backend-domain` | Pure server-side billing rules, exported through the package entry point | None at runtime |
-| `packages/contracts` | Public OpenAPI/event schemas and deterministic generation/checking | None |
+| `packages/contracts` | Public OpenAPI/event schemas and generated Dart SDK | None among internal workspaces |
 | `audio` | Runnable independent browser reference with test credits | None |
 | `apps/admin`, `apps/web`, `apps/worker` | Reserved staff, public-site and worker boundaries | Not registered yet |
 | `packages/config` | Reserved configuration boundary | Not registered yet |
@@ -26,7 +26,7 @@ flowchart LR
   AUDIO["Independent browser reference"]
 ```
 
-Arrows describe repository dependencies. Flutter makes network requests to NestJS; it does not load TypeScript packages at runtime. Its current checked-in Dart client remains in place. Generated Dart-client adoption is tracked separately in [#7](https://github.com/agilandeenadhayalan/nightshift/issues/7).
+Arrows describe repository dependencies. Flutter makes network requests to NestJS; it does not load TypeScript packages at runtime. The generated Dart SDK lives in `packages/contracts/dart` and is referenced through Flutter's native path dependency. The handwritten mobile facade retains runtime configuration, safe errors and request deadlines while generated operations own endpoint paths, bodies and response decoding.
 
 Applications must not import another application's source. Shared code goes into a package with an explicit public entry point or exported subpath and a declared dependency in the consuming package. For example, `@nightshift/contracts/openapi.json` is public; private `/src` imports are not. Do not use relative paths or TypeScript path aliases to bypass this boundary. Dependencies belong in the package that imports them; root dependencies are repository tooling. The monorepo guard checks the registered graph and source boundaries; it complements code review rather than proving all architectural properties.
 
@@ -40,6 +40,8 @@ Run `npm ci` once at the repository root using the pinned Node/npm versions. Kee
 |---|---|
 | `npm run check:repo` | Secret/boundary guards, contract drift checks and tooling regression tests |
 | `npm run check:boundaries` | Workspace policy and backend-domain import boundaries |
+| `npm run generate:client` | Regenerate the checked-in Dart SDK with the pinned official generator; Java 17+ required |
+| `npm run check:client` | Regenerate in a temporary directory and reject SDK drift; Java 17+ required |
 | `npm run typecheck` | TypeScript workspaces |
 | `npm run build` | TypeScript builds in dependency order |
 | `npm test` | TypeScript unit tests and browser-reference tests |
@@ -51,6 +53,7 @@ Run `npm ci` once at the repository root using the pinned Node/npm versions. Kee
 | `npm run build:android` | ARM64 Android debug APK |
 | `npm run db:migrate`, `npm run db:seed` | Explicit local database operations |
 | `npm run start:api` | Backend process |
+| `npm run smoke:client` | Real HTTP test-credit call/history journey through the generated Dart SDK; local API required |
 
 Build dependencies before their consumers. A backend-domain change must invalidate the API build; a contract change must reach API and mobile checks through their declared graph edges. Use the installed runner's dry-run output to inspect the task graph, for example `npm exec turbo -- run build --dry=json`. Avoid calling a root Turbo task from a workspace script, which would recurse into the same graph.
 
@@ -64,6 +67,7 @@ The default TypeScript build and typecheck select the API and its package depend
 | Deterministic static/contract checks | Cached only with complete source, config and contract inputs |
 | Unit, integration and browser-reference tests | Uncached; each invocation executes tests |
 | Flutter dependency resolution, analysis, tests and APK builds | Uncached |
+| Dart client generation and regeneration comparison | Uncached; generator JAR has a pinned checksum |
 | Database migrations/seeding, service startup and smoke checks | Uncached; long-running services are persistent tasks |
 
 Keep shared TypeScript settings, tool pins and contract inputs in the task hash. Do not narrow inputs without proving that generated files and dependencies still invalidate downstream tasks. Changing the task configuration itself is a build change. A successful cache replay is not evidence that an integration test ran against the current database.

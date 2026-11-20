@@ -9,6 +9,8 @@
   },
   "scripts": {
     "build": "node build-contract.mjs --check",
-    "generate": "node build-contract.mjs"
+    "generate": "node build-contract.mjs",
+    "generate:client": "node ../../scripts/generate-dart-client.mjs",
+    "check:client": "node ../../scripts/generate-dart-client.mjs --check"
   }
 }

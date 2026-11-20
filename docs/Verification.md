@@ -43,7 +43,7 @@ Universal local output: `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk
 - Debug build only; no production signing, embedded test access key or Agora certificate.
 - Both modes share this single package. CI builds the smaller ARM64 variant from the same project.
 
-The subsequent workspace/task-graph refactor was revalidated separately; see [Monorepo_Verification.md](Monorepo_Verification.md) for its 73 tests, packaged API smoke run and APK rebuild.
+The subsequent workspace/task-graph refactor was revalidated separately; see [Monorepo_Verification.md](Monorepo_Verification.md) for its 73 tests, packaged API smoke run and APK rebuild. The latest schema/generated-client continuation is recorded in [FA007_Verification.md](FA007_Verification.md), including 94 passing tests, a real Dart SDK HTTP journey and the newer ARM64 APK hash. The artifact hashes above belong to the earlier milestone build.
 
 ## Evidence still required
 

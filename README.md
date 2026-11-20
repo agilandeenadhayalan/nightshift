@@ -13,7 +13,7 @@ Follow [Windows Flutter + WSL 2 backend setup](docs/Local_Development.md) for Po
 | `apps/mobile` | Single Flutter app: Customer and Listener |
 | `apps/api` | Shared NestJS sessions, presence, calls, test billing and history |
 | `db/migrations` | PostgreSQL schema and constraints |
-| `packages/contracts` | Versioned API/event contracts |
+| `packages/contracts` | Versioned API/event contracts and generated Dart SDK |
 | `packages/backend-domain` | Pure billing rules imported by the backend |
 | `infra` | Local PostgreSQL/Redis Compose stack |
 | `apps/admin`, `apps/web`, `apps/worker` | Boundaries for subsequent staff/public/worker work |
@@ -43,6 +43,8 @@ npm run build:android
 ```
 
 The Android command builds the ARM64 debug APK. Native Flutter commands from `apps/mobile` remain supported, including `flutter build apk --debug` for a universal APK. See [verification evidence](docs/Verification.md), [two-phone procedure](docs/Two_Phone_Test.md), and [contributor checks](docs/Contributor_Guide.md). An APK build does not establish audible two-way media on physical phones.
+
+API changes also require `npm run generate:client` and `npm run check:client` with Java 17+. The official generator is pinned and checksum-verified; ordinary app builds use the checked-in Dart SDK. With the local backend running, `npm run smoke:client` checks the generated SDK's actual HTTP call/history journey using the ignored local environment.
 
 ## Browser reference
 

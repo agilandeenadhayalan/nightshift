@@ -37,7 +37,9 @@ dependencies:
     sdk: flutter
   flutter_riverpod: 2.6.1
   go_router: 14.8.1
-  http: 1.3.0
+  http: 1.5.0
+  nightshift_api:
+    path: ../../packages/contracts/dart
   agora_rtc_engine: 6.5.3
   permission_handler: 11.3.1
   flutter_secure_storage: 9.2.4

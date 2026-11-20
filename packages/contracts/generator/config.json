@@ -1,0 +1,10 @@
+{
+  "pubName": "nightshift_api",
+  "pubLibrary": "nightshift.api",
+  "pubVersion": "0.1.0",
+  "pubDescription": "Generated NightShift test-credit API client",
+  "pubHomepage": "https://github.com/agilandeenadhayalan/nightshift",
+  "pubPublishTo": "none",
+  "hideGenerationTimestamp": true,
+  "enumUnknownDefaultCase": false
+}

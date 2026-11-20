@@ -26,9 +26,24 @@ Json callJson({String state = 'ringing', int version = 1}) => {
       'chargeMicrocredits': 3600000,
       'earningPaise': 833,
       'createdAt': '2026-11-20T00:00:00.000Z',
+      'expiresAt': '2026-11-20T00:00:30.000Z',
+      'acceptedAt': state == 'ringing' ? null : '2026-11-20T00:00:01.000Z',
       'endedAt': state == 'ended' ? '2026-11-20T00:00:41.000Z' : null,
       'reason': state == 'ended' ? 'ended' : null,
       'maxDurationSeconds': 600,
+      'rate': rateJson(),
+      'testOnly': true,
+    };
+
+Json rateJson() => {
+      'id': 'test-audio-v1',
+      'coinsPerMinute': 60,
+      'microcreditsPerCoin': 60000,
+      'microcreditsPerSecond': 60000,
+      'freeThroughSeconds': 40,
+      'minimumChargedSeconds': 60,
+      'listenerPaisePerHour': 50000,
+      'testOnly': true,
     };
 
 class MemoryStore implements SessionStore {

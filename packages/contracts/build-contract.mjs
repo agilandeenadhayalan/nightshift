@@ -19,13 +19,13 @@ const schemas={
   Error:object({error:object({code:str,message:str}),requestId:id}),
   Event:object({id,type:{type:'string',enum:['call.invited','call.state_changed']},entityId:id,version:integer,timestamp:date,data:ref('Call')})
 };
-const responses=schema=>({200:{description:'Authoritative response',content:{'application/json':{schema}}},400:{description:'Validation failed',content:{'application/json':{schema:ref('Error')}}},401:{description:'Session is missing, expired or revoked',content:{'application/json':{schema:ref('Error')}}},409:{description:'State, eligibility or idempotency conflict',content:{'application/json':{schema:ref('Error')}}},503:{description:'Dependency or RTC configuration unavailable',content:{'application/json':{schema:ref('Error')}}}});
+const responses=schema=>({200:{description:'Authoritative response',content:{'application/json':{schema}}},400:{description:'Validation failed',content:{'application/json':{schema:ref('Error')}}},401:{description:'Session is missing, expired or revoked',content:{'application/json':{schema:ref('Error')}}},403:{description:'Role or participant access denied',content:{'application/json':{schema:ref('Error')}}},404:{description:'Resource is missing or not visible to this participant',content:{'application/json':{schema:ref('Error')}}},409:{description:'State, eligibility or idempotency conflict',content:{'application/json':{schema:ref('Error')}}},429:{description:'Request rate limit exceeded',content:{'application/json':{schema:ref('Error')}}},503:{description:'Dependency or RTC configuration unavailable',content:{'application/json':{schema:ref('Error')}}}});
 const pathId={name:'id',in:'path',required:true,schema:id};
 const idempotency={name:'Idempotency-Key',in:'header',required:true,schema:{type:'string',minLength:1,maxLength:128}};
 const json=schema=>({required:true,content:{'application/json':{schema}}});
 const paths={
   '/v1/health':{get:{operationId:'health',security:[],responses:responses(object({status:str,service:str,testOnly:bool}))}},
-  '/v1/auth/dev':{post:{operationId:'developmentSignIn',security:[],description:'Development/test only. Server refuses production boot.',requestBody:json(object({handle:{type:'string',enum:['customer','customer2','listener']},accessKey:{type:'string',minLength:24},deviceId:str})),responses:{201:responses(ref('Login'))[200]}}},
+  '/v1/auth/dev':{post:{operationId:'developmentSignIn',security:[],description:'Development/test only. Server refuses production boot.',requestBody:json(object({handle:{type:'string',enum:['customer','customer2','listener']},accessKey:{type:'string',minLength:24},deviceId:str})),responses:responses(ref('Login'))}},
   '/v1/auth/logout':{post:{operationId:'signOut',responses:responses(object({signedOut:bool}))}},
   '/v1/me':{get:{operationId:'getMe',responses:responses(ref('User'))}},
   '/v1/snapshot':{get:{operationId:'getSnapshot',parameters:[{name:'language',in:'query',schema:{type:'string',enum:['ta','en'],default:'ta'}}],responses:responses(ref('Snapshot'))}},
@@ -36,7 +36,7 @@ const paths={
   '/v1/listeners':{get:{operationId:'listListeners',parameters:[{name:'language',in:'query',schema:{type:'string',enum:['ta','en']}},{name:'cursor',in:'query',schema:id}],responses:responses(ref('ListenerPage'))}},
   '/v1/calls':{
     get:{operationId:'listCalls',parameters:[{name:'cursor',in:'query',schema:id}],responses:responses(ref('CallPage'))},
-    post:{operationId:'createCall',parameters:[idempotency],requestBody:json(object({listenerId:id,quoteId:{type:'string',const:'test-audio-v1'}})),responses:{201:responses(ref('Call'))[200]}}
+    post:{operationId:'createCall',parameters:[idempotency],requestBody:json(object({listenerId:id,quoteId:{type:'string',const:'test-audio-v1'}})),responses:responses(ref('Call'))}
   },
   '/v1/calls/{id}':{get:{operationId:'getCall',parameters:[pathId],responses:responses(ref('Call'))}},
   '/v1/calls/{id}/media':{post:{operationId:'reportMediaReady',parameters:[pathId],description:'Report only local/remote RTC readiness. No client duration or price. Heartbeat every two seconds; not provider proof.',requestBody:json(object({ready:bool})),responses:responses(ref('Call'))}},
