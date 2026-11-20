@@ -1,4 +1,6 @@
-# FA-009: phone identity validation foundation
+# FA-009: original phone identity validation foundation
+
+This document preserves the earlier provider-foundation checkpoint and its 209-test/build evidence. The subsequent [account and private application continuation](Account_Application_Verification.md) implements the previously missing phone UI, Firebase client exchange/refresh, app sessions, onboarding and deletion foundation. Use that document for current behavior and remaining acceptance; the milestone statements below describe the earlier build.
 
 Related issue: [#9](https://github.com/agilandeenadhayalan/nightshift/issues/9). This implements the server challenge/proof lifecycle, provider boundaries, HTTP contracts and Flutter client/error handling. **The issue remains partially implemented.** A phone sign-in screen, Firebase client token exchange/refresh, app-session integration, owner provider configuration and real Indian SIM delivery still require work/evidence. The existing fictional Customer/Listener sign-in and test-credit call milestone remain available.
 

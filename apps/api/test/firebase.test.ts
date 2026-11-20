@@ -71,6 +71,24 @@ test('real SDK validates signed custom-provider ID token and returns only identi
   assert.equal(userLookup.mock.calls[0]?.arguments[0], uid);
 });
 
+test('real SDK verifies native phone proof without exposing arbitrary claims',async t=>{
+  const {provider,userLookup}=fixture(t),phone='+919876543210';
+  const result=await provider.verifyIdToken(token({phone_number:phone,firebase:{sign_in_provider:'phone',identities:{phone:[phone]}},admin:true}));
+  assert.equal(result.signInProvider,'phone');assert.equal(result.phoneNumber,phone);assert.ok(!('admin' in result));
+  assert.equal(userLookup.mock.callCount(),1);
+});
+
+test('signed phone provider tokens require one matching canonical phone identity',async t=>{
+  const {provider}=fixture(t),phone='+919876543210';
+  for(const claims of [
+    {firebase:{sign_in_provider:'phone',identities:{phone:[phone]}}},
+    {phone_number:phone,firebase:{sign_in_provider:'phone',identities:{}}},
+    {phone_number:phone,firebase:{sign_in_provider:'phone',identities:{phone:['+919000000000']}}},
+    {phone_number:phone,firebase:{sign_in_provider:'phone',identities:{phone:[phone,phone]}}},
+    {phone_number:'919876543210',firebase:{sign_in_provider:'phone',identities:{phone:['919876543210']}}},
+  ])await assert.rejects(provider.verifyIdToken(token(claims)),safeFailure('INVALID_ID_TOKEN'));
+});
+
 for (const [name, changes] of [
   ['wrong audience', { aud: 'different-project' }],
   ['wrong issuer', { iss: 'https://attacker.invalid/project' }],

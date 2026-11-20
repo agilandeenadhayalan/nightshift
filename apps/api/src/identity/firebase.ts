@@ -10,6 +10,9 @@ export interface VerifiedFirebaseIdentity {
   readonly authTime: number;
   readonly issuedAt: number;
   readonly expiresAt: number;
+  readonly signInProvider?: string;
+  /** Private verified phone proof only; never returned in an app/session response. */
+  readonly phoneNumber?: string;
 }
 
 type FirebaseAuthClient = Pick<Auth, 'verifyIdToken' | 'createCustomToken'>;
@@ -131,8 +134,16 @@ export class FirebaseIdentityProvider {
         decoded.firebase?.tenant !== undefined) {
       throw invalidToken();
     }
-    // No phone, email, roles, arbitrary custom claims or bearer token cross this
-    // boundary. MSG91-backed sign-in uses Firebase's 'custom' provider.
+    const provider=decoded.firebase?.sign_in_provider;
+    let phoneNumber:string|undefined;
+    if(provider==='phone'){
+      const phone=decoded.phone_number,identities=decoded.firebase?.identities?.phone;
+      if(typeof phone!=='string' || !/^\+[1-9]\d{7,14}$/.test(phone) || !Array.isArray(identities)
+        || identities.length!==1 || identities[0]!==phone)throw invalidToken();
+      phoneNumber=phone;
+    }
+    // No role, email, custom claims or bearer token cross this boundary. The
+    // verified phone is consumed privately by the canonical identity mapper.
     return Object.freeze({
       uid: decoded.uid,
       issuer: decoded.iss,
@@ -140,6 +151,8 @@ export class FirebaseIdentityProvider {
       authTime: decoded.auth_time,
       issuedAt: decoded.iat,
       expiresAt: decoded.exp,
+      ...(provider==='phone'?{signInProvider:provider}:{}),
+      ...(phoneNumber?{phoneNumber}:{}),
     });
   }
 

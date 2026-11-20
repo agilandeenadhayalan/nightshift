@@ -132,6 +132,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               message: state.text(
                   'Fictional accounts and test credits only. No purchases or cash payouts. Keep both phones open during a call.',
                   'சோதனை கணக்குகள் மற்றும் சோதனை நாணயங்கள் மட்டுமே. வாங்குதல் அல்லது பணம் பெறுதல் இல்லை. அழைப்பின்போது இரு செயலிகளையும் திறந்து வைத்திருங்கள்.')),
+          OutlinedButton.icon(
+              onPressed: () => context.go('/phone-login'),
+              icon: const Icon(Icons.phone_outlined),
+              label: Text(state.text(
+                  'Sign in with your phone', 'தொலைபேசி மூலம் உள்நுழைக'))),
+          if (state.privacy.hasSavedReceipt)
+            TextButton(
+                onPressed: () => context.go('/deletion-status'),
+                child: Text(state.text('View saved deletion receipt',
+                    'சேமிக்கப்பட்ட நீக்க ரசீதைப் பார்'))),
           const ErrorNotice(),
           const SizedBox(height: 16),
           TextField(
@@ -1107,8 +1117,13 @@ class ProfileScreen extends ConsumerWidget {
             title: state.text(
                 'Listener approval required', 'கேட்பவருக்கான அங்கீகாரம் தேவை'),
             message: state.text(
-                'Only manually approved test listeners can go online. Review and application tooling is separate from this app.',
-                'அங்கீகரிக்கப்பட்ட சோதனை கேட்பவர்கள் மட்டுமே ஆன்லைன் செல்லலாம். விண்ணப்ப ஆய்வு இந்த செயலியிலிருந்து தனியானது.')),
+                'Only approved Listeners can go online. Apply privately below; staff review is separate.',
+                'அங்கீகரிக்கப்பட்ட கேட்பவர்கள் மட்டுமே ஆன்லைன் செல்லலாம். கீழே தனிப்பட்ட முறையில் விண்ணப்பிக்கலாம்; ஊழியர் ஆய்வு தனியானது.')),
+      OutlinedButton.icon(
+          onPressed: () => context.go('/listener-application'),
+          icon: const Icon(Icons.assignment_outlined),
+          label: Text(state.text(
+              'Apply to be a Listener', 'கேட்பவராக விண்ணப்பிக்கவும்'))),
       const SizedBox(height: 24),
       DropdownButtonFormField<String>(
           value: state.locale,
@@ -1130,8 +1145,13 @@ class ProfileScreen extends ConsumerWidget {
           title:
               state.text('Privacy in this build', 'இந்த பதிப்பின் தனியுரிமை'),
           message: state.text(
-              'No call recording, phone numbers, bank details or provider secrets are required on this device. Use consenting adults and fictional test accounts. Production support, reports and account deletion remain release gates.',
-              'அழைப்புப் பதிவு, தொலைபேசி எண்கள், வங்கி விவரங்கள் அல்லது சேவை ரகசியங்கள் இந்த சாதனத்தில் தேவையில்லை. ஒப்புக்கொண்ட பெரியவர்கள் மற்றும் சோதனை கணக்குகளைப் பயன்படுத்தவும். ஆதரவும் கணக்கு நீக்கமும் வெளியீட்டிற்கு முன் முடிக்கப்பட வேண்டும்.')),
+              'Calls are not recorded. Your phone number and date of birth stay private. Review your consent history and the account deletion notice below. Production support and retention approvals remain release requirements.',
+              'அழைப்புகள் பதிவு செய்யப்படாது. உங்கள் தொலைபேசி எண் மற்றும் பிறந்த தேதி தனிப்பட்டதாக இருக்கும். ஒப்புதல் வரலாறு மற்றும் கணக்கு நீக்க அறிவிப்பை கீழே படிக்கவும். ஆதரவு மற்றும் தரவு தக்கவைப்பு அனுமதிகள் வெளியீட்டிற்கு தேவை.')),
+      OutlinedButton.icon(
+          onPressed: () => context.go('/privacy'),
+          icon: const Icon(Icons.privacy_tip_outlined),
+          label: Text(state.text('Privacy and account deletion',
+              'தனியுரிமை மற்றும் கணக்கு நீக்கம்'))),
       const SizedBox(height: 16),
       OutlinedButton.icon(
           onPressed: state.busy ? null : state.logout,

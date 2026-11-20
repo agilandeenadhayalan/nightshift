@@ -48,3 +48,14 @@ test('phone validation requires complete config and rejects emulator bypass', ()
   }
   assert.throws(() => loadConfig({ ...phoneEnv, FIREBASE_PROJECT_ID: 'wrong project' }), /requires valid/);
 });
+
+test('native Firebase configuration is explicit and its admission budget is separate from legacy SMS sends',()=>{
+  const env={...phoneEnv,PHONE_AUTH_PROVIDER:'firebase',PHONE_AUTH_DAILY_ADMISSION_LIMIT:'10',MSG91_WIDGET_ID:'',MSG91_AUTH_KEY:'',PHONE_AUTH_DAILY_SEND_LIMIT:''};
+  const configured=loadConfig(env).phoneAuth!;
+  assert.equal(configured.provider,'firebase');assert.equal(configured.dailyAdmissionLimit,10);
+  assert.equal(configured.dailySendLimit,undefined);assert.equal(configured.msg91AuthKey,undefined);
+  assert.equal(loadConfig({...env,PHONE_AUTH_ENABLED:'false'}).phoneAuth,undefined);
+  assert.throws(()=>loadConfig({...env,PHONE_AUTH_DAILY_ADMISSION_LIMIT:'',PHONE_AUTH_DAILY_SEND_LIMIT:'10'}),/requires valid/);
+  assert.throws(()=>loadConfig({...env,PHONE_AUTH_PROVIDER:'twilio'}),/PHONE_AUTH_PROVIDER/);
+  assert.throws(()=>loadConfig({...env,NODE_ENV:'production'}),/PRODUCTION_NOT_READY/);
+});

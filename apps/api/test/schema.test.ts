@@ -77,7 +77,7 @@ async function event(provider = 'fixture-payout', kind = 'payout', eventDigest =
 test('empty migration is repeatable and commerce cannot bypass test-only boundaries', async () => {
   const migrations = await db.pool.query('SELECT name FROM schema_migrations ORDER BY name');
   assert.deepEqual(migrations.rows.map(row => row.name), [
-    '001_android_test_milestone.sql', '002_durable_event_sequence.sql', '003_identity_commerce_foundation.sql', '004_otp_challenges.sql', '005_video_calls.sql',
+    '001_android_test_milestone.sql', '002_durable_event_sequence.sql', '003_identity_commerce_foundation.sql', '004_otp_challenges.sql', '005_video_calls.sql', '006_account_onboarding.sql', '007_account_lifecycle.sql', '008_listener_applications.sql', '009_firebase_phone.sql', '010_presence_versions.sql',
   ]);
   const id = await purchase();
   await assert.rejects(db.pool.query('UPDATE purchases SET test_only=false WHERE id=$1', [id]), code('23514'));
@@ -107,7 +107,8 @@ test('forward migration preserves representative users, review, history, journal
       const tables = ['users', 'listener_reviews', 'call_sessions', 'call_events', 'outbox_events', 'wallet_accounts', 'journal_batches', 'journal_lines'];
       const values: Record<string, unknown> = {};
       for (const table of tables) {
-        values[table] = (await upgrade.pool.query(`SELECT to_jsonb(t) - 'application_id' - 'media_type' - 'customer_video_consent_at' - 'listener_video_consent_at' AS record FROM ${table} t ORDER BY id`)).rows;
+        values[table] = (await upgrade.pool.query(`SELECT to_jsonb(t) - 'application_id' - 'media_type' - 'customer_video_consent_at' - 'listener_video_consent_at'
+          - 'identity_revoked_before' - 'identity_last_issued_at' - 'identity_last_auth_time' - 'presence_version' AS record FROM ${table} t ORDER BY id`)).rows;
       }
       return values;
     };
@@ -119,6 +120,10 @@ test('forward migration preserves representative users, review, history, journal
     assert.deepEqual(await snapshot(), beforeRows);
     assert.deepEqual((await upgrade.pool.query('SELECT name,checksum FROM schema_migrations ORDER BY name LIMIT 2')).rows, beforeChecksums);
     assert.equal((await upgrade.pool.query('SELECT application_id FROM listener_reviews')).rows[0].application_id, null);
+    for(const row of (await upgrade.pool.query('SELECT identity_revoked_before,identity_last_issued_at,identity_last_auth_time FROM users')).rows){
+      assert.deepEqual(row,{identity_revoked_before:null,identity_last_issued_at:null,identity_last_auth_time:null});
+    }
+    assert.ok((await upgrade.pool.query('SELECT presence_version FROM users')).rows.every(row=>row.presence_version==='0'));
     assert.deepEqual((await upgrade.pool.query('SELECT media_type,customer_video_consent_at,listener_video_consent_at FROM call_sessions WHERE id=$1', [callId])).rows[0],
       {media_type: 'audio', customer_video_consent_at: null, listener_video_consent_at: null});
   } finally {

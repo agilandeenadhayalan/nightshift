@@ -193,6 +193,12 @@ class ApiClient {
           return CallPage.fromJson(value);
         case 'CancelCallRequest':
           return CancelCallRequest.fromJson(value);
+        case 'CompleteOnboardingRequest':
+          return CompleteOnboardingRequest.fromJson(value);
+        case 'ConsentEvent':
+          return ConsentEvent.fromJson(value);
+        case 'ConsentHistory':
+          return ConsentHistory.fromJson(value);
         case 'CreateCallRequest':
           return CreateCallRequest.fromJson(value);
         case 'CreateReport201Response':
@@ -201,6 +207,14 @@ class ApiClient {
           return CreateReportRequest.fromJson(value);
         case 'DeclineCallRequest':
           return DeclineCallRequest.fromJson(value);
+        case 'DeletionNotice':
+          return DeletionNotice.fromJson(value);
+        case 'DeletionReceipt':
+          return DeletionReceipt.fromJson(value);
+        case 'DeletionReceiptRequest':
+          return DeletionReceiptRequest.fromJson(value);
+        case 'DeletionRequest':
+          return DeletionRequest.fromJson(value);
         case 'DevelopmentSignInRequest':
           return DevelopmentSignInRequest.fromJson(value);
         case 'Error':
@@ -211,6 +225,8 @@ class ApiClient {
           return Event.fromJson(value);
         case 'FavoriteListener200Response':
           return FavoriteListener200Response.fromJson(value);
+        case 'FirebasePhoneAdmission':
+          return FirebasePhoneAdmission.fromJson(value);
         case 'FirebaseVerifyRequest':
           return FirebaseVerifyRequest.fromJson(value);
         case 'GetEvents200Response':
@@ -225,10 +241,20 @@ class ApiClient {
           return Heartbeat201Response.fromJson(value);
         case 'Listener':
           return Listener.fromJson(value);
+        case 'ListenerApplication':
+          return ListenerApplication.fromJson(value);
+        case 'ListenerApplicationInput':
+          return ListenerApplicationInput.fromJson(value);
+        case 'ListenerApplicationState':
+          return ListenerApplicationState.fromJson(value);
         case 'ListenerPage':
           return ListenerPage.fromJson(value);
         case 'Login':
           return Login.fromJson(value);
+        case 'OnboardingProfile':
+          return OnboardingProfile.fromJson(value);
+        case 'OnboardingState':
+          return OnboardingState.fromJson(value);
         case 'OtpChallenge':
           return OtpChallenge.fromJson(value);
         case 'OtpProof':
@@ -239,10 +265,18 @@ class ApiClient {
           return OtpVerifyRequest.fromJson(value);
         case 'PhoneIdentity':
           return PhoneIdentity.fromJson(value);
+        case 'PhoneSession':
+          return PhoneSession.fromJson(value);
+        case 'PhoneSessionRequest':
+          return PhoneSessionRequest.fromJson(value);
         case 'Rate':
           return Rate.fromJson(value);
         case 'ReportMediaReadyRequest':
           return ReportMediaReadyRequest.fromJson(value);
+        case 'ReviewUpload':
+          return ReviewUpload.fromJson(value);
+        case 'ReviewUploadRequest':
+          return ReviewUploadRequest.fromJson(value);
         case 'RtcConfig':
           return RtcConfig.fromJson(value);
         case 'RtcToken':

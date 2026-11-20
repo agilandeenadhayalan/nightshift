@@ -45,12 +45,34 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm run test:integration
+        timeout-minutes: 5
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - run: npm run test:economics
   android:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.7-alpine
+        env:
+          POSTGRES_USER: nightshift
+          POSTGRES_PASSWORD: isolated-ci-only
+          POSTGRES_DB: nightshift_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U nightshift -d nightshift_test"
+          --health-interval 3s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7.4.7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 3s --health-timeout 3s --health-retries 20
+    env:
+      NODE_ENV: test
+      TEST_DATABASE_URL: postgresql://nightshift:isolated-ci-only@127.0.0.1:5432/nightshift_test
+      REDIS_URL: redis://127.0.0.1:6379/15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -69,6 +91,9 @@ jobs:
           cache: true
       - run: npm run check:client
       - run: npm run check:mobile
+      - run: npm run test:review-reader
+      - run: npm run build
+      - run: npm run smoke:accounts
       - run: npm run build:android
       - uses: actions/upload-artifact@v4
         with:

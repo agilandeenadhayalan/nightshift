@@ -12,6 +12,7 @@
     "test:integration": "turbo run test:integration --filter=@nightshift/api",
     "test:audio": "turbo run test --filter=@nightshift/audio",
     "test:tooling": "node --test scripts/*.test.mjs",
+    "test:review-reader": "node scripts/test-review-reader.mjs",
     "test:economics": "python -m unittest discover -s tests -p test_*.py",
     "db:migrate": "turbo run db:migrate --filter=@nightshift/api",
     "db:seed": "turbo run db:seed --filter=@nightshift/api",
@@ -26,6 +27,7 @@
     "generate:client": "turbo run generate:client --filter=@nightshift/contracts",
     "check:client": "turbo run check:client --filter=@nightshift/contracts",
     "smoke:api": "node --env-file-if-exists=.env scripts/smoke-api.mjs",
+    "smoke:accounts": "node --env-file-if-exists=.env scripts/smoke-account-client.cjs",
     "smoke:client": "node --env-file-if-exists=.env scripts/smoke-generated-client.mjs"
   },
   "devDependencies": {

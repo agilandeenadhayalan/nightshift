@@ -1,10 +1,14 @@
+import { isAbsolute } from 'node:path';
+
 export interface Config {
   databaseUrl: string; redisUrl: string; port: number; devAccessKey: string;
   agoraAppId?: string; agoraAppCertificate?: string;
   videoCallsEnabled?: boolean;
+  privateReviewDirectory?: string;
   phoneAuth?: {
+    provider?: 'msg91'|'firebase';
     projectId: string; digestKey: string; consentVersion: string;
-    msg91WidgetId: string; msg91AuthKey: string; dailySendLimit: number;
+    msg91WidgetId?: string; msg91AuthKey?: string; dailySendLimit?: number; dailyAdmissionLimit?: number;
   };
 }
 
@@ -24,25 +28,29 @@ export function loadConfig(env = process.env): Config {
     throw new Error('VIDEO_CALLS_ENABLED must be true or false');
   }
   let phoneAuth: Config['phoneAuth'];
+  const privateReviewDirectory=env.PRIVATE_REVIEW_STORAGE_DIR || undefined;
+  if(privateReviewDirectory && !isAbsolute(privateReviewDirectory))throw new Error('PRIVATE_REVIEW_STORAGE_DIR must be an absolute private directory');
   if (env.PHONE_AUTH_ENABLED !== undefined && !['true', 'false'].includes(env.PHONE_AUTH_ENABLED)) {
     throw new Error('PHONE_AUTH_ENABLED must be true or false');
   }
   if (env.PHONE_AUTH_ENABLED === 'true') {
     if (env.FIREBASE_AUTH_EMULATOR_HOST !== undefined) throw new Error('Phone identity validation cannot use the Firebase emulator');
-    const dailySendLimit = Number(env.PHONE_AUTH_DAILY_SEND_LIMIT);
+    const provider=env.PHONE_AUTH_PROVIDER??'msg91';
+    if(!['msg91','firebase'].includes(provider))throw new Error('PHONE_AUTH_PROVIDER must be firebase or msg91');
+    const dailySendLimit = Number(provider==='firebase'?env.PHONE_AUTH_DAILY_ADMISSION_LIMIT:env.PHONE_AUTH_DAILY_SEND_LIMIT);
     if (!/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(env.FIREBASE_PROJECT_ID ?? '') ||
         (env.PHONE_AUTH_DIGEST_KEY?.length ?? 0) < 32 ||
         (env.PHONE_AUTH_DIGEST_KEY?.length ?? 0) > 256 ||
         !/^[A-Za-z0-9._-]{1,80}$/.test(env.PHONE_AUTH_CONSENT_VERSION ?? '') ||
-        !/^[A-Za-z0-9_-]{8,128}$/.test(env.MSG91_WIDGET_ID ?? '') ||
-        !/^[!-~]{16,512}$/.test(env.MSG91_AUTH_KEY ?? '') ||
         !Number.isSafeInteger(dailySendLimit) || dailySendLimit < 1 || dailySendLimit > 1000) {
-      throw new Error('Phone identity validation requires valid FIREBASE_PROJECT_ID, PHONE_AUTH_DIGEST_KEY, PHONE_AUTH_CONSENT_VERSION, MSG91_WIDGET_ID, MSG91_AUTH_KEY and PHONE_AUTH_DAILY_SEND_LIMIT');
+      throw new Error('Phone identity validation requires valid project, stable digest key, consent version and explicit daily admission/send limit');
     }
+    if(provider==='msg91' && (!/^[A-Za-z0-9_-]{8,128}$/.test(env.MSG91_WIDGET_ID??'') || !/^[!-~]{16,512}$/.test(env.MSG91_AUTH_KEY??'')))throw new Error('Legacy MSG91 requires valid MSG91_WIDGET_ID and MSG91_AUTH_KEY');
     phoneAuth = { projectId: env.FIREBASE_PROJECT_ID!, digestKey: env.PHONE_AUTH_DIGEST_KEY!,
-      consentVersion: env.PHONE_AUTH_CONSENT_VERSION!, msg91WidgetId: env.MSG91_WIDGET_ID!, msg91AuthKey: env.MSG91_AUTH_KEY!, dailySendLimit };
+      consentVersion: env.PHONE_AUTH_CONSENT_VERSION!, provider:provider as 'firebase'|'msg91',
+      ...(provider==='firebase'?{dailyAdmissionLimit:dailySendLimit}:{msg91WidgetId:env.MSG91_WIDGET_ID!,msg91AuthKey:env.MSG91_AUTH_KEY!,dailySendLimit}) };
   }
   return { databaseUrl: env.DATABASE_URL, redisUrl: env.REDIS_URL, port,
     devAccessKey: env.DEV_ACCESS_KEY!, agoraAppId: env.AGORA_APP_ID,
-    agoraAppCertificate: env.AGORA_APP_CERTIFICATE, videoCallsEnabled: env.VIDEO_CALLS_ENABLED === 'true', phoneAuth };
+    agoraAppCertificate: env.AGORA_APP_CERTIFICATE, videoCallsEnabled: env.VIDEO_CALLS_ENABLED === 'true', phoneAuth,privateReviewDirectory };
 }
