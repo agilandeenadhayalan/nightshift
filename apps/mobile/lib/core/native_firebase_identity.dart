@@ -212,6 +212,25 @@ class NativeFirebaseIdentityClient implements PhoneIdentityClient {
   }
 }
 
+/// Selects Firebase's real browser app-verification flow for a diagnostic debug
+/// build. Verification remains enabled, including when the switch is omitted.
+@visibleForTesting
+Future<bool> configurePhoneAppVerification({
+  required Future<void> Function({
+    required bool appVerificationDisabledForTesting,
+    required bool forceRecaptchaFlow,
+  }) applySettings,
+  required bool Function() isCurrent,
+  bool debugBuild = kDebugMode,
+  bool forceRequested = const bool.fromEnvironment('FIREBASE_FORCE_RECAPTCHA'),
+}) async {
+  if (!isCurrent()) return false;
+  await applySettings(
+      appVerificationDisabledForTesting: false,
+      forceRecaptchaFlow: debugBuild && forceRequested);
+  return isCurrent();
+}
+
 class FlutterFirePhoneDriver implements NativePhoneAuthDriver {
   static const _apiKey = String.fromEnvironment('FIREBASE_WEB_API_KEY');
   static const _appId = String.fromEnvironment('FIREBASE_ANDROID_APP_ID');
@@ -254,7 +273,10 @@ class FlutterFirePhoneDriver implements NativePhoneAuthDriver {
       int? resendToken}) async {
     try {
       final auth = await _auth();
-      if (!isCurrent()) return;
+      if (!await configurePhoneAppVerification(
+          applySettings: auth.setSettings, isCurrent: isCurrent)) {
+        return;
+      }
       await auth.verifyPhoneNumber(
           phoneNumber: phone,
           timeout: const Duration(seconds: 60),
