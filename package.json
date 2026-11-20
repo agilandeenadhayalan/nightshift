@@ -23,7 +23,10 @@
     "check:boundaries": "node scripts/check-boundaries.mjs && npm run check:boundaries --workspace @nightshift/backend-domain",
     "check:secrets": "node scripts/check-secrets.mjs",
     "check:contracts": "node packages/contracts/build-contract.mjs --check",
-    "smoke:api": "node --env-file-if-exists=.env scripts/smoke-api.mjs"
+    "generate:client": "turbo run generate:client --filter=@nightshift/contracts",
+    "check:client": "turbo run check:client --filter=@nightshift/contracts",
+    "smoke:api": "node --env-file-if-exists=.env scripts/smoke-api.mjs",
+    "smoke:client": "node --env-file-if-exists=.env scripts/smoke-generated-client.mjs"
   },
   "devDependencies": {
     "turbo": "2.11.13",

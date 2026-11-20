@@ -59,6 +59,10 @@ flutter build apk --debug
 adb devices
 ```
 
+The app consumes the generated SDK under `packages/contracts/dart`. After an API contract change, run `npm run generate:client` from the root with Java 17+ on PATH or configured through `JAVA_HOME`; `npm run check:client` compares a fresh generation against the committed SDK. The first run downloads the checksum-pinned generator JAR into ignored `artifacts/openapi-generator`; subsequent runs reuse it. No provider credentials are needed for generation.
+
+With the backend healthy, return to the root and run `npm run smoke:client` with the pinned Node and Flutter tools on PATH. The wrapper loads root `.env` privately and runs the Dart SDK against `http://127.0.0.1:3000` (override `API_BASE_URL` if needed). It verifies the HTTP call lifecycle and both histories using test identities without simulating media readiness. It does not replace the two-phone test.
+
 APK: `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`. Both phones install the same APK, with provisional application ID `com.nightshift.app`, and connect to the same backend. Production registration/signing remain owner decisions.
 
 For a smaller APK on ARM64 phones, build `flutter build apk --debug --split-per-abi --target-platform android-arm64` and install `build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk`. Check the phone with `adb -s DEVICE_SERIAL shell getprop ro.product.cpu.abi`; use the universal APK for other ABIs. The split APK uses version code 2001, so switching back to universal version code 1 requires `adb install -r -d` for an explicit debug downgrade. Both variants remain the same application and modes.

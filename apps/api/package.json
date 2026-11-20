@@ -10,7 +10,7 @@
     "db:migrate": "node --env-file-if-exists=../../.env dist/src/migrate.js",
     "db:seed": "node --env-file-if-exists=../../.env dist/src/seed.js",
     "test": "node --test dist/test/unit.test.js",
-    "test:integration": "node --env-file-if-exists=../../.env --test --test-concurrency=1 dist/test/integration.test.js"
+    "test:integration": "node --env-file-if-exists=../../.env --test --test-concurrency=1 --test-timeout=60000 dist/test/integration.test.js dist/test/schema.test.js"
   },
   "dependencies": {
     "@nightshift/backend-domain": "0.1.0",

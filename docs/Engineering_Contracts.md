@@ -19,13 +19,15 @@
 
 Use npm workspaces and Turborepo for the explicit task graph, retaining Flutter's own package manager and lockfile. Only runnable applications and real shared packages are registered: API, mobile task adapter, browser reference, contracts and backend-domain. Reserved web/admin/worker/config directories are not empty build targets. See [monorepo rules](Monorepo.md) and [ADR-0002](adr/0002-monorepo-task-graph.md).
 
-API code consumes backend-domain and contracts through declared package boundaries. Mobile depends on contracts as task metadata only; do not import TypeScript or server packages into Flutter. Apps do not import other apps. Backend-domain exports pure financial rules with no framework, provider or database dependency; the API owns authorization and durable transactions. Financial calculations execute only on the server. Contracts contain public schemas and no private configuration. Generate the Dart client as the endpoint surface grows; adoption remains tracked in #7. Local mock provider adapters are explicitly test-only; CI checks they cannot be enabled with production configuration.
+API code consumes backend-domain and contracts through declared package boundaries. Mobile uses the generated public Dart SDK in `packages/contracts/dart` and declares the contracts dependency in the task graph; do not import TypeScript or server packages into Flutter. Apps do not import other apps. Backend-domain exports pure financial rules with no framework, provider or database dependency; the API owns authorization and durable transactions. Financial calculations execute only on the server. Contracts contain public schemas and no private configuration. Generate the Dart client with `npm run generate:client` and reject drift with `npm run check:client`; generated code is never hand-edited. Local mock provider adapters are explicitly test-only; CI checks they cannot be enabled with production configuration.
 
 ## Main durable entities
 
 `users`, `auth_identities`, `devices`, `consents`, `profiles`, `languages`, `user_languages`, `listener_applications`, `listener_reviews`, `listener_profiles`, `blocks`, `favorites`, `call_sessions`, `call_participants`, `active_participant_claims`, `call_events`, `rate_versions`, `wallet_accounts`, `journal_batches`, `journal_lines`, `credit_lots`, `credit_allocations`, `spend_holds`, `purchases`, `provider_events`, `refunds`, `earning_accruals`, `payout_accounts`, `payout_requests`, `payout_events`, `reports`, `support_tickets`, `attachments`, `audit_events`, `outbox_events`, `deletion_requests`.
 
 Separate PII and financial identifiers from public profiles. Retain explicit links between purchase, lot, spend, call, host accrual and refund. Dates are stored in UTC; the user interface renders the user's time zone and includes the zone on downloadable statements. Use stable opaque IDs; telephone numbers are not usernames.
+
+The implemented schema and its dormant sandbox commerce records are documented in [Database_Model.md](Database_Model.md). Those records establish constraints without enabling provider authentication, purchases or payouts; full financial workflows remain later issues.
 
 ## API outline
 

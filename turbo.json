@@ -61,6 +61,16 @@
       "cache": false,
       "passThroughEnv": ["FLUTTER_ROOT", "PUB_CACHE", "FLUTTER_STORAGE_BASE_URL", "JAVA_HOME", "ANDROID_HOME", "ANDROID_SDK_ROOT", "GRADLE_USER_HOME", "LOCALAPPDATA", "APPDATA", "USERPROFILE", "SystemRoot"]
     },
-    "generate": {"cache": false}
+    "generate": {"cache": false},
+    "generate:client": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "passThroughEnv": ["JAVA_HOME", "LOCALAPPDATA", "APPDATA", "USERPROFILE", "SystemRoot"]
+    },
+    "check:client": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "passThroughEnv": ["JAVA_HOME", "LOCALAPPDATA", "APPDATA", "USERPROFILE", "SystemRoot"]
+    }
   }
 }
