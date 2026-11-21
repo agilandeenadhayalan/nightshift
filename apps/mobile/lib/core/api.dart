@@ -199,6 +199,8 @@ class NightShiftApi {
         return api.getConsentHistory();
       case 'GET /me/listener-application':
         return api.getListenerApplication();
+      case 'GET /me/listener-application/review':
+        return api.getListenerApplicationReview();
       case 'POST /listener-applications':
         return api.createListenerApplication(
             key(), generated.ListenerApplicationInput.fromJson(data)!);

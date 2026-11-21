@@ -3,11 +3,12 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {reviewDetailValue, reviewPageValue, type ReviewApplication, type ReviewLanguage, type ReviewSummary, type ReviewTopic} from '../lib/review-contract';
 import {object, type StaffSession} from '../lib/staff-contract';
+import ReviewDecision from './review-decision';
 
 const languageLabels: Record<ReviewLanguage, string> = {ta: 'Tamil', en: 'English'};
 const topicLabels: Record<ReviewTopic, string> = {everyday: 'Everyday life', work: 'Work', study: 'Study', hobbies: 'Hobbies', 'language-practice': 'Language practice'};
 type State = {kind: 'queue'; items: ReviewSummary[]; nextCursor: string | null; loading: boolean; error: string | null; expired: boolean} |
-  {kind: 'detail-loading'; id: string} | {kind: 'detail'; application: ReviewApplication} | {kind: 'detail-error'; id: string; message: string};
+  {kind: 'detail-loading'; id: string} | {kind: 'detail'; application: ReviewApplication; decisionsEnabled: boolean; recorded?: boolean} | {kind: 'detail-error'; id: string; message: string};
 const emptyQueue = (): State => ({kind: 'queue', items: [], nextCursor: null, loading: true, error: null, expired: false});
 function errorCode(body: unknown): string {
   return object(body) && object(body.error) && typeof body.error.code === 'string' ? body.error.code : '';
@@ -80,14 +81,14 @@ export default function ListenerReviews({session, onAccessLost}: {session: Staff
     void read(`/api/staff/listener-applications/${id}`, (response, body) => {
       if (response.status === 404 || response.status === 409) {setState({kind: 'detail-error', id, message: 'This application is no longer available for review. Return to the queue for current submissions.'}); return;}
       if (!response.ok || !reviewDetailValue(body) || body.application.id !== id) throw Error('Invalid detail');
-      setState({kind: 'detail', application: body.application});
+      setState({kind: 'detail', application: body.application, decisionsEnabled: body.decisionsEnabled});
     }, () => setState({kind: 'detail-error', id, message: 'Application details could not be loaded. Try again.'}));
   };
   useEffect(() => {if (state.kind === 'detail' || state.kind === 'detail-error') heading.current?.focus();}, [state.kind]);
   const application = state.kind === 'detail' ? state.application : null;
   const materialGeneration = revision.current;
   return <section className="reviews" aria-label="Listener applications">
-    <p className="review-boundary">Submitted applications only. Decisions are not available in this workspace yet.</p>
+    <p className="review-boundary">Submitted applications only. Decisions require an approved policy and separate review permissions.</p>
     {state.kind === 'queue' ? <>
       <div className="review-toolbar"><label>Requested language<select value={language} onChange={event => setLanguage(event.target.value as ReviewLanguage | '')}>
         <option value="">All languages</option><option value="ta">Tamil</option><option value="en">English</option>
@@ -109,15 +110,20 @@ export default function ListenerReviews({session, onAccessLost}: {session: Staff
       {state.kind === 'detail-loading' && <p role="status">Loading application…</p>}
       {state.kind === 'detail-error' && <div className="review-empty"><h2 ref={heading} tabIndex={-1}>Review material unavailable</h2><p role="status">{state.message}</p><button className="secondary" onClick={() => detail(state.id)}>Refresh application</button></div>}
       {application && <article className="review-detail">
-        <header><span className="status-label">Submitted</span><h2 ref={heading} tabIndex={-1}>{application.alias}</h2><p>Submitted <time dateTime={application.submittedAt}>{dateLabel(application.submittedAt)}</time></p></header>
+        <header><span className="status-label">{state.kind === 'detail' && state.recorded ? 'Review recorded' : 'Submitted'}</span><h2 ref={heading} tabIndex={-1}>{application.alias}</h2><p>Submitted <time dateTime={application.submittedAt}>{dateLabel(application.submittedAt)}</time></p></header>
+        {!(state.kind === 'detail' && state.recorded) && <>
         <dl className="review-facts"><div><dt>Application reference</dt><dd className="opaque-reference">{application.id}</dd></div><div><dt>Requested languages</dt><dd>{application.languages.map(value => languageLabels[value]).join(', ')}</dd></div>
           <div><dt>Age declaration</dt><dd>Self-declared adult. Age and identity have not been verified by this review.</dd></div></dl>
         <section aria-label="Application introduction"><h3>About the applicant</h3><p className="review-bio">{application.bio || 'No introduction provided.'}</p><h3>Conversation topics</h3><p>{application.topics.map(topic => topicLabels[topic]).join(', ') || 'No topics provided.'}</p></section>
         {application.voiceSample && session.permissions.includes('listener.review.evidence.read') ? <PrivateSample key={`${application.id}:${application.materialVersion}`} application={application}
-          unavailable={() => setState(current => revision.current === materialGeneration && current.kind === 'detail' && current.application.id === application.id && current.application.materialVersion === application.materialVersion
+          unavailable={() => setState(current => revision.current === materialGeneration && current.kind === 'detail' && !current.recorded && current.application.id === application.id && current.application.materialVersion === application.materialVersion
             ? {kind: 'detail-error', id: application.id, message: 'The sample could not be loaded or access has changed. Refresh the application before trying again.'} : current)} /> :
           <section className="review-sample"><h3>Private voice sample</h3><p>{application.voiceSample ? 'Your staff account does not have permission to listen to review samples.' : 'No current voice sample is available for this application.'}</p></section>}
         <button className="secondary" onClick={() => detail(application.id)}>Refresh application</button>
+        </>}
+        <ReviewDecision key={`${application.id}:${materialGeneration}`} application={application} session={session} enabled={state.kind === 'detail' && state.decisionsEnabled} onAccessLost={onAccessLost}
+          onRecorded={() => setState(current => current.kind === 'detail' && revision.current === materialGeneration ? {...current, recorded: true} : current)}
+          onStale={() => {++revision.current; setState({kind: 'detail-error', id: application.id, message: 'The application or review policy has changed. Refresh and read the current material before recording new findings.'});}} />
       </article>}
     </>}
   </section>;

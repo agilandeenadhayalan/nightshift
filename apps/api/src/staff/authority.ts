@@ -35,6 +35,7 @@ export class StaffAuthority {
   private checkCsrf(cookie:unknown,csrf:unknown){
     requireThat(validSecret(cookie)&&validSecret(csrf)&&equal(this.csrf(cookie),csrf),403,'STAFF_CSRF_INVALID','Refresh staff access and try again.');
   }
+  checkMutation(cookie:unknown,csrf:unknown,origin:unknown){this.origin(origin);this.checkCsrf(cookie,csrf);}
   private methods(identity:VerifiedStaffSignIn){
     const p=this.ready(),now=Math.floor(this.clock()/1000),time=(n:unknown)=>Number.isSafeInteger(n)&&Number(n)>=0;
     requireThat(identity&&identity.issuer===p.issuer&&identity.audience===p.audience&&identity.tenant===p.tenant

@@ -16,6 +16,8 @@ class ListenerApplication extends ChangeNotifier {
   final String? Function() currentUserId;
   final ReviewSamplePicker picker;
   Json? application;
+  Json? reviewOutcome;
+  String? reviewErrorCode;
   String bio = '';
   Set<String> topics = {}, languages = {'ta'};
   bool consent = false, busy = false, loaded = false, dirty = false;
@@ -83,6 +85,8 @@ class ListenerApplication extends ChangeNotifier {
       _submitKey = newId();
     }
     application = result;
+    reviewOutcome = null;
+    reviewErrorCode = null;
     if (result != null) _pendingCreate = null;
     bio = result?['bio'] as String? ?? '';
     topics = ((result?['topics'] as List?) ?? []).cast<String>().toSet();
@@ -103,6 +107,8 @@ class ListenerApplication extends ChangeNotifier {
     unawaited(picker.cancel());
     _owner = _origin = null;
     application = _grant = _pendingCreate = null;
+    reviewOutcome = null;
+    reviewErrorCode = null;
     sample = null;
     bio = '';
     topics = {};
@@ -127,6 +133,8 @@ class ListenerApplication extends ChangeNotifier {
     final generation = _generation;
     busy = true;
     errorCode = null;
+    reviewOutcome = null;
+    reviewErrorCode = null;
     _notify();
     try {
       final result =
@@ -143,6 +151,7 @@ class ListenerApplication extends ChangeNotifier {
         _grant = null;
         _grantKey = null;
       }
+      await _loadReview(generation);
     } catch (e) {
       if (_current(generation)) {
         errorCode = e is ApiFailure ? e.code : 'INVALID_RESPONSE';
@@ -151,6 +160,39 @@ class ListenerApplication extends ChangeNotifier {
       if (_current(generation)) {
         busy = false;
         _notify();
+      }
+    }
+  }
+
+  Future<void> _loadReview(int generation) async {
+    if (!_current(generation) ||
+        !['approved', 'rejected', 'needs_information']
+            .contains(application?['state'])) {
+      return;
+    }
+    final id = application!['id'], status = application!['state'];
+    try {
+      final result =
+          await _request(generation, 'GET', '/me/listener-application/review');
+      if (!_current(generation) ||
+          application?['id'] != id ||
+          application?['state'] != status) {
+        return;
+      }
+      final review = result['review'];
+      if (result['applicationId'] != id ||
+          result['state'] != status ||
+          (review != null &&
+              (review is! Json ||
+                  review['applicationId'] != id ||
+                  review['outcome'] != status))) {
+        reviewErrorCode = 'APPLICATION_REVIEW_CHANGED';
+        return;
+      }
+      reviewOutcome = review as Json?;
+    } catch (_) {
+      if (_current(generation)) {
+        reviewErrorCode = 'APPLICATION_REVIEW_UNAVAILABLE';
       }
     }
   }
@@ -184,7 +226,9 @@ class ListenerApplication extends ChangeNotifier {
     errorCode = null;
     _notify();
     try {
+      final previous = application;
       await action(generation);
+      if (!identical(previous, application)) await _loadReview(generation);
     } catch (e) {
       if (!_current(generation)) return;
       final code = e is ApiFailure ? e.code : 'INVALID_RESPONSE';

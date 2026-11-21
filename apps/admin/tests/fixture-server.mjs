@@ -4,6 +4,7 @@ import {spawn} from 'node:child_process';
 import {createRequire} from 'node:module';
 import {randomUUID} from 'node:crypto';
 import {applicationId, detail, nextCursor, page, second, secondId, third, materialVersion, sampleBytes} from './review-fixtures.ts';
+import {policy, receipt} from './decision-fixtures.ts';
 if (process.argv[2] !== '--test-fixtures') throw Error('Explicit test harness required');
 const require = createRequire(import.meta.url);
 const Ajv2020 = require('ajv/dist/2020.js').default;
@@ -13,7 +14,9 @@ const validators = Object.fromEntries(Object.entries(contract.components.schemas
 const token = 'a'.repeat(64), csrf = 'b'.repeat(64);
 let mode = 'unavailable', sessionReads = 0, mutations = 0, probes = 0;
 let queueReads = 0, detailReads = 0, sampleReads = 0;
-const session = () => ({staff: {id: 'c874c564-4701-445c-a090-cceab31ba9c9'}, permissions: mode === 'review-no-read' ? [] : mode.startsWith('review-') && mode !== 'review-no-evidence' ? ['listener.review.read', 'listener.review.evidence.read'] : ['listener.review.read'],
+let decisionPosts = 0, receiptReads = 0, decisionKeys = [], decisionBodies = [], savedReceipts = new Map();
+const decisionMode = () => mode.startsWith('decision-');
+const session = () => ({staff: {id: 'c874c564-4701-445c-a090-cceab31ba9c9'}, permissions: decisionMode() ? ['listener.review.read', 'listener.review.evidence.read', ...(mode === 'decision-no-permission' ? [] : ['listener.review.decide'])] : mode === 'review-no-read' ? [] : mode.startsWith('review-') && mode !== 'review-no-evidence' ? ['listener.review.read', 'listener.review.evidence.read'] : ['listener.review.read'],
   expiresAt: new Date(Date.now() + (mode === 'expiring' ? 1200 : 600000)).toISOString(), csrfToken: csrf});
 const upstream = createServer(async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
@@ -21,7 +24,7 @@ const upstream = createServer(async (req, res) => {
   const send = (data, code = 200) => {
     if (req.url?.startsWith('/v1/admin/')) {
       const path = new URL(req.url, 'http://fixture.test').pathname;
-      const name = code >= 400 ? 'StaffError' : path === '/v1/admin/listener-applications' ? 'StaffReviewQueue' : path.startsWith('/v1/admin/listener-applications/') ? 'StaffReviewDetail' : req.url.endsWith('/status') ? 'StaffAuthStatus' : req.url.endsWith('/session') ? 'StaffSession' : 'StaffLogout';
+      const name = code >= 400 ? 'StaffError' : path === '/v1/admin/listener-review-policy' ? 'StaffReviewPolicy' : path.endsWith('/decisions') || path.endsWith('/decision-receipt') ? 'StaffReviewReceipt' : path === '/v1/admin/listener-applications' ? 'StaffReviewQueue' : path.startsWith('/v1/admin/listener-applications/') ? 'StaffReviewDetail' : req.url.endsWith('/status') ? 'StaffAuthStatus' : req.url.endsWith('/session') ? 'StaffSession' : 'StaffLogout';
       if (!validators[name](data)) throw Error('Synthetic response does not match the public staff contract');
     }
     res.statusCode = code; res.end(JSON.stringify(data));
@@ -33,6 +36,8 @@ const upstream = createServer(async (req, res) => {
   }
   if (req.url === '/__fixture/counts') return send({sessionReads, mutations, probes});
   if (req.url === '/__fixture/review-counts') return send({queueReads, detailReads, sampleReads});
+  if (req.url === '/__fixture/decision-counts') return send({decisionPosts, receiptReads, decisionKeys, decisionBodies});
+  if (req.url === '/__fixture/reset-decisions' && req.method === 'POST') {decisionPosts = receiptReads = 0; decisionKeys = []; decisionBodies = []; savedReceipts = new Map(); return send({ok: true});}
   if (req.url?.startsWith('/__fixture/probe')) {probes++; return send({received: true});}
   if (req.url === '/v1/admin/auth/status') return send(mode === 'unavailable' ? {configured: false, available: false, reasonCode: 'STAFF_AUTH_UNAVAILABLE'} : {configured: true, available: true, reasonCode: null});
   if (req.url === '/v1/admin/session') {
@@ -40,6 +45,26 @@ const upstream = createServer(async (req, res) => {
     if (mode === 'revoked' || !req.headers.cookie?.includes(`__Host-nightshift_staff=${token}`)) return failure('STAFF_UNAUTHENTICATED', 401);
     if (mode === 'held-session') {setTimeout(() => send(session()), 300); return;}
     return send(session());
+  }
+  if (req.url === '/v1/admin/listener-review-policy') return send(decisionMode() && mode !== 'decision-off' ? policy : {enabled: false, reasonCode: 'REVIEW_POLICY_UNAVAILABLE'});
+  if (req.url?.endsWith('/decisions') || req.url?.endsWith('/decision-receipt')) {
+    if (mode === 'revoked' || !req.headers.cookie?.includes(`__Host-nightshift_staff=${token}`)) return failure('STAFF_UNAUTHENTICATED', 401);
+    if (mode === 'decision-no-permission') return failure('STAFF_FORBIDDEN', 403);
+    const key = req.headers['idempotency-key'];
+    if (!key || req.headers.authorization) return failure('INVALID_REVIEW_DECISION', 400);
+    if (req.url.endsWith('/decision-receipt')) {receiptReads++; return savedReceipts.has(key) ? send(savedReceipts.get(key)) : failure('REVIEW_DECISION_NOT_FOUND', 404);}
+    if (req.method !== 'POST' || req.headers.origin !== 'http://127.0.0.1:4773' || req.headers['x-csrf-token'] !== csrf) return failure('STAFF_CSRF_INVALID', 403);
+    decisionPosts++; const chunks = []; for await (const chunk of req) chunks.push(chunk); const input = JSON.parse(Buffer.concat(chunks).toString());
+    if (!validators.StaffReviewDecision(input)) throw Error('Invalid synthetic decision request');
+    decisionKeys.push(key); decisionBodies.push(input);
+    if (mode === 'decision-off') return failure('REVIEW_POLICY_UNAVAILABLE', 503);
+    if (mode === 'decision-stale') return failure('REVIEW_MATERIAL_CHANGED', 409);
+    if (mode === 'decision-policy-changed') return failure('REVIEW_POLICY_CHANGED', 409);
+    if (mode === 'decision-failed' && decisionPosts === 1) return failure('STAFF_REQUEST_TIMEOUT', 503);
+    const result = savedReceipts.get(key) ?? receipt(input); savedReceipts.set(key, result);
+    if (mode === 'decision-lost' && decisionPosts === 1) return failure('STAFF_REQUEST_TIMEOUT', 503);
+    if (mode === 'decision-held') {setTimeout(() => send(result), 600); return;}
+    return send(result);
   }
   if (req.url?.startsWith('/v1/admin/listener-applications')) {
     if (req.method !== 'GET') return failure('STAFF_FORBIDDEN', 403);
@@ -72,7 +97,8 @@ const upstream = createServer(async (req, res) => {
       return res.end(bytes);
     }
     detailReads++;
-    const body = id === secondId ? {...detail, application: {...detail.application, id: secondId, alias: second.alias, languages: ['ta'], bio: 'அன்றாட உரையாடல்களையும் மொழிப் பயிற்சியையும் விரும்புகிறேன். '.repeat(5)}} : detail;
+    const base = {...detail, decisionsEnabled: decisionMode() && mode !== 'decision-off'};
+    const body = id === secondId ? {...base, application: {...detail.application, id: secondId, alias: second.alias, languages: ['ta'], bio: 'அன்றாட உரையாடல்களையும் மொழிப் பயிற்சியையும் விரும்புகிறேன். '.repeat(5)}} : base;
     if (mode === 'review-held-detail' && id === applicationId) {setTimeout(() => send(body), 500); return;}
     return send(body);
   }

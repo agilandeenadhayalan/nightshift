@@ -5,6 +5,7 @@ export interface Config {
   agoraAppId?: string; agoraAppCertificate?: string;
   videoCallsEnabled?: boolean;
   privateReviewDirectory?: string;
+  staffReviewPolicyFile?: string;
   staffAuth?: {origin:string;digestKey:string;policyVersion:string;sessionSeconds:number};
   phoneAuth?: {
     provider?: 'msg91'|'firebase';
@@ -62,7 +63,9 @@ export function loadConfig(env = process.env): Config {
       ||!/^[A-Za-z0-9._-]{1,80}$/.test(env.STAFF_AUTH_POLICY_VERSION??''))throw new Error('Staff access requires native Firebase, a stable private digest key, explicit policy version and bounded session configuration');
     staffAuth={origin:origin.origin,digestKey:env.STAFF_AUTH_DIGEST_KEY!,policyVersion:env.STAFF_AUTH_POLICY_VERSION!,sessionSeconds};
   }
+  const staffReviewPolicyFile=env.STAFF_REVIEW_POLICY_FILE||undefined;
+  if(staffReviewPolicyFile&&(!staffAuth||!isAbsolute(staffReviewPolicyFile)))throw new Error('STAFF_REVIEW_POLICY_FILE requires configured staff access and an absolute approved policy file');
   return { databaseUrl: env.DATABASE_URL, redisUrl: env.REDIS_URL, port,
     devAccessKey: env.DEV_ACCESS_KEY!, agoraAppId: env.AGORA_APP_ID,
-    agoraAppCertificate: env.AGORA_APP_CERTIFICATE, videoCallsEnabled: env.VIDEO_CALLS_ENABLED === 'true', phoneAuth,privateReviewDirectory,staffAuth };
+    agoraAppCertificate: env.AGORA_APP_CERTIFICATE, videoCallsEnabled: env.VIDEO_CALLS_ENABLED === 'true', phoneAuth,privateReviewDirectory,staffAuth,staffReviewPolicyFile };
 }

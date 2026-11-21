@@ -20,6 +20,9 @@ import { StaffController } from './staff/http';
 import { createStaffAuthority } from './staff/factory';
 import { StaffReviewQueries } from './staff/review-queries';
 import { StaffReviewController } from './staff/review-http';
+import { StaffReviewDecisions } from './staff/review-decisions';
+import { StaffReviewDecisionController } from './staff/review-decision-http';
+import { createStaffReviewDecisions,loadApprovedReviewPolicy } from './staff/review-factory';
 
 type AuthenticatedRequest=Request & {actor:Actor;requestId:string};
 @Injectable()
@@ -95,7 +98,8 @@ class AccountController {
 @UseGuards(SessionGuard)
 class AppController {
   constructor(@Inject(Auth) private readonly auth:Auth,@Inject(NightShiftService) private readonly service:NightShiftService,
-    @Inject(ListenerApplications) private readonly applications:ListenerApplications){}
+    @Inject(ListenerApplications) private readonly applications:ListenerApplications,@Inject(StaffReviewDecisions) private readonly decisions:StaffReviewDecisions){}
+  @Get('me/listener-application/review') reviewStatus(@Req()req:AuthenticatedRequest,@Query()query:unknown){requireThat(!query||Object.keys(query).length===0,400,'INVALID_FIELD','No review query fields are accepted.');return this.decisions.ownerStatus(req.actor);}
   @Get('me/listener-application') application(@Req() req:AuthenticatedRequest){return this.applications.get(req.actor);}
   @Post('listener-applications') createApplication(@Req() req:AuthenticatedRequest,@Body() body:unknown){return this.applications.create(req.actor,body,req.headers['idempotency-key']);}
   @Put('listener-applications/:id') updateApplication(@Req() req:AuthenticatedRequest,@Param('id') id:string,@Body() body:unknown){return this.applications.update(req.actor,id,body);}
@@ -138,6 +142,8 @@ class AppController {
 }
 
 export async function createApplication(config:Config,clock:()=>number=Date.now,identityTestAdapters?:PhoneAuthDependencies){
+  requireThat(!config.staffReviewPolicyFile||config.staffAuth,503,'REVIEW_POLICY_UNAVAILABLE','Approved review policy requires configured staff authority.');
+  const approvedReviewPolicy=await loadApprovedReviewPolicy(config.staffReviewPolicyFile);
   const db=new Database(config.databaseUrl),presence=new Presence(config.redisUrl);
   await presence.connect();
   let phone:PhoneAuthentication;
@@ -153,8 +159,9 @@ export async function createApplication(config:Config,clock:()=>number=Date.now,
   const staff=staffRuntime.authority;
   // The fallback key cannot enable a disabled staff authority; it only keeps
   // the read service constructible in the existing default-off bootstrap.
-  const reviews=new StaffReviewQueries(db,staff,{storage:reviewStorage,cursorKey:config.staffAuth?.digestKey??tokenHash(config.devAccessKey)},clock);
-  @Module({controllers:[PublicController,AccountController,AppController,StaffController,StaffReviewController],providers:[SessionGuard,OnboardingSessionGuard,{provide:Auth,useValue:auth},{provide:NightShiftService,useValue:service},{provide:PhoneAuthentication,useValue:phone},{provide:Onboarding,useValue:onboarding},{provide:AccountLifecycle,useValue:lifecycle},{provide:ListenerApplications,useValue:applications},{provide:StaffAuthority,useValue:staff},{provide:StaffReviewQueries,useValue:reviews}]})
+  const reviews=new StaffReviewQueries(db,staff,{storage:reviewStorage,cursorKey:config.staffAuth?.digestKey??tokenHash(config.devAccessKey),decisionsEnabled:()=>decisions.policy().enabled},clock);
+  const decisions=createStaffReviewDecisions(db,staff,reviews,approvedReviewPolicy,clock);
+  @Module({controllers:[PublicController,AccountController,AppController,StaffController,StaffReviewController,StaffReviewDecisionController],providers:[SessionGuard,OnboardingSessionGuard,{provide:Auth,useValue:auth},{provide:NightShiftService,useValue:service},{provide:PhoneAuthentication,useValue:phone},{provide:Onboarding,useValue:onboarding},{provide:AccountLifecycle,useValue:lifecycle},{provide:ListenerApplications,useValue:applications},{provide:StaffAuthority,useValue:staff},{provide:StaffReviewQueries,useValue:reviews},{provide:StaffReviewDecisions,useValue:decisions}]})
   class AppModule{}
   const app=await NestFactory.create(AppModule,{logger:['error','warn'],bodyParser:true});
   app.use((req:AuthenticatedRequest,res:Response,next:()=>void)=>{
@@ -264,10 +271,10 @@ export async function createApplication(config:Config,clock:()=>number=Date.now,
     if(privacyRunning)return;privacyRunning=true;
     try{
       // Each recovery pass gets a chance even when the other storage boundary fails.
-      await Promise.allSettled([lifecycle.processPending(),applications.sweepExpiredUploads(),service.directory.cleanupExpired(),staff.cleanupAccessRequests()]);
+      await Promise.allSettled([lifecycle.processPending(),applications.sweepExpiredUploads(),service.directory.cleanupExpired(),staff.cleanupAccessRequests(),decisions.processPending()]);
     }catch{/* Retry durable work on the next tick; never log private records. */}
     finally{privacyRunning=false;}
   })(),30000);privacyTimer.unref();
   await app.init();
-  return {app,db,presence,auth,service,phone,lifecycle,applications,async close(){clearInterval(timer);clearInterval(directoryTimer);clearInterval(privacyTimer);await io.close();await app.close();await staffRuntime.close();await phone.close();await presence.close();await db.close();}};
+  return {app,db,presence,auth,service,phone,lifecycle,applications,decisions,async close(){clearInterval(timer);clearInterval(directoryTimer);clearInterval(privacyTimer);await io.close();await app.close();await staffRuntime.close();await phone.close();await presence.close();await db.close();}};
 }

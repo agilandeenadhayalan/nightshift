@@ -459,8 +459,9 @@ void main() {
     addTearDown(flow.dispose);
     await flow.load();
     expect(flow.canWithdraw, true);
+    final loadedRequests = api.requests.length;
     await flow.withdraw(confirmed: false);
-    expect(api.requests.length, 1);
+    expect(api.requests.length, loadedRequests);
     await flow.withdraw(confirmed: true);
     expect(flow.application!['state'], 'approved');
     expect(flow.consent, false);

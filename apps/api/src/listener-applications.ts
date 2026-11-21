@@ -142,7 +142,9 @@ export class ListenerApplications {
     return this.db.tx(async c=>{
       const owner=await this.owner(c,actor);requireThat(!owner.listener_approved,409,'LISTENER_ALREADY_APPROVED','Your Listener access is already approved.');
       return this.idempotent(c,actor,'listener.application.create',key,input,async()=>{
-        const active=await c.query("SELECT id FROM listener_applications WHERE user_id=$1 AND state IN ('draft','submitted','needs_information')",[actor.id]);
+        // A durable approval may still be waiting for its entitlement worker.
+        // It must not open a second application during that commit/projection gap.
+        const active=await c.query("SELECT id FROM listener_applications WHERE user_id=$1 AND state IN ('draft','submitted','needs_information','approved')",[actor.id]);
         requireThat(!active.rows.length,409,'APPLICATION_EXISTS','Continue your existing application.');
         const id=randomUUID(),{rows}=await c.query(`INSERT INTO listener_applications(id,user_id,bio,topics,languages,voice_sample_consent,consent_version)
           VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *`,[id,actor.id,input.bio,input.topics,input.languages,input.voiceSampleConsent,CONSENT]);
