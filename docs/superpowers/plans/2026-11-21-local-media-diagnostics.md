@@ -29,6 +29,6 @@ Primary SDK evidence is the installed pinned Agora Flutter 6.5.3 source. Current
 - [x] Wire actual SDK callbacks and controller lifecycle without affecting call behavior: 30 focused cases passed.
 - [x] Implement explicit localized view/copy with owner-fenced widget verification: 12 cases passed, including real Call/Recents navigation.
 - [x] Complete independent review and local checks: 499 Flutter cases passed with 24 explicit platform/time-zone skips, clean analyzer, 3 audio reference and 11 tooling cases. Configured APK 6007 verifies 222 source/four private inputs, signature and 31 ELF/ZIP alignments; no installation.
-- [ ] Publish a draft stacked PR and verify its final-commit CI.
+- [x] Publish draft PR #85 stacked on PR #84; backend, Android and staff CI passed for final head `45bb2aaa6463fba472de42ae68f15dddb48ae260` in run 44873118015. APK 6007 is sealed to all 222 committed inputs (193 byte-exact, 29 verified Git text CRLF→LF) and four unchanged private inputs.
 
 Synthetic callbacks are not real network impairment, audible one-way audio or physical capture-stop evidence. This slice does not provide backend QoS retention, remote support lookup, staffed support or complete FA-032 acceptance. Production diagnostic retention/upload policy remains a later owner-reviewed decision; no such storage is activated here.
