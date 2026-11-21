@@ -428,11 +428,8 @@ class CallScreen extends ConsumerWidget {
         .toStringAsFixed(2)
         .replaceFirst(RegExp(r'\.00$'), '');
     final title = state.endingLocally
-        ? call.isVideo
-            ? state.text('Camera and audio stopped · waiting for server',
-                'கேமராவும் ஆடியோவும் நிறுத்தப்பட்டன · சேவையகத்திற்காக காத்திருக்கிறது')
-            : state.text('Audio stopped · waiting for server',
-                'ஆடியோ நிறுத்தப்பட்டது · சேவையகத்திற்காக காத்திருக்கிறது')
+        ? state.text('Ending call · waiting for confirmation',
+            'அழைப்பை முடிக்கிறது · உறுதிப்படுத்தலுக்காக காத்திருக்கிறது')
         : switch (call.state) {
             'ringing' => incoming
                 ? call.isVideo

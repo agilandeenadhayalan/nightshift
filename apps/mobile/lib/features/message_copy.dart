@@ -258,9 +258,17 @@ String errorMessage(String? code, String locale) {
         'The audio connection failed. Try another call.',
         'ஆடியோ இணைப்பு தோல்வியடைந்தது. மீண்டும் அழைக்கவும்.'
       ),
+    'RTC_CLEANUP_PENDING' => (
+        'Audio is still closing. Wait before starting another call.',
+        'ஆடியோ நிறுத்தம் இன்னும் முடியவில்லை. மற்றொரு அழைப்பைத் தொடங்கும் முன் காத்திருக்கவும்.'
+      ),
+    'RTC_CLEANUP_FAILED' => (
+        'Audio cleanup could not be confirmed. Starting another call is blocked.',
+        'ஆடியோ நிறுத்தத்தை உறுதிப்படுத்த முடியவில்லை. மற்றொரு அழைப்பைத் தொடங்க முடியாது.'
+      ),
     'END_PENDING' => (
-        'Audio has stopped. Waiting for the server to confirm the call ended.',
-        'ஆடியோ நிறுத்தப்பட்டது. அழைப்பு முடிவை சேவையகம் உறுதிப்படுத்த காத்திருக்கிறது.'
+        'Waiting for the server to confirm the call ended.',
+        'அழைப்பு முடிவை சேவையகம் உறுதிப்படுத்த காத்திருக்கிறது.'
       ),
     'LISTENER_BUSY' || 'CALL_ACTIVE' => (
         'A participant is already in a call. Try again when available.',
