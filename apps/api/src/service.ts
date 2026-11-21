@@ -193,7 +193,10 @@ export class NightShiftService {
       listenerName:names.rows.find(u=>u.id===r.listener_id)?.display_name,state:r.state,version:r.version,
       createdAt:iso(r.created_at),expiresAt:iso(r.expires_at),acceptedAt:iso(r.accepted_at),endedAt:iso(r.ended_at),reason:r.reason,
       connectedMs:Number(r.connected_ms),chargeMicrocredits:Number(r.charge_microcredits),earningPaise:Number(r.earning_paise),
-      rate:r.rate_snapshot,maxDurationSeconds:r.max_duration_seconds,testOnly:true };
+      // The frozen 60..600-second development allowance includes free time.
+      // Later wallet changes do not alter which limit admitted this call.
+      rate:r.rate_snapshot,maxDurationSeconds:r.max_duration_seconds,
+      durationLimitReason:r.max_duration_seconds<600?'test_credit_balance':'test_duration_cap',testOnly:true };
   }
   async call(actorId: string,id: string) { return this.view(this.db.pool,await this.row(this.db.pool,actorId,id)); }
   async history(actorId: string,cursor?: string) {

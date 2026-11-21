@@ -6554,6 +6554,14 @@
               "audio",
               "video"
             ]
+          },
+          "durationLimitReason": {
+            "type": "string",
+            "enum": [
+              "test_credit_balance",
+              "test_duration_cap"
+            ],
+            "description": "Reason for the frozen connected-time allowance at reservation. May be absent on legacy events and idempotent responses."
           }
         },
         "required": [

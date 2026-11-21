@@ -32,6 +32,7 @@ class Call {
     required this.maxDurationSeconds,
     required this.testOnly,
     this.mediaType,
+    this.durationLimitReason,
   });
 
   String id;
@@ -72,6 +73,9 @@ class Call {
 
   CallMediaTypeEnum? mediaType;
 
+  /// Reason for the frozen connected-time allowance at reservation. May be absent on legacy events and idempotent responses.
+  CallDurationLimitReasonEnum? durationLimitReason;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is Call &&
     other.id == id &&
@@ -92,7 +96,8 @@ class Call {
     other.rate == rate &&
     other.maxDurationSeconds == maxDurationSeconds &&
     other.testOnly == testOnly &&
-    other.mediaType == mediaType;
+    other.mediaType == mediaType &&
+    other.durationLimitReason == durationLimitReason;
 
   @override
   int get hashCode =>
@@ -115,7 +120,8 @@ class Call {
     (rate.hashCode) +
     (maxDurationSeconds.hashCode) +
     (testOnly.hashCode) +
-    (mediaType == null ? 0 : mediaType!.hashCode);
+    (mediaType == null ? 0 : mediaType!.hashCode) +
+    (durationLimitReason == null ? 0 : durationLimitReason!.hashCode);
 
   @override
   // Never include tokens, access keys or private fields in diagnostics.
@@ -155,6 +161,9 @@ class Call {
       json[r'testOnly'] = this.testOnly;
     if (this.mediaType != null) {
       json[r'mediaType'] = this.mediaType;
+    }
+    if (this.durationLimitReason != null) {
+      json[r'durationLimitReason'] = this.durationLimitReason;
     }
     return json;
   }
@@ -320,6 +329,7 @@ class Call {
         maxDurationSeconds: mapValueOfType<int>(json, r'maxDurationSeconds')!,
         testOnly: CallTestOnlyEnum.fromJson(json[r'testOnly'])!,
         mediaType: CallMediaTypeEnum.fromJson(json[r'mediaType']),
+        durationLimitReason: CallDurationLimitReasonEnum.fromJson(json[r'durationLimitReason']),
       );
     }
     return null;
@@ -619,6 +629,83 @@ class CallMediaTypeEnumTypeTransformer {
 
   /// The singleton instance of this transformer.
   static CallMediaTypeEnumTypeTransformer? _instance;
+}
+
+
+/// Reason for the frozen connected-time allowance at reservation. May be absent on legacy events and idempotent responses.
+enum CallDurationLimitReasonEnum {
+  testCreditBalance._(r'test_credit_balance'),
+  testDurationCap._(r'test_duration_cap'),
+  ;
+
+  /// Instantiate a new enum with the provided value.
+  const CallDurationLimitReasonEnum._(this._value);
+
+  /// The underlying value of this enum member.
+  final String _value;
+
+  @override
+  String toString() => _value;
+
+  /// Encodes this enum as a value suitable for JSON.
+  String toJson() => _value;
+
+  /// Returns the instance of [CallDurationLimitReasonEnum] that was successfully decoded
+  /// from the passed [value] on success, null otherwise.
+  static CallDurationLimitReasonEnum? fromJson(dynamic value) => CallDurationLimitReasonEnumTypeTransformer().decode(value);
+
+  /// Returns a [List] containing instances of [CallDurationLimitReasonEnum]
+  /// that were successfully decoded from the passed [JSON][json].
+  static List<CallDurationLimitReasonEnum> listFromJson(dynamic json, {bool growable = false,}) {
+    final result = <CallDurationLimitReasonEnum>[];
+    if (json is List && json.isNotEmpty) {
+      for (final row in json) {
+        final value = CallDurationLimitReasonEnum.fromJson(row);
+        if (value == null) throw const FormatException('Invalid enum list item');
+        result.add(value);
+      }
+    }
+    return result.toList(growable: growable);
+  }
+}
+
+/// Transformation class that can [encode] an instance of [CallDurationLimitReasonEnum] to String,
+/// and [decode] dynamic data back to [CallDurationLimitReasonEnum].
+class CallDurationLimitReasonEnumTypeTransformer {
+  factory CallDurationLimitReasonEnumTypeTransformer() => _instance ??= const CallDurationLimitReasonEnumTypeTransformer._();
+
+  const CallDurationLimitReasonEnumTypeTransformer._();
+
+  String encode(CallDurationLimitReasonEnum data) => data._value;
+
+  /// Returns the instance of [CallDurationLimitReasonEnum] that was successfully decoded
+  /// from the passed [data] value on success, null otherwise.
+  ///
+  /// If [allowNull] is true and the [dynamic value][data] cannot be decoded successfully,
+  /// then null is returned. However, if [allowNull] is false and the [dynamic value][data]
+  /// cannot be decoded successfully, then an [UnimplementedError] is thrown.
+  ///
+  /// The [allowNull] is very handy when an API changes and a new enum value is added or removed,
+  /// and users are still using an old app with the old code.
+  CallDurationLimitReasonEnum? decode(dynamic data, {bool allowNull = false}) {
+    if (data is CallDurationLimitReasonEnum) {
+      return data;
+    }
+    if (data != null) {
+      switch (data) {
+        case r'test_credit_balance': return CallDurationLimitReasonEnum.testCreditBalance;
+        case r'test_duration_cap': return CallDurationLimitReasonEnum.testDurationCap;
+        default:
+          if (!allowNull) {
+            throw const FormatException('Unknown enum value');
+          }
+      }
+    }
+    return null;
+  }
+
+  /// The singleton instance of this transformer.
+  static CallDurationLimitReasonEnumTypeTransformer? _instance;
 }
 
 

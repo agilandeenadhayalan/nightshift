@@ -11,6 +11,7 @@ import 'video_view.dart';
 import 'discovery_view.dart';
 import '../core/discovery.dart';
 import 'invitation_settings.dart';
+import 'call_allowance.dart';
 
 class PageBody extends StatelessWidget {
   const PageBody({super.key, required this.children});
@@ -427,6 +428,11 @@ class CallScreen extends ConsumerWidget {
     final listenerHourlyRate = (call.rate.listenerPaisePerHour / 100)
         .toStringAsFixed(2)
         .replaceFirst(RegExp(r'\.00$'), '');
+    final frozenCustomerRate = call.isVideo
+        ? state.text('Video · ${testRateLabel(state, call.rate)}',
+            'வீடியோ · ${testRateLabel(state, call.rate)}')
+        : state.text('Audio · ${testRateLabel(state, call.rate)}',
+            'ஆடியோ · ${testRateLabel(state, call.rate)}');
     final title = state.endingLocally
         ? state.text('Ending call · waiting for confirmation',
             'அழைப்பை முடிக்கிறது · உறுதிப்படுத்தலுக்காக காத்திருக்கிறது')
@@ -502,13 +508,13 @@ class CallScreen extends ConsumerWidget {
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.titleMedium)),
               const SizedBox(height: 24),
-              if (call.isVideo) ...[
-                Text(
-                    state.text('Video · ${testRateLabel(state, call.rate)}',
-                        'வீடியோ · ${testRateLabel(state, call.rate)}'),
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 12),
-              ],
+              Text(
+                  incoming
+                      ? state.text('Customer rate: $frozenCustomerRate',
+                          'வாடிக்கையாளர் கட்டணம்: $frozenCustomerRate')
+                      : frozenCustomerRate,
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 12),
               if (call.ringing) ...[
                 Text(
                     state.text(
@@ -585,6 +591,10 @@ class CallScreen extends ConsumerWidget {
                             'Test coins charged: ${creditAmount(call.chargeMicrocredits)}',
                             'சோதனை நாணயக் கட்டணம்: ${creditAmount(call.chargeMicrocredits)}'),
                     textAlign: TextAlign.center),
+                CallAllowanceDisplay(
+                    call: call,
+                    locale: state.locale,
+                    endingLocally: state.endingLocally),
                 const SizedBox(height: 24),
                 Wrap(
                     alignment: WrapAlignment.center,

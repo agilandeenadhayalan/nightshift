@@ -138,6 +138,25 @@ class ListenerProfile {
   final CallRate? videoRate;
 }
 
+enum CallDurationLimitReason { testCreditBalance, testDurationCap }
+
+CallDurationLimitReason? _durationLimitReason(Json json) {
+  if (!json.containsKey('durationLimitReason')) return null;
+  return switch (json['durationLimitReason']) {
+    'test_credit_balance' => CallDurationLimitReason.testCreditBalance,
+    'test_duration_cap' => CallDurationLimitReason.testDurationCap,
+    _ => throw const FormatException('Unsupported duration limit reason'),
+  };
+}
+
+bool _validAllowance(Object? capSeconds, Object? connectedMs) =>
+    capSeconds is int &&
+    capSeconds > 0 &&
+    capSeconds <= 9007199254740 &&
+    connectedMs is int &&
+    connectedMs >= 0 &&
+    connectedMs <= 9007199254740991;
+
 class CallSession {
   const CallSession(
       {required this.id,
@@ -153,9 +172,12 @@ class CallSession {
       required this.createdAt,
       this.endedAt,
       this.reason,
+      this.durationLimitReason,
       this.mediaType = 'audio',
       this.rate = const CallRate.audio(),
-      required this.maxDurationSeconds});
+      bool allowanceFieldsValid = true,
+      required this.maxDurationSeconds})
+      : _allowanceFieldsValid = allowanceFieldsValid;
   factory CallSession.fromJson(Json json) => CallSession(
         id: json['id'] as String,
         customerId: json['customerId'] as String,
@@ -173,11 +195,16 @@ class CallSession {
             : DateTime.parse(json['endedAt'] as String),
         reason: json['reason'] as String?,
         maxDurationSeconds: number(json['maxDurationSeconds']),
+        allowanceFieldsValid:
+            _validAllowance(json['maxDurationSeconds'], json['connectedMs']),
+        durationLimitReason: _durationLimitReason(json),
         mediaType: _callMediaType(json),
         rate: _callRate(json),
       );
   final String id, customerId, listenerId, customerName, listenerName, state;
   final String? reason;
+  final CallDurationLimitReason? durationLimitReason;
+  final bool _allowanceFieldsValid;
   final String mediaType;
   final CallRate rate;
   final int version,
@@ -190,6 +217,18 @@ class CallSession {
   bool get ended => state == 'ended';
   bool get ringing => state == 'ringing';
   bool get isVideo => mediaType == 'video';
+
+  /// Confirmed connected-time allocation, independent of minimum charges and
+  /// the client's clock. Invalid wire fields must not become a zero warning.
+  int? get remainingConnectedMs {
+    if (!_allowanceFieldsValid ||
+        !_validAllowance(maxDurationSeconds, connectedMs)) {
+      return null;
+    }
+    final remaining = maxDurationSeconds * 1000 - connectedMs;
+    return remaining > 0 ? remaining : 0;
+  }
+
   String otherName(String userId) =>
       customerId == userId ? listenerName : customerName;
 }
