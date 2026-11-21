@@ -350,12 +350,15 @@ export class NightShiftService {
     requireThat(['accept','decline','cancel','end'].includes(action),404,'NOT_FOUND','Unknown action');
     return this.idempotent(actor,`call:${id}:${action}`,key,body,
       c=>this.authorizedCall(c,actor,id,action==='accept'),async(c,r)=>{
+      const lockedVersion=r.version;
       await this.advance(c,r,this.clock());
       if(r.state==='ended') {
         requireThat(action!=='accept',409,'CALL_ALREADY_ENDED','The invitation has ended');
         return this.view(c,r);
       }
-      requireThat(r.version===body.expectedVersion,409,'STALE_VERSION','Refresh the call and try again');
+      // End may itself advance stale media to reconnecting. Validate against
+      // the persisted version locked above, not that uncommitted transition.
+      requireThat((action==='end'?lockedVersion:r.version)===body.expectedVersion,409,'STALE_VERSION','Refresh the call and try again');
       if(action==='accept'||action==='decline')requireThat(actor.id===r.listener_id&&r.state==='ringing',409,'INVALID_TRANSITION','Only the invited listener may respond');
       if(action==='cancel')requireThat(actor.id===r.customer_id&&r.state==='ringing',409,'INVALID_TRANSITION','Only the caller may cancel an invitation');
       if(action==='accept'){

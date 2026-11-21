@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:nightshift/app.dart';
 import 'package:nightshift/core/api.dart';
 import 'package:nightshift/core/controller.dart';
@@ -259,7 +261,53 @@ void main() {
   });
   test('blocking an old conversation cannot mutate the replacement account',
       () async {
-    final api = FakeApi()..token = 'a';
+    final preparing = Completer<void>(), resume = Completer<void>();
+    final requests = <http.Request>[];
+    final api = NightShiftApi(client: MockClient((request) async {
+      requests.add(request);
+      return http.Response('{"blocked":true}', 200);
+    }))
+      ..token = 'a';
+    final audio = LeaveGate();
+    final state = AppController(
+        api: api, store: MemoryStore(), audio: audio, startTimers: false)
+      ..user = UserProfile.fromJson(userJson())
+      ..activeCall = CallSession.fromJson(callJson(state: 'active'));
+    api.prepareSession = () {
+      if (!preparing.isCompleted) preparing.complete();
+      return resume.future;
+    };
+    final action =
+        state.submitSafety(state.activeCall!, 'test reason', block: true);
+    await preparing.future;
+    expect(audio.leaveCount, 1);
+    expect(audio.gate.isCompleted, false);
+    expect(requests, isEmpty);
+    state.user = UserProfile.fromJson({...userJson(), 'id': 'replacement'});
+    state.activeCall = null;
+    state.error = 'Replacement account message';
+    state.errorCode = 'REPLACEMENT_ERROR';
+    api.token = 'b';
+    resume.complete();
+    await action;
+    expect(requests, isEmpty);
+    expect(state.user!.id, 'replacement');
+    expect(api.token, 'b');
+    expect(state.error, 'Replacement account message');
+    expect(state.errorCode, 'REPLACEMENT_ERROR');
+    audio.gate.complete();
+    state.dispose();
+  });
+  test('old block response cannot send a report or read as replacement owner',
+      () async {
+    final dispatched = Completer<void>(), response = Completer<http.Response>();
+    final requests = <http.Request>[];
+    final api = NightShiftApi(client: MockClient((request) {
+      requests.add(request);
+      if (!dispatched.isCompleted) dispatched.complete();
+      return response.future;
+    }))
+      ..token = 'a';
     final audio = LeaveGate();
     final state = AppController(
         api: api, store: MemoryStore(), audio: audio, startTimers: false)
@@ -267,16 +315,49 @@ void main() {
       ..activeCall = CallSession.fromJson(callJson(state: 'active'));
     final action =
         state.submitSafety(state.activeCall!, 'test reason', block: true);
-    await Future<void>.delayed(Duration.zero);
+    await dispatched.future;
+    expect(audio.leaveCount, 1);
+    expect(audio.gate.isCompleted, false);
+    expect(requests.single.method, 'PUT');
+    expect(requests.single.url.path, '/v1/blocks/listener-id');
+    expect(requests.single.headers['Authorization'], 'Bearer a');
     state.user = UserProfile.fromJson({...userJson(), 'id': 'replacement'});
     api.token = 'b';
-    audio.gate.complete();
+    response.complete(http.Response('{"blocked":true}', 200));
     await action;
-    expect(
-        api.requests.where((r) =>
-            (r['path'] as String).startsWith('/blocks/') ||
-            r['path'] == '/reports'),
-        isEmpty);
+    expect(requests, hasLength(1));
+    expect(state.user!.id, 'replacement');
+    expect(api.token, 'b');
+    expect(state.errorCode, isNull);
+    audio.gate.complete();
+    state.dispose();
+  });
+  test('a current-owner block failure remains visible and does not report',
+      () async {
+    final api = FakeApi()
+      ..token = 'a'
+      ..interceptor = (method, path, body) async {
+        if (method == 'PUT' && path.startsWith('/blocks/')) {
+          throw const ApiFailure('BLOCK_DENIED', 'Could not block this account.',
+              status: 403);
+        }
+        return null;
+      };
+    final audio = LeaveGate();
+    final state = AppController(
+        api: api, store: MemoryStore(), audio: audio, startTimers: false)
+      ..user = UserProfile.fromJson(userJson())
+      ..activeCall = CallSession.fromJson(callJson(state: 'active'));
+    await state.submitSafety(state.activeCall!, 'test reason', block: true);
+    expect(state.errorCode, 'BLOCK_DENIED');
+    expect(state.error, 'Could not block this account.');
+    expect(api.requests.where((r) => r['path'] == '/blocks/listener-id'),
+        hasLength(1));
+    expect(api.requests.where((r) => r['path'] == '/reports'), isEmpty);
+    expect(state.user!.id, 'customer-id');
+    expect(api.token, 'a');
+    expect(audio.gate.isCompleted, false);
+    audio.gate.complete();
     state.dispose();
   });
 }
@@ -284,5 +365,8 @@ void main() {
 class LeaveGate extends FakeAudio {
   final gate = Completer<void>();
   @override
-  Future<void> leave() => gate.future;
+  Future<void> leave() {
+    leaveCount++;
+    return gate.future;
+  }
 }

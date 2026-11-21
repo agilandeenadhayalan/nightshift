@@ -45,7 +45,7 @@ Push configuration defaults off. No production policy, staff approval, live migr
 - [x] Resolve proposal review findings: one schema key; type-specific terminal dispatch; no conflation of incoming notifications and ongoing media. No destructive native End queue is needed in this slice.
 - [x] Independently review privacy, authority, native cold-process behavior, absolute expiry/clock uncertainty, unknown responses, session invalidation and concurrency. Fix demonstrated defects and rerun affected checks.
 - [x] Run complete appropriate backend/mobile/contracts/repository verification and required `node --test` from `audio/`. Inspect manifest/permissions and native artifact alignment without claiming physical compatibility from static inspection.
-- [ ] Record exact evidence, feature configuration, migration/recovery and remaining acceptance in verification docs and the issue register. Publish a reviewable draft PR stacked on PR80, then verify exact-head CI.
+- [x] Record exact evidence, feature configuration, migration/recovery and remaining acceptance in verification docs and the issue register. Draft [PR81](https://github.com/agilandeenadhayalan/nightshift/pull/81) is stacked on PR80 at `cd7678edac6feadfca2a250325c21124d0ff1b98`; backend, Android and staff CI passed in run44864035487.
 - [ ] Continue ongoing-call compatibility work and selected-device acceptance when prerequisites permit. Physical matrix includes locked screen, notifications denied/channel off, Doze/battery restrictions, offline/API-unreachable, rotation, logout/account switch, expired notice and foreground Answer. FCM arrival alone does not establish the USB-forwarded control API is reachable.
 
 ## Isolation

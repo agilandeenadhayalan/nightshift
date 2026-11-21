@@ -20,6 +20,7 @@ import 'staff_session.dart';
 import 'staff_transport.dart';
 import 'matching.dart';
 import 'call_invitations.dart';
+import 'call_stop_intent.dart';
 
 final appControllerProvider = ChangeNotifierProvider<AppController>((ref) {
   final controller = AppController(
@@ -234,8 +235,18 @@ class AppController extends ChangeNotifier {
   Future<void>? _sessionCleanup;
   String _deviceId = '', _joiningId = '', _joinedId = '';
   int _joinAttempt = 0;
-  String? _abandonedCallId;
-  bool _stopping = false;
+  String? _abandonedCallId, _legacyStopCallId;
+  CallStopIntent? _stopIntent, _storedStopIntent;
+  Object? _stopOwner;
+  Future<void> _stopStorage = Future<void>.value();
+  final Map<(Object, String), Future<void>> _stopRequests = {};
+  Future<void>? _logoutWork;
+  Object? _logoutOwner;
+  Future<void> _pathStorage = Future<void>.value();
+  int _cleanupRevision = 0;
+  Object? _cleanupOwner;
+  String? _cleanupCallId;
+  Future<void>? _cleanupWork;
   int _revision = 0;
   bool _polling = false, _mediaPosting = false, _disposed = false;
   bool snapshotLoaded = false;
@@ -428,7 +439,17 @@ class AppController extends ChangeNotifier {
       if (!['en', 'ta'].contains(locale)) locale = 'en';
       if (!['en', 'ta'].contains(language)) language = 'ta';
       discovery.language = language;
-      _abandonedCallId = await store.read('abandonedCallId');
+      _legacyStopCallId = await store.read('abandonedCallId');
+      final stop = await store.read('callStopIntent');
+      if (stop != null) {
+        try {
+          if (stop.length > 8192) throw const FormatException();
+          _storedStopIntent = CallStopIntent.fromJson(jsonDecode(stop) as Json);
+        } catch (_) {
+          // A malformed scoped record cannot fall back to an unowned mutation.
+          _legacyStopCallId = null;
+        }
+      }
       lastPath = await store.read('lastPath') ?? '/home';
       if (!['/home', '/history', '/profile'].contains(lastPath)) {
         lastPath = '/home';
@@ -831,24 +852,29 @@ class AppController extends ChangeNotifier {
       }
       // Snapshot is authoritative; terminal sessions cannot retain the microphone.
       if (next == null || next.ended) {
+        final owner = accountIdentity, origin = api.baseUrl;
         activeCall = null;
-        _abandonedCallId = null;
-        await store.delete('abandonedCallId');
+        if (_storedStopIntent == null ||
+            (_storedStopIntent!.ownerId == user!.id &&
+                _storedStopIntent!.origin == origin)) {
+          _forgetStop(owner, origin);
+        }
         if (previous != null && !previous.ended) {
-          _videoConsentCallId = null;
-          await closeVideoPreview();
-          await audio.leave();
-          _joinedId = '';
+          _requestCleanup(callId: previous.id);
+          if (next != null) lastCall = next;
           lastPath = '/history';
-          await store.write('lastPath', lastPath);
+          await _savePath();
+          if (!_sameOwner(owner, origin) || activeCall != null) return;
           await loadHistory();
         }
-        if (next != null) lastCall = next;
-        activeCall = null;
+        if (_sameOwner(owner, origin) && activeCall == null && next != null) {
+          lastCall = next;
+        }
       } else {
         activeCall = next;
+        _recoverStop(next);
         if (endingLocally) {
-          if (!_stopping) await _stopOnServer(next);
+          await _stopOnServer(next);
         } else if (!next.ringing &&
             (!next.isVideo || _videoConsentCallId == next.id) &&
             _joiningId != next.id &&
@@ -865,8 +891,7 @@ class AppController extends ChangeNotifier {
           _lastServerContact != null &&
           DateTime.now().difference(_lastServerContact!) >
               const Duration(seconds: 8)) {
-        await audio.leave();
-        _joinedId = '';
+        _requestCleanup(callId: activeCall!.id);
       }
     } finally {
       if (request == _snapshotRequest) {
@@ -977,7 +1002,7 @@ class AppController extends ChangeNotifier {
         _availabilityIntent++;
         user = profile;
         lastPath = '/home';
-        await store.write('lastPath', lastPath);
+        await _savePath();
         if (!current()) return;
         await refresh();
       });
@@ -1038,6 +1063,7 @@ class AppController extends ChangeNotifier {
       final call = activeCall;
       if (call == null) return;
       final session = _sessionRevision;
+      final owner = accountIdentity, origin = api.baseUrl;
       if (action == 'accept') {
         if (call.isVideo && !cameraConsent) {
           throw const ApiFailure('VIDEO_CONSENT_REQUIRED',
@@ -1049,7 +1075,12 @@ class AppController extends ChangeNotifier {
         }
         await closeVideoPreview();
         await audio.checkPermission();
-        if (_disposed || !foreground || activeCall?.id != call.id) return;
+        if (!_sameOwner(owner, origin) ||
+            !foreground ||
+            activeCall?.id != call.id ||
+            endingLocally) {
+          return;
+        }
       }
       _revision++;
       final result = await api.request('POST', '/calls/${call.id}/$action',
@@ -1068,12 +1099,11 @@ class AppController extends ChangeNotifier {
       _revision++;
       if (updated.ended) {
         activeCall = null;
-        await audio.leave();
-        _joinedId = '';
+        _requestCleanup(callId: call.id);
         lastCall = updated;
-        activeCall = null;
         lastPath = '/history';
-        await store.write('lastPath', lastPath);
+        await _savePath();
+        if (!_sameOwner(owner, origin) || activeCall != null) return;
         await loadHistory();
       } else {
         activeCall = updated;
@@ -1082,19 +1112,133 @@ class AppController extends ChangeNotifier {
         }
         if (!updated.ringing) unawaited(_join(updated));
       }
-      await refresh();
+      if (_sameOwner(owner, origin)) await refresh();
     });
+  }
+
+  bool _sameOwner(Object owner, String origin) =>
+      !_disposed && owner == accountIdentity && origin == api.baseUrl;
+
+  /// Admission invalidates readiness synchronously. Completion is observed, never
+  /// used as permission to resume media or as a prerequisite for server End.
+  void _requestCleanup({String? callId}) {
+    final owner = accountIdentity, origin = api.baseUrl;
+    if (_cleanupOwner == owner &&
+        _cleanupCallId == callId &&
+        _cleanupWork != null) {
+      return;
+    }
+    final revision = ++_cleanupRevision;
+    _cleanupOwner = owner;
+    _cleanupCallId = callId;
+    _joinedId = '';
+    _joiningId = '';
+    _joinAttempt++;
+    _videoConsentCallId = null;
+    _videoPreviewRequest++;
+    _videoPreviewRequested = videoPreviewBusy = false;
+    late final Future<void> work;
+    work = Future<void>.sync(audio.leave).catchError((Object failure) {
+      if (revision != _cleanupRevision ||
+          !_sameOwner(owner, origin) ||
+          (activeCall != null && activeCall!.id != callId)) {
+        return;
+      }
+      _showError(failure is ApiFailure &&
+              ['RTC_CLEANUP_PENDING', 'RTC_CLEANUP_FAILED']
+                  .contains(failure.code)
+          ? failure
+          : const ApiFailure(
+              'RTC_CLEANUP_FAILED', 'Media cleanup was not confirmed.'));
+      _notify();
+    }).whenComplete(() {
+      if (identical(_cleanupWork, work)) _cleanupWork = null;
+    });
+    _cleanupWork = work;
+    _notify();
+  }
+
+  bool _ownsStop(CallStopIntent intent, Object owner) =>
+      _sameOwner(owner, intent.origin) &&
+      intent.ownerId == user?.id &&
+      identical(_stopIntent, intent) &&
+      _stopOwner == owner &&
+      activeCall?.id == intent.callId;
+
+  void _persistStop(CallStopIntent intent, Object owner) {
+    _storedStopIntent = intent;
+    _stopStorage = _stopStorage.then((_) async {
+      // A queued receipt survives local logout. It carries no credentials and
+      // can be recovered only from an exact current owner/origin/call snapshot.
+      // A newer receipt or authoritative terminal result supersedes this write.
+      if (!identical(_storedStopIntent, intent)) return;
+      await store.write('callStopIntent', jsonEncode(intent.toJson()));
+      if (!identical(_storedStopIntent, intent)) return;
+      await store.write('abandonedCallId', intent.callId);
+    }).catchError((Object failure) {
+      if (_ownsStop(intent, owner)) {
+        _showError(failure);
+        _notify();
+      }
+    });
+  }
+
+  void _forgetStop(Object owner, String origin) {
+    _stopIntent = null;
+    _stopOwner = null;
+    _abandonedCallId = null;
+    _legacyStopCallId = null;
+    _storedStopIntent = null;
+    _stopStorage = _stopStorage.then((_) async {
+      if (!_sameOwner(owner, origin) || _stopIntent != null) return;
+      await store.delete('abandonedCallId');
+      if (!_sameOwner(owner, origin) || _stopIntent != null) return;
+      await store.delete('callStopIntent');
+    }).catchError((Object failure) {
+      if (_sameOwner(owner, origin) && _stopIntent == null) {
+        _showError(failure);
+        _notify();
+      }
+    });
+  }
+
+  void _recoverStop(CallSession call) {
+    if (_stopIntent != null &&
+        _stopOwner == accountIdentity &&
+        _stopIntent!.callId == call.id) {
+      return;
+    }
+    final saved = _storedStopIntent;
+    if (saved != null) {
+      if (saved.ownerId != user?.id ||
+          saved.origin != api.baseUrl ||
+          saved.callId != call.id) {
+        _abandonedCallId = null;
+        return;
+      }
+      _stopIntent = saved;
+    } else if (_legacyStopCallId == call.id) {
+      // Legacy markers are bound only by an authenticated current-call snapshot.
+      _stopIntent = CallStopIntent.forCall(user!.id, api.baseUrl, call);
+    } else {
+      return;
+    }
+    _stopOwner = accountIdentity;
+    _abandonedCallId = call.id;
+    _requestCleanup(callId: call.id);
+    _persistStop(_stopIntent!, _stopOwner!);
   }
 
   Future<void> _terminateCall() async {
     final call = activeCall;
     if (_disposed || call == null || endingLocally) return;
+    final owner = accountIdentity, origin = api.baseUrl;
     clearError();
     try {
-      await _stopLocally(call);
+      _stopLocally(call);
       await _stopOnServer(call);
     } catch (e) {
-      if (!_disposed && activeCall?.id == call.id) _showError(e);
+      if (_sameOwner(owner, origin) && activeCall?.id == call.id) _showError(e);
     } finally {
       _notify();
     }
@@ -1142,8 +1286,7 @@ class AppController extends ChangeNotifier {
     } catch (e) {
       if (!authorized()) return;
       _showError(e);
-      await audio.leave();
-      if (activeCall?.id == call.id) await _endAfterFailure();
+      await _endAfterFailure(call);
     } finally {
       if (attempt == _joinAttempt) _joiningId = '';
       _notify();
@@ -1204,7 +1347,7 @@ class AppController extends ChangeNotifier {
       _videoPreviewRequest++;
       _videoPreviewRequested = videoPreviewBusy = false;
       videoPreviewError = 'VIDEO_FAILED';
-      await video?.stopPreview();
+      _requestCleanup(callId: activeCall?.id);
       _notify();
       return;
     }
@@ -1213,15 +1356,16 @@ class AppController extends ChangeNotifier {
     errorCode = activeCall!.isVideo ? 'VIDEO_FAILED' : 'AUDIO_FAILED';
     diagnosticId = null;
     _errorFromSnapshot = false;
-    await audio.leave();
-    await _endAfterFailure();
+    final call = activeCall!;
+    await _endAfterFailure(call);
     _notify();
   }
 
-  Future<void> _endAfterFailure() async {
-    final call = activeCall;
+  Future<void> _endAfterFailure([CallSession? original]) async {
+    final call = original ?? activeCall;
     if (call == null) return;
-    await _stopLocally(call);
+    if (_disposed || activeCall?.id != call.id) return;
+    _stopLocally(call);
     try {
       await _stopOnServer(call);
     } catch (_) {
@@ -1229,53 +1373,85 @@ class AppController extends ChangeNotifier {
     }
   }
 
-  Future<void> _stopLocally(CallSession call) async {
-    // Release capture before any network or disk operation, including offline hangup.
+  void _stopLocally(CallSession call) {
+    if (_disposed || user == null || activeCall?.id != call.id) return;
+    final owner = accountIdentity;
+    if (_stopIntent?.callId != call.id || _stopOwner != owner) {
+      _stopIntent = CallStopIntent.forCall(user!.id, api.baseUrl, call);
+      _stopOwner = owner;
+    }
     _abandonedCallId = call.id;
-    _videoConsentCallId = null;
     _revision++;
-    _joinedId = '';
-    await closeVideoPreview();
-    await audio.leave();
-    _notify();
-    await store.write('abandonedCallId', call.id);
+    _requestCleanup(callId: call.id);
+    _persistStop(_stopIntent!, owner);
   }
 
-  Future<void> _stopOnServer(CallSession initial) async {
-    if (_stopping) return;
-    _stopping = true;
+  Future<void> _stopOnServer(CallSession initial) {
+    final intent = _stopIntent, owner = _stopOwner;
+    if (intent == null ||
+        owner == null ||
+        intent.callId != initial.id ||
+        !_ownsStop(intent, owner)) {
+      return Future<void>.value();
+    }
+    final scope = (owner, initial.id),
+        existing = _stopRequests[(owner, initial.id)];
+    if (existing != null) return existing;
+    late final Future<void> work;
+    work = _sendStop(intent, owner).whenComplete(() {
+      if (identical(_stopRequests[scope], work)) _stopRequests.remove(scope);
+    });
+    _stopRequests[scope] = work;
+    return work;
+  }
+
+  Future<void> _sendStop(CallStopIntent initial, Object owner) async {
+    var intent = initial;
+    bool current() => _ownsStop(intent, owner);
     try {
-      var call = initial;
       for (var attempt = 0; attempt < 2; attempt++) {
-        final action = call.ringing
-            ? (call.listenerId == user?.id ? 'decline' : 'cancel')
-            : 'end';
+        if (!current()) return;
         try {
-          final result = await api.request('POST', '/calls/${call.id}/$action',
-              body: {'expectedVersion': call.version}, idempotencyKey: newId());
+          final result = await api.privateRequest('POST', intent.path,
+              origin: intent.origin,
+              isCurrent: current,
+              body: intent.body,
+              idempotencyKey: intent.key);
+          if (!current()) return;
           final ended = CallSession.fromJson(result);
-          if (!ended.ended) {
+          if (ended.id != intent.callId || !ended.ended) {
             throw const ApiFailure(
                 'END_PENDING', 'Waiting for the server to end the call.');
           }
           _revision++;
           activeCall = null;
           lastCall = ended;
-          _abandonedCallId = null;
-          await store.delete('abandonedCallId');
+          _forgetStop(owner, intent.origin);
           lastPath = '/history';
-          await store.write('lastPath', lastPath);
+          await _savePath();
+          if (!_sameOwner(owner, intent.origin) || activeCall != null) return;
           await loadHistory();
           return;
         } on ApiFailure catch (e) {
+          if (!current()) return;
           if (e.status != 409 || attempt != 0) rethrow;
-          call = CallSession.fromJson(
-              await api.request('GET', '/calls/${call.id}'));
+          final result = await api.privateRequest(
+              'GET', '/calls/${intent.callId}',
+              origin: intent.origin, isCurrent: current);
+          if (!current()) return;
+          final call = CallSession.fromJson(result);
+          if (call.id != intent.callId ||
+              (call.customerId != intent.ownerId &&
+                  call.listenerId != intent.ownerId)) {
+            throw const ApiFailure('INVALID_RESPONSE', 'Invalid call state.');
+          }
+          intent = CallStopIntent.forCall(intent.ownerId, intent.origin, call);
+          _stopIntent = intent;
+          _persistStop(intent, owner);
         }
       }
     } finally {
-      _stopping = false;
-      _notify();
+      if (_sameOwner(owner, initial.origin)) _notify();
     }
   }
 
@@ -1344,24 +1520,32 @@ class AppController extends ChangeNotifier {
           {required bool block}) =>
       perform(() async {
         final owner = accountIdentity, ownerId = user?.id;
+        final origin = api.baseUrl;
+        bool current() => _sameOwner(owner, origin);
         if (ownerId == null ||
             (call.customerId != ownerId && call.listenerId != ownerId)) {
           return;
         }
-        if (block) {
-          if (activeCall?.id == call.id) await _stopLocally(call);
-          if (owner != accountIdentity) return;
-          final target =
-              call.customerId == user!.id ? call.listenerId : call.customerId;
-          await api.request('PUT', '/blocks/$target', body: {});
-          if (owner != accountIdentity) return;
-          discovery.forget(target);
-          await refresh();
-        }
-        if (reason.trim().isNotEmpty && owner == accountIdentity) {
-          await api.request('POST', '/reports',
-              body: {'callId': call.id, 'reason': reason.trim()},
-              idempotencyKey: newId());
+        try {
+          if (block) {
+            if (activeCall?.id == call.id) _stopLocally(call);
+            if (!current()) return;
+            final target =
+                call.customerId == ownerId ? call.listenerId : call.customerId;
+            await api.request('PUT', '/blocks/$target', body: {});
+            if (!current()) return;
+            discovery.forget(target);
+            await refresh();
+          }
+          if (reason.trim().isNotEmpty && current()) {
+            await api.request('POST', '/reports',
+                body: {'callId': call.id, 'reason': reason.trim()},
+                idempotencyKey: newId());
+          }
+        } catch (_) {
+          // A stale failure must not reach perform's error/recovery path under
+          // a replacement identity. Current-owner failures retain that path.
+          if (current()) rethrow;
         }
       });
 
@@ -1393,10 +1577,8 @@ class AppController extends ChangeNotifier {
                 })
               : Future<Json?>.value();
       _revision++;
-      _videoConsentCallId = null;
-      await closeVideoPreview();
       // First milestone is foreground-only; never imply unsupported background calling.
-      await audio.leave();
+      _requestCleanup(callId: backgroundCall?.id);
       if (current() &&
           backgroundCall != null &&
           activeCall?.id == backgroundCall.id &&
@@ -1406,7 +1588,7 @@ class AppController extends ChangeNotifier {
                       !backgroundCall.isVideo &&
                       invitations.active))) &&
           hasCall) {
-        await _endAfterFailure();
+        await _endAfterFailure(backgroundCall);
       }
       final result = await withdrawal;
       if (current() && result != null && result['id'] == owner) {
@@ -1444,24 +1626,42 @@ class AppController extends ChangeNotifier {
     if (hasCall) return;
     lastPath =
         ['/home', '/history', '/profile'].contains(path) ? path : '/home';
-    await store.write('lastPath', lastPath);
+    await _savePath();
     if (lastPath == '/history') await loadHistory();
     _notify();
   }
 
-  Future<void> logout() => perform(() async {
-        invitations.invalidate();
-        staffWorkspace.close();
-        _videoConsentCallId = null;
-        await closeVideoPreview();
-        await audio.leave();
-        if (hasCall) await _endAfterFailure();
-        try {
-          await api.request('POST', '/auth/logout', body: {});
-        } finally {
-          await _clearSession();
-        }
-      });
+  Future<void> _savePath() {
+    final owner = accountIdentity, origin = api.baseUrl, path = lastPath;
+    final work = _pathStorage.then((_) async {
+      if (_sameOwner(owner, origin)) await store.write('lastPath', path);
+    });
+    // Preserve ordering even when an older storage operation fails. Later
+    // navigation/logout writes must follow any already-admitted older write.
+    _pathStorage = work.catchError((Object _) {});
+    return work;
+  }
+
+  Future<void> logout() {
+    final owner = accountIdentity;
+    final pending = _logoutWork;
+    if (pending != null && _logoutOwner == owner) return pending;
+    if (_disposed) return Future<void>.value();
+    // The auth request captures this token synchronously. Local invalidation and
+    // cleanup admission proceed even while another permission/SDK operation waits.
+    _requestCleanup(callId: activeCall?.id);
+    final remote = api
+        .request('POST', '/auth/logout', body: {}).then<void>((_) {}, onError:
+            (Object _) {/* Local logout does not depend on the network. */});
+    final local = _clearSession();
+    late final Future<void> work;
+    work = Future.wait([local, remote]).then<void>((_) {}).whenComplete(() {
+      if (identical(_logoutWork, work)) _logoutWork = null;
+    });
+    _logoutOwner = owner;
+    _logoutWork = work;
+    return work;
+  }
 
   Future<void> _clearSession() async {
     final pending = _sessionCleanup;
@@ -1469,6 +1669,12 @@ class AppController extends ChangeNotifier {
     final cleanup = Completer<void>();
     _sessionCleanup = cleanup.future;
     try {
+      final call = activeCall;
+      if (call != null && !call.ended && user != null) {
+        _stopLocally(call);
+      } else {
+        _requestCleanup(callId: call?.id);
+      }
       _invalidateSessionRequests();
       _videoConsentCallId = null;
       api.token = null;
@@ -1497,9 +1703,7 @@ class AppController extends ChangeNotifier {
       await _phoneStorage;
       await store.delete('token');
       await store.delete('phoneSession');
-      await store.write('lastPath', lastPath);
-      await closeVideoPreview();
-      await audio.leave();
+      await _savePath();
     } finally {
       // The caller still receives storage errors; this barrier only sequences
       // a later sign-in, whose token write can safely replace any old value.
@@ -1515,6 +1719,9 @@ class AppController extends ChangeNotifier {
     discovery.reset();
     matching.reset();
     _matchCallSeen = null;
+    _stopIntent = null;
+    _stopOwner = null;
+    _abandonedCallId = null;
     _identityRevision++;
     _sessionRevision++;
     _availabilityIntent++;
@@ -1596,7 +1803,7 @@ class AppController extends ChangeNotifier {
     _mediaTimer?.cancel();
     audio.onChanged = null;
     audio.onFailure = null;
-    unawaited(audio.leave());
+    unawaited(Future<void>.sync(audio.leave).catchError((Object _) {}));
     discovery.removeListener(_notify);
     discovery.dispose();
     matching.removeListener(_matchingChanged);

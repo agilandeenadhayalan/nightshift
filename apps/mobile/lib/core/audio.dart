@@ -13,6 +13,9 @@ abstract interface class CallAudio {
   Future<void> checkPermission();
   Future<void> join(
       RtcCredentials credentials, Future<RtcCredentials> Function() renew);
+
+  /// Returns after native release. A cleanup failure or caller timeout does not
+  /// establish capture shutdown; further engine creation remains fenced.
   Future<void> leave();
   Future<void> toggleMute();
   Future<void> toggleSpeaker();
@@ -70,6 +73,8 @@ class _OwnedRtcEngine {
         }
       }
 
+      // Publication mute alone does not stop microphone capture.
+      await attempt(() => engine.enableLocalAudio(false));
       if (video) {
         await attempt(() => engine.enableLocalVideo(false));
         await attempt(engine.stopPreview);
@@ -88,7 +93,9 @@ class AgoraCallAudio implements CallVideo {
     RtcEngine Function()? engineFactory,
     Future<bool> Function()? microphonePermission,
     Future<bool> Function()? cameraPermission,
+    Duration cleanupTimeout = const Duration(seconds: 3),
   })  : _engineFactory = engineFactory ?? createAgoraRtcEngine,
+        _cleanupTimeout = cleanupTimeout,
         _microphonePermission = microphonePermission ??
             (() async => (await Permission.microphone.request()).isGranted),
         _cameraPermission = cameraPermission ??
@@ -96,8 +103,10 @@ class AgoraCallAudio implements CallVideo {
 
   final RtcEngine Function() _engineFactory;
   final Future<bool> Function() _microphonePermission, _cameraPermission;
+  final Duration _cleanupTimeout;
   _OwnedRtcEngine? _session;
   Future<void> _releaseBarrier = Future<void>.value();
+  bool _lastDetachedWasPreview = false;
   int _generation = 0, _cameraRevision = 0;
   bool _previewRequested = false;
   bool _joined = false,
@@ -169,13 +178,28 @@ class AgoraCallAudio implements CallVideo {
     _session = null;
     _resetState();
     if (old != null) {
+      _lastDetachedWasPreview = old.previewOnly;
       final previous = _releaseBarrier;
       final closing = old.close();
       _releaseBarrier = Future.wait([previous, closing]).then((_) {});
+      // Observe late failure even after every caller has stopped waiting. Keep
+      // this actual completion as the barrier, including its failed state.
+      _releaseBarrier.ignore();
     }
     onChanged?.call();
-    return _releaseBarrier;
+    return _waitForRelease();
   }
+
+  Future<void> _waitForRelease() =>
+      _releaseBarrier.then<void>((_) {}, onError: (Object _, StackTrace __) {
+        throw const ApiFailure('RTC_CLEANUP_FAILED',
+            'Audio cleanup could not be confirmed. Further calls are unavailable.');
+      }).timeout(_cleanupTimeout, onTimeout: () {
+        // This only bounds the caller. Native cleanup is still pending, so its
+        // original future continues to block all new engine creation.
+        throw const ApiFailure('RTC_CLEANUP_PENDING',
+            'Audio cleanup is still pending. Further calls are unavailable.');
+      });
 
   Future<bool> _run(
       _OwnedRtcEngine session, Future<void> Function() operation) async {
@@ -186,10 +210,15 @@ class AgoraCallAudio implements CallVideo {
 
   @override
   Future<void> checkPermission() async {
+    // Pre-call permission checks precede server reservation/acceptance. Do not
+    // let them succeed while a prior engine still owns native resources.
+    await _waitForRelease();
     if (!await _microphonePermission()) {
       throw const ApiFailure('MICROPHONE_DENIED',
           'Microphone access is required for a call. Allow it in Android app settings and try again.');
     }
+    // Cleanup may have started while Android's permission dialog was open.
+    await _waitForRelease();
   }
 
   Future<void> _checkCameraPermission() async {
@@ -233,7 +262,12 @@ class AgoraCallAudio implements CallVideo {
   @override
   Future<void> stopPreview() async {
     // A dismissed preflight must not tear down a later joined call engine.
-    if (!_previewRequested && _session?.previewOnly != true) return;
+    if (!_previewRequested && _session?.previewOnly != true) {
+      // Repeating the same preview stop must not acknowledge a release that
+      // remains pending. A newer live engine is outside this preview's scope.
+      if (_session == null && _lastDetachedWasPreview) await _waitForRelease();
+      return;
+    }
     _previewRequested = false;
     _generation++;
     await _detach();

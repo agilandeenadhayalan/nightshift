@@ -428,11 +428,8 @@ class CallScreen extends ConsumerWidget {
         .toStringAsFixed(2)
         .replaceFirst(RegExp(r'\.00$'), '');
     final title = state.endingLocally
-        ? call.isVideo
-            ? state.text('Camera and audio stopped · waiting for server',
-                'கேமராவும் ஆடியோவும் நிறுத்தப்பட்டன · சேவையகத்திற்காக காத்திருக்கிறது')
-            : state.text('Audio stopped · waiting for server',
-                'ஆடியோ நிறுத்தப்பட்டது · சேவையகத்திற்காக காத்திருக்கிறது')
+        ? state.text('Ending call · waiting for confirmation',
+            'அழைப்பை முடிக்கிறது · உறுதிப்படுத்தலுக்காக காத்திருக்கிறது')
         : switch (call.state) {
             'ringing' => incoming
                 ? call.isVideo
@@ -1001,7 +998,7 @@ Future<void> showSafetyDialog(
       context: context, builder: (context) => _SafetyDialog(controller: state));
   if (result != null && owner == state.accountIdentity) {
     await state.submitSafety(call, result.$1, block: result.$2);
-    if (context.mounted && state.error == null) {
+    if (context.mounted && owner == state.accountIdentity && state.error == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(state.text(
               'Your action was saved.', 'உங்கள் செயல் சேமிக்கப்பட்டது.'))));
