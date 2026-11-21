@@ -66,6 +66,7 @@ const schemas={
 };
 // Additive optional fields preserve old durable event/idempotency payloads.
 schemas.Call.properties.mediaType=mediaType;
+schemas.Call.properties.durationLimitReason={type:'string',enum:['test_credit_balance','test_duration_cap'],description:'Reason for the frozen connected-time allowance at reservation. May be absent on legacy events and idempotent responses.'};
 schemas.RtcToken.properties.mediaType=mediaType;
 schemas.Listener.properties.videoRate={anyOf:[ref('Rate'),{type:'null'}]};
 const responses=schema=>({200:{description:'Authoritative response',content:{'application/json':{schema}}},400:{description:'Validation failed',content:{'application/json':{schema:ref('Error')}}},401:{description:'Session is missing, expired or revoked',content:{'application/json':{schema:ref('Error')}}},403:{description:'Role or participant access denied',content:{'application/json':{schema:ref('Error')}}},404:{description:'Resource is missing or not visible to this participant',content:{'application/json':{schema:ref('Error')}}},409:{description:'State, eligibility or idempotency conflict',content:{'application/json':{schema:ref('Error')}}},429:{description:'Request rate limit exceeded',content:{'application/json':{schema:ref('Error')}}},503:{description:'Dependency or RTC configuration unavailable',content:{'application/json':{schema:ref('Error')}}}});
