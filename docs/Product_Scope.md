@@ -28,7 +28,7 @@ This table covers the features recorded from the transcript in the master plan a
 |---|---|---|
 | One app, Customer and Listener modes | Required | Remains one app; staff tools separate |
 | Android, Tamil and English | Required | More languages and iOS follow independent gates |
-| Adult onboarding, consent, OTP | Fictional adult test identities; explicit development access | MSG91 branded OTP, Firebase session verification, age assurance and consent required before public use |
+| Adult onboarding, consent, OTP | Fictional adult test identities; explicit development access | Owner-selected Firebase paid phone verification (D17), actual delivery/presentation and session evidence, age assurance and approved consent required before public use |
 | Nickname, avatar, language | Safe test profiles and language selection | Editable moderated profile; never expose phone number or birth date |
 | Listener application and approval | Manually seeded approved fictional Listener | Private application, verification, consented voice sample and human review |
 | Availability and discovery sorting | Online/offline/busy, stale-presence expiry and language filter | Stable pagination, eligibility checks and accessible states |
