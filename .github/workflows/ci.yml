@@ -111,6 +111,11 @@ jobs:
           flutter-version: '3.27.4'
           channel: stable
           cache: true
+      - name: Cache verified OpenAPI Generator
+        uses: actions/cache@v5
+        with:
+          path: artifacts/openapi-generator/openapi-generator-cli-7.26.0.jar
+          key: openapi-generator-7.26.0-1760050094997b9cc790cc1350be095f15da8c08a996b184d3eadc4ccda5e35e
       - run: npm run check:client
       - run: npm run check:mobile
       - name: Verify history calendar time zones

@@ -42,7 +42,7 @@
     "smoke:accounts": "node --env-file-if-exists=.env scripts/smoke-account-client.cjs",
     "smoke:client": "node --env-file-if-exists=.env scripts/smoke-generated-client.mjs",
     "dev:admin": "npm run dev --workspace @nightshift/admin",
-    "check:admin": "turbo run build typecheck test --filter=@nightshift/admin",
+    "check:admin": "turbo run build typecheck test --filter=@nightshift/admin --concurrency=1",
     "test:admin:e2e": "turbo run test:e2e --filter=@nightshift/admin"
   },
   "devDependencies": {

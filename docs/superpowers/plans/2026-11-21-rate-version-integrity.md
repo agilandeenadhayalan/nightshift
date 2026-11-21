@@ -24,4 +24,4 @@ No live database migration, repair, deployment or financial transaction is autho
 
 - [x] Reproduce two meaningful mutation/seed-conflict failures and implement immutable versions with atomic validation.
 - [x] Verify 11 focused and 415 full backend tests (zero failures/skips/cancellations), migration preservation and independent review. Typecheck/build/unit and repository checks pass.
-- [ ] Publish a draft stacked PR and verify exact final-commit CI.
+- [x] Publish draft PR #86 stacked on PR #85. Backend, Android and staff CI passed for exact head `a3412e2e910c179eb8e13fd43bca3d6903e22513` in run 44874478124.

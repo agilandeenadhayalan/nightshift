@@ -1,11 +1,11 @@
 // Official OpenAPI Generator; only the checked-in templates customize its output.
-import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { ensureVerifiedDownload } from './verified-download.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const version = '7.26.0';
@@ -15,17 +15,8 @@ const destination = path.join(root, 'packages', 'contracts', 'dart');
 const check = process.argv.includes('--check');
 if (process.argv.slice(2).some(arg => arg !== '--check')) throw new Error('Use --check or no arguments');
 const normalize = buffer => buffer.toString('utf8').replaceAll('\r\n', '\n');
-const digest = buffer => createHash('sha256').update(buffer).digest('hex');
-
-await mkdir(path.dirname(jar), { recursive: true });
-if (!existsSync(jar)) {
-  const response = await fetch(`https://repo.maven.apache.org/maven2/org/openapitools/openapi-generator-cli/${version}/openapi-generator-cli-${version}.jar`, { signal: AbortSignal.timeout(120_000) });
-  if (!response.ok) throw new Error(`Generator download failed: HTTP ${response.status}`);
-  const bytes = Buffer.from(await response.arrayBuffer());
-  if (digest(bytes) !== sha256) throw new Error('Generator download checksum mismatch');
-  await writeFile(jar, bytes);
-}
-if (digest(await readFile(jar)) !== sha256) throw new Error('Cached generator checksum mismatch; remove the invalid cached JAR');
+await ensureVerifiedDownload({target:jar,sha256,
+  url:`https://repo.maven.apache.org/maven2/org/openapitools/openapi-generator-cli/${version}/openapi-generator-cli-${version}.jar`});
 
 async function files(directory, prefix = '') {
   if (!existsSync(directory)) return new Map();
