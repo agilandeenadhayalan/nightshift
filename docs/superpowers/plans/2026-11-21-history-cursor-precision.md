@@ -22,8 +22,8 @@ Run focused checks followed by the full isolated backend regression, typecheck/b
 ## Execution
 
 - [x] Reproduce and fix the precision defect with participant-only pagination evidence: four pre-fix precision failures, then eight focused cases passed.
-- [ ] Verify calendar boundaries locally and all four process-scoped zones in CI.
+- [x] Verify calendar boundaries locally and all four process-scoped zones in CI: UTC/Kolkata/Kiritimati 8 passed each, New York 11 passed; no failures and explicit other-zone skips.
 - [x] Complete independent review and required local regression checks: 404 backend integration, 449 Flutter (24 explicit Linux-zone skips), clean analyzer, 74 API, 7 domain, 3 audio reference and 11 tooling cases.
-- [ ] Publish a draft PR stacked on PR83 and verify final-commit CI.
+- [x] Publish draft PR84 stacked on PR83; backend, Android and staff CI passed for final head `3d76f5d41bb31bd7c922f6c2d529dfc2e7465bd9` in run44871582338.
 
 Physical current-build history/reconnect checks and upstream acceptance remain separate. There is no new owner decision required for this engineering fix.

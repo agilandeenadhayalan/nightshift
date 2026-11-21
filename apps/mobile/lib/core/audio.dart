@@ -3,6 +3,7 @@ import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'api.dart';
 import 'models.dart';
+import 'media_diagnostics.dart';
 
 abstract interface class CallAudio {
   bool get ready;
@@ -38,12 +39,21 @@ abstract interface class CallVideo implements CallAudio {
   Future<void> switchCamera();
 }
 
+/// Optional observation capability. The sink is captured for one join attempt;
+/// it never carries credentials or controls media readiness.
+abstract interface class CallAudioDiagnostics {
+  Future<void> joinWithDiagnostics(
+      RtcCredentials credentials, Future<RtcCredentials> Function() renew,
+      {required bool video, required MediaDiagnosticSink sink});
+}
+
 /// Serializes native mutations with final teardown. A pending enable operation
 /// cannot finish after release and leave a camera running.
 class _OwnedRtcEngine {
   _OwnedRtcEngine(this.engine,
-      {required this.video, required this.previewOnly});
+      {required this.video, required this.previewOnly, this.diagnostics});
   final RtcEngine engine;
+  final MediaDiagnosticSink? diagnostics;
   final bool video, previewOnly;
   bool closed = false;
   bool audioInterrupted = false;
@@ -88,7 +98,7 @@ class _OwnedRtcEngine {
 }
 
 /// SDK callbacks establish media readiness; HTTP acceptance is never proof.
-class AgoraCallAudio implements CallVideo {
+class AgoraCallAudio implements CallVideo, CallAudioDiagnostics {
   AgoraCallAudio({
     RtcEngine Function()? engineFactory,
     Future<bool> Function()? microphonePermission,
@@ -106,6 +116,7 @@ class AgoraCallAudio implements CallVideo {
   final Duration _cleanupTimeout;
   _OwnedRtcEngine? _session;
   Future<void> _releaseBarrier = Future<void>.value();
+  MediaDiagnosticSink? _releaseDiagnostics;
   bool _lastDetachedWasPreview = false;
   int _generation = 0, _cameraRevision = 0;
   bool _previewRequested = false;
@@ -162,6 +173,15 @@ class AgoraCallAudio implements CallVideo {
   bool _current(_OwnedRtcEngine session) =>
       identical(_session, session) && !session.closed;
 
+  MediaDiagnosticSink? _diagnosticsFor(
+          _OwnedRtcEngine session, RtcConnection connection) =>
+      _current(session) &&
+              !session.previewOnly &&
+              connection.channelId == _channel &&
+              connection.localUid == _localUid
+          ? session.diagnostics
+          : null;
+
   void _resetState() {
     _joined = _connected = _recording = _remoteReady = false;
     _localVideoReady = _remoteVideoReady = false;
@@ -179,8 +199,18 @@ class AgoraCallAudio implements CallVideo {
     _resetState();
     if (old != null) {
       _lastDetachedWasPreview = old.previewOnly;
+      _releaseDiagnostics = old.diagnostics;
+      old.diagnostics?.capture(DiagnosticCapture.stopRequested);
+      old.diagnostics?.cleanup(DiagnosticCleanup.requested);
       final previous = _releaseBarrier;
       final closing = old.close();
+      // Only the original close future proves SDK release completion. A caller
+      // timeout cannot settle this observer or release the engine barrier.
+      closing.then<void>((_) {
+        old.diagnostics?.cleanup(DiagnosticCleanup.released);
+      }, onError: (Object _, StackTrace __) {
+        old.diagnostics?.cleanup(DiagnosticCleanup.failed);
+      }).ignore();
       _releaseBarrier = Future.wait([previous, closing]).then((_) {});
       // Observe late failure even after every caller has stopped waiting. Keep
       // this actual completion as the barrier, including its failed state.
@@ -190,16 +220,21 @@ class AgoraCallAudio implements CallVideo {
     return _waitForRelease();
   }
 
-  Future<void> _waitForRelease() =>
-      _releaseBarrier.then<void>((_) {}, onError: (Object _, StackTrace __) {
-        throw const ApiFailure('RTC_CLEANUP_FAILED',
-            'Audio cleanup could not be confirmed. Further calls are unavailable.');
-      }).timeout(_cleanupTimeout, onTimeout: () {
-        // This only bounds the caller. Native cleanup is still pending, so its
-        // original future continues to block all new engine creation.
-        throw const ApiFailure('RTC_CLEANUP_PENDING',
-            'Audio cleanup is still pending. Further calls are unavailable.');
-      });
+  Future<void> _waitForRelease() {
+    final diagnostics = _releaseDiagnostics;
+    return _releaseBarrier.then<void>((_) {},
+        onError: (Object _, StackTrace __) {
+      diagnostics?.cleanup(DiagnosticCleanup.failed);
+      throw const ApiFailure('RTC_CLEANUP_FAILED',
+          'Audio cleanup could not be confirmed. Further calls are unavailable.');
+    }).timeout(_cleanupTimeout, onTimeout: () {
+      diagnostics?.cleanup(DiagnosticCleanup.pending);
+      // This only bounds the caller. Native cleanup is still pending, so its
+      // original future continues to block all new engine creation.
+      throw const ApiFailure('RTC_CLEANUP_PENDING',
+          'Audio cleanup is still pending. Further calls are unavailable.');
+    });
+  }
 
   Future<bool> _run(
       _OwnedRtcEngine session, Future<void> Function() operation) async {
@@ -283,9 +318,15 @@ class AgoraCallAudio implements CallVideo {
           Future<RtcCredentials> Function() renew) =>
       _join(credentials, renew, video: true);
 
+  @override
+  Future<void> joinWithDiagnostics(
+          RtcCredentials credentials, Future<RtcCredentials> Function() renew,
+          {required bool video, required MediaDiagnosticSink sink}) =>
+      _join(credentials, renew, video: video, diagnostics: sink);
+
   Future<void> _join(
       RtcCredentials credentials, Future<RtcCredentials> Function() renew,
-      {required bool video}) async {
+      {required bool video, MediaDiagnosticSink? diagnostics}) async {
     final generation = ++_generation;
     _previewRequested = false;
     await _detach();
@@ -296,8 +337,8 @@ class AgoraCallAudio implements CallVideo {
       await _checkCameraPermission();
       if (generation != _generation) return;
     }
-    final session =
-        _OwnedRtcEngine(_engineFactory(), video: video, previewOnly: false);
+    final session = _OwnedRtcEngine(_engineFactory(),
+        video: video, previewOnly: false, diagnostics: diagnostics);
     _session = session;
     _remoteUid = credentials.remoteUid;
     _localUid = credentials.uid;
@@ -337,9 +378,13 @@ class AgoraCallAudio implements CallVideo {
               )))) {
         return;
       }
+      diagnostics?.localMute(DiagnosticMute.unmuted);
       onChanged?.call();
     } catch (_) {
-      if (_current(session)) await leave();
+      if (_current(session)) {
+        diagnostics?.failure(DiagnosticFailure.joinFailed);
+        await leave();
+      }
       rethrow;
     }
   }
@@ -369,16 +414,26 @@ class AgoraCallAudio implements CallVideo {
     session.engine.registerEventHandler(RtcEngineEventHandler(
       onJoinChannelSuccess: (connection, elapsed) {
         if (!_current(session) || session.previewOnly) return;
+        _diagnosticsFor(session, connection)
+            ?.milestone(DiagnosticMilestone.sdkJoined);
         _joined = _connected = true;
         onChanged?.call();
       },
       onRejoinChannelSuccess: (connection, elapsed) {
         if (!_current(session) || session.previewOnly) return;
+        _diagnosticsFor(session, connection)
+            ?.milestone(DiagnosticMilestone.sdkJoined);
         _joined = _connected = true;
         onChanged?.call();
       },
       onConnectionStateChanged: (connection, state, reason) {
         if (!_current(session) || session.previewOnly) return;
+        final diagnostics = _diagnosticsFor(session, connection);
+        if (state == ConnectionStateType.connectionStateReconnecting) {
+          diagnostics?.reconnect();
+        } else if (state == ConnectionStateType.connectionStateFailed) {
+          diagnostics?.failure(DiagnosticFailure.connectionFailed);
+        }
         _connected = state == ConnectionStateType.connectionStateConnected;
         if (!_connected) {
           _remoteReady = _remoteVideoReady = false;
@@ -398,6 +453,14 @@ class AgoraCallAudio implements CallVideo {
         _recording = !session.audioInterrupted &&
             (state == LocalAudioStreamState.localAudioStreamStateRecording ||
                 state == LocalAudioStreamState.localAudioStreamStateEncoding);
+        final diagnostics = _diagnosticsFor(session, connection);
+        if (interrupted) {
+          diagnostics?.capture(DiagnosticCapture.uncertain);
+          diagnostics?.failure(DiagnosticFailure.mediaFailure);
+        } else if (_recording) {
+          diagnostics?.capture(DiagnosticCapture.active);
+          diagnostics?.milestone(DiagnosticMilestone.localCaptureObserved);
+        }
         onChanged?.call();
         if (interrupted) {
           onFailure?.call('RTC_MICROPHONE_FAILED');
@@ -406,6 +469,16 @@ class AgoraCallAudio implements CallVideo {
       onRemoteAudioStateChanged: (connection, uid, state, reason, elapsed) {
         if (!_current(session) || session.previewOnly || uid != _remoteUid) {
           return;
+        }
+        final diagnostics = _diagnosticsFor(session, connection);
+        if (reason == RemoteAudioStateReason.remoteAudioReasonRemoteMuted) {
+          diagnostics?.remoteMute(DiagnosticMute.muted);
+        } else if (reason ==
+            RemoteAudioStateReason.remoteAudioReasonRemoteUnmuted) {
+          diagnostics?.remoteMute(DiagnosticMute.unmuted);
+        }
+        if (state == RemoteAudioState.remoteAudioStateDecoding) {
+          diagnostics?.milestone(DiagnosticMilestone.remoteDecodeObserved);
         }
         // Intentional audio mute preserves previously established media readiness.
         if (reason != RemoteAudioStateReason.remoteAudioReasonRemoteMuted) {
@@ -464,6 +537,28 @@ class AgoraCallAudio implements CallVideo {
           unawaited(_adaptQuality(session, false));
         }
       },
+      onLocalAudioStats: (connection, stats) {
+        final diagnostics = _diagnosticsFor(session, connection);
+        diagnostics?.metric(
+            DiagnosticMetric.localPacketLossPercent, stats.txPacketLossRate);
+        diagnostics?.metric(DiagnosticMetric.localSentKbps, stats.sentBitrate);
+      },
+      onRemoteAudioStats: (connection, stats) {
+        if (stats.uid != _remoteUid) return;
+        final diagnostics = _diagnosticsFor(session, connection);
+        diagnostics?.metric(
+            DiagnosticMetric.remoteFrameLossPercent, stats.audioLossRate);
+        diagnostics?.metric(
+            DiagnosticMetric.remoteReceivedKbps, stats.receivedBitrate);
+        diagnostics?.metric(DiagnosticMetric.networkTransportDelayMs,
+            stats.networkTransportDelay);
+        diagnostics?.metric(
+            DiagnosticMetric.jitterBufferDelayMs, stats.jitterBufferDelay);
+      },
+      onRtcStats: (connection, stats) {
+        _diagnosticsFor(session, connection)
+            ?.metric(DiagnosticMetric.clientServerDelayMs, stats.lastmileDelay);
+      },
       onTokenPrivilegeWillExpire: (connection, token) {
         if (!_current(session) || renew == null) return;
         unawaited(() async {
@@ -473,12 +568,16 @@ class AgoraCallAudio implements CallVideo {
               await _run(session, () => session.engine.renewToken(next.token));
             }
           } catch (_) {
-            if (_current(session)) onFailure?.call('RTC_RENEWAL_FAILED');
+            if (_current(session)) {
+              session.diagnostics?.failure(DiagnosticFailure.mediaFailure);
+              onFailure?.call('RTC_RENEWAL_FAILED');
+            }
           }
         }());
       },
       onRequestToken: (connection) {
         if (_current(session) && !session.previewOnly) {
+          session.diagnostics?.failure(DiagnosticFailure.mediaFailure);
           onFailure?.call('RTC_TOKEN_EXPIRED');
         }
       },
@@ -487,6 +586,7 @@ class AgoraCallAudio implements CallVideo {
         if (session.previewOnly) {
           _cameraFailed(session);
         } else {
+          session.diagnostics?.failure(DiagnosticFailure.mediaFailure);
           onFailure?.call('RTC_${code.value()}');
         }
       },
@@ -607,6 +707,8 @@ class AgoraCallAudio implements CallVideo {
     final next = !muted;
     if (await _run(session, () => session.engine.muteLocalAudioStream(next))) {
       muted = next;
+      session.diagnostics
+          ?.localMute(next ? DiagnosticMute.muted : DiagnosticMute.unmuted);
       onChanged?.call();
     }
   }
