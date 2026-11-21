@@ -23,7 +23,7 @@ The seal persists independently of transaction-number reuse, including across da
 | Typecheck/build/unit checks | Passed; 74 API, 7 domain and 3 audio cases; unchanged domain/audio results reused by Turbo | `journal-integrity-typecheck-final.log`, `journal-integrity-build-final.log`, `journal-integrity-test-final.log` |
 | Direct `node --test` from `audio/` | 3 passed | `journal-integrity-audio-reference-final.log` |
 | Repository/contracts/boundaries/secret guard | Passed, including 11 tooling cases | `journal-integrity-repo-check.log` |
-| Final-commit CI | Pending | Recorded in the PR after completion |
+| Implementation-commit CI | Backend, Android and staff passed for `9083a397e8477f4fb8ad74399e4972467b0d4c57` | [PR #87](https://github.com/agilandeenadhayalan/nightshift/pull/87), [run 44876049224](https://github.com/agilandeenadhayalan/nightshift/actions/runs/44876049224); any subsequent documentation-head result is recorded in the PR |
 
 The focused suite covers account identity/owner/unit/kind changes, unused deletion, semantic no-ops, multi-statement and savepoint posting, caller-supplied true/false/null seals, empty and cross-unit-unbalanced commit rejection, early sealing, forced deferred checks followed by savepoint rollback, injected whole-transaction rollback, immutable history, separate corrective test postings, actual cascading truncation, foreign-transaction attempts and a same-key contender observed waiting on the creator. Concurrent/idempotent seeding retains three grants and six lines without reopening batches.
 

@@ -26,4 +26,4 @@ Keep existing phone runtime/database at their verified baseline. No installation
 
 - [x] Reproduce both source gaps and implement persistent seals/account integrity without changing runtime writers.
 - [x] Verify 16 focused and 431 full backend cases (zero failures/skips/cancellations), independent source/docs review, typecheck/build/unit, explicit audio and repository checks.
-- [ ] Publish a draft stacked PR and verify exact-head CI.
+- [x] Publish draft PR #87 stacked on PR #86; backend, Android and staff CI passed for implementation head `9083a397e8477f4fb8ad74399e4972467b0d4c57` in run 44876049224. Subsequent documentation-only evidence and its final-head CI are recorded in the PR.
