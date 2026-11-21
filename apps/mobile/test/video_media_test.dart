@@ -98,6 +98,24 @@ void main() {
   });
   tearDown(() => media.leave());
 
+  test(
+      'interruption latches readiness off even when SDK later reports recording',
+      () async {
+    await media.joinVideo(credentials(), () async => credentials());
+    engine.audioConnected();
+    expect(media.ready, isTrue);
+    final failures = <String>[];
+    media.onFailure = failures.add;
+    engine.handler!.onLocalAudioStateChanged!(
+        const RtcConnection(channelId: 'test-channel', localUid: 1),
+        LocalAudioStreamState.localAudioStreamStateRecording,
+        LocalAudioStreamReason.localAudioStreamReasonInterrupted);
+    expect(media.ready, isFalse);
+    expect(failures, ['RTC_MICROPHONE_FAILED']);
+    engine.audioConnected();
+    expect(media.ready, isFalse);
+  });
+
   test('preview captures camera only and requires an actual capture callback',
       () async {
     await media.startPreview('test-app');

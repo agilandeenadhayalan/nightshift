@@ -264,7 +264,8 @@ test('HTTP exposes bounded pages/status/favorites without private profile or ide
   const owner=await participant(),listener=await participant(true);
   assert.equal((await request('listeners')).status,401);assert.equal((await request('favorites')).status,401);
   const result=await request('listeners?language=ta',owner);assert.equal(result.status,200);assert.equal(result.body.items[0].id,listener.id);
-  assert.deepEqual(Object.keys(result.body.items[0]).sort(),['id','displayName','languages','online','available','busy','favorite','testOnly','rate','videoRate'].sort());
+  assert.deepEqual(Object.keys(result.body.items[0]).sort(),['id','displayName','languages','online','reachability','available','busy','favorite','testOnly','rate','videoRate'].sort());
+  assert.equal(result.body.items[0].reachability,'offline');
   const status=await request('listeners/status',owner,'POST',{language:'ta',listenerIds:[listener.id]});assert.equal(status.status,201);assert.equal(status.body.items.length,1);
   assert.equal((await request('listeners?availableOnly=1',owner)).status,400);
   assert.equal((await request(`favorites/${listener.id}`,owner,'PUT')).status,200);

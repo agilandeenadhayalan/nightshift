@@ -100,8 +100,8 @@ class _VideoPreflightState extends State<_VideoPreflight> {
         final state = widget.state;
         final video = state.video;
         final previewing = video?.previewing == true;
-        final available =
-            widget.listener == null || state.canCallListener(widget.listener!);
+        final available = widget.listener == null ||
+            state.canCallListener(widget.listener!, video: true);
         final canConfirm = available &&
             previewing &&
             _consent &&

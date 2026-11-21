@@ -2,6 +2,8 @@
 
 Recorded 20 November 2026. The owner selected project **nightshift-c3e1a** (NightShift), number **844582070891**, and explicitly chose **Firebase paid Phone Authentication SMS to India (+91)**. This supersedes the previous Twilio and MSG91 provider choices. The connected Firebase tools registered Android application **com.nightshift.app**, app ID **1:844582070891:android:43b3988afbd1e2d4a61f2e**. The `development` alias in `.firebaserc` points to this project; it is not a production release approval.
 
+Update, 21 November: the owner explicitly approved **com.agilandeenadhayalan.nightshift** as the permanent identifier after Play rejected the original identifier as already used. Firebase now has a second active Android registration, **NightShift Play Android**, app ID **1:844582070891:android:e673f4c812adeb21a61f2e**, for that exact package. The original registration remains active for the installed private test build. The local debug certificate was independently checked against APK4002 using Android `apksigner`; its matching SHA-1 and SHA-256 were added to the new registration and verified through a fresh app-list read. New builds need the new app ID in their ignored Firebase definitions. This registration operation sent no SMS/push and does not establish sign-in on the new package, release-signing configuration or Play acceptance. No installed app or live server was changed by the registration.
+
 An earlier isolated project, `nightshift-dev-agilan`, was created before the owner supplied the intended project. It also has billing disabled and is unused. No existing unrelated application project was modified. Removing that unused cloud project remains an explicit cleanup decision.
 
 ## Local configuration
@@ -42,7 +44,7 @@ That build does not enable the server's SMS adapter or approve a provider bill. 
 - Approved production notice wording; the Redmi follow-up sign-in now passes.
 - Actual SDK delivery, manual/automatic verification, refresh and disabled/revoked/expired identities through this project.
 - Physical-device account recovery and accessibility checks.
-- Publisher/package confirmation and release decisions before production distribution.
+- New-package sign-in/device evidence, release signing, listing/test evidence and production access before distribution; the package choice and Play app creation are recorded in D08/D14.
 
 Firebase's [authentication limits](https://firebase.google.com/docs/auth/limits) require Blaze for verification SMS. Its [Android phone authentication guide](https://firebase.google.com/docs/auth/android/phone-auth) covers provider enablement, fingerprints, Play Integrity and SMS regions. See also [billing protection guidance](https://firebase.google.com/docs/projects/billing/avoid-surprise-bills). The currently documented [Firebase spend-cap preview](https://firebase.google.com/docs/projects/billing/spend-caps) covers selected services, not Authentication; it must not be presented as an SMS cutoff.
 

@@ -17,6 +17,7 @@ class Listener {
     required this.displayName,
     this.languages = const [],
     required this.online,
+    required this.reachability,
     required this.available,
     required this.busy,
     required this.favorite,
@@ -32,6 +33,8 @@ class Listener {
   List<ListenerLanguagesEnum> languages;
 
   bool online;
+
+  ListenerReachabilityEnum reachability;
 
   bool available;
 
@@ -51,6 +54,7 @@ class Listener {
     other.displayName == displayName &&
     _deepEquality.equals(other.languages, languages) &&
     other.online == online &&
+    other.reachability == reachability &&
     other.available == available &&
     other.busy == busy &&
     other.favorite == favorite &&
@@ -65,6 +69,7 @@ class Listener {
     (displayName.hashCode) +
     (languages.hashCode) +
     (online.hashCode) +
+    (reachability.hashCode) +
     (available.hashCode) +
     (busy.hashCode) +
     (favorite.hashCode) +
@@ -82,6 +87,7 @@ class Listener {
       json[r'displayName'] = this.displayName;
       json[r'languages'] = this.languages;
       json[r'online'] = this.online;
+      json[r'reachability'] = this.reachability;
       json[r'available'] = this.available;
       json[r'busy'] = this.busy;
       json[r'favorite'] = this.favorite;
@@ -136,6 +142,12 @@ class Listener {
       if (json[r'online'] != null && json[r'online'] is! bool) {
         throw const FormatException('Invalid Listener.online boolean');
       }
+      if (!json.containsKey(r'reachability')) {
+        throw const FormatException('Missing Listener.reachability');
+      }
+      if (json[r'reachability'] == null) {
+        throw const FormatException('Null Listener.reachability');
+      }
       if (!json.containsKey(r'available')) {
         throw const FormatException('Missing Listener.available');
       }
@@ -184,6 +196,7 @@ class Listener {
         displayName: mapValueOfType<String>(json, r'displayName')!,
         languages: ListenerLanguagesEnum.listFromJson(json[r'languages']),
         online: mapValueOfType<bool>(json, r'online')!,
+        reachability: ListenerReachabilityEnum.fromJson(json[r'reachability'])!,
         available: mapValueOfType<bool>(json, r'available')!,
         busy: mapValueOfType<bool>(json, r'busy')!,
         favorite: mapValueOfType<bool>(json, r'favorite')!,
@@ -240,6 +253,7 @@ class Listener {
     'displayName',
     'languages',
     'online',
+    'reachability',
     'available',
     'busy',
     'favorite',
@@ -322,6 +336,85 @@ class ListenerLanguagesEnumTypeTransformer {
 
   /// The singleton instance of this transformer.
   static ListenerLanguagesEnumTypeTransformer? _instance;
+}
+
+
+
+enum ListenerReachabilityEnum {
+  foreground._(r'foreground'),
+  backgroundEligible._(r'background_eligible'),
+  offline._(r'offline'),
+  ;
+
+  /// Instantiate a new enum with the provided value.
+  const ListenerReachabilityEnum._(this._value);
+
+  /// The underlying value of this enum member.
+  final String _value;
+
+  @override
+  String toString() => _value;
+
+  /// Encodes this enum as a value suitable for JSON.
+  String toJson() => _value;
+
+  /// Returns the instance of [ListenerReachabilityEnum] that was successfully decoded
+  /// from the passed [value] on success, null otherwise.
+  static ListenerReachabilityEnum? fromJson(dynamic value) => ListenerReachabilityEnumTypeTransformer().decode(value);
+
+  /// Returns a [List] containing instances of [ListenerReachabilityEnum]
+  /// that were successfully decoded from the passed [JSON][json].
+  static List<ListenerReachabilityEnum> listFromJson(dynamic json, {bool growable = false,}) {
+    final result = <ListenerReachabilityEnum>[];
+    if (json is List && json.isNotEmpty) {
+      for (final row in json) {
+        final value = ListenerReachabilityEnum.fromJson(row);
+        if (value == null) throw const FormatException('Invalid enum list item');
+        result.add(value);
+      }
+    }
+    return result.toList(growable: growable);
+  }
+}
+
+/// Transformation class that can [encode] an instance of [ListenerReachabilityEnum] to String,
+/// and [decode] dynamic data back to [ListenerReachabilityEnum].
+class ListenerReachabilityEnumTypeTransformer {
+  factory ListenerReachabilityEnumTypeTransformer() => _instance ??= const ListenerReachabilityEnumTypeTransformer._();
+
+  const ListenerReachabilityEnumTypeTransformer._();
+
+  String encode(ListenerReachabilityEnum data) => data._value;
+
+  /// Returns the instance of [ListenerReachabilityEnum] that was successfully decoded
+  /// from the passed [data] value on success, null otherwise.
+  ///
+  /// If [allowNull] is true and the [dynamic value][data] cannot be decoded successfully,
+  /// then null is returned. However, if [allowNull] is false and the [dynamic value][data]
+  /// cannot be decoded successfully, then an [UnimplementedError] is thrown.
+  ///
+  /// The [allowNull] is very handy when an API changes and a new enum value is added or removed,
+  /// and users are still using an old app with the old code.
+  ListenerReachabilityEnum? decode(dynamic data, {bool allowNull = false}) {
+    if (data is ListenerReachabilityEnum) {
+      return data;
+    }
+    if (data != null) {
+      switch (data) {
+        case r'foreground': return ListenerReachabilityEnum.foreground;
+        case r'background_eligible': return ListenerReachabilityEnum.backgroundEligible;
+        case r'offline': return ListenerReachabilityEnum.offline;
+        default:
+          if (!allowNull) {
+            throw const FormatException('Unknown enum value');
+          }
+      }
+    }
+    return null;
+  }
+
+  /// The singleton instance of this transformer.
+  static ListenerReachabilityEnumTypeTransformer? _instance;
 }
 
 

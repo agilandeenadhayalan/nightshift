@@ -349,6 +349,7 @@ class FakeApi extends NightShiftApi {
 
 Json directoryCard(Json value) => {
       'online': value['available'] == true,
+      'reachability': value['available'] == true ? 'foreground' : 'offline',
       'busy': false,
       'favorite': false,
       'rate': rateJson(),

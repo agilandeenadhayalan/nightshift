@@ -1,0 +1,26 @@
+{
+  "serverTime": "2026-11-21T00:00:00.000Z",
+  "leaseExpiresAt": "2026-11-21T00:30:00.000Z",
+  "payload": {
+    "schemaVersion": "1",
+    "type": "call.invitation",
+    "callId": "10000000-0000-4000-8000-000000000001",
+    "eventId": "20000000-0000-4000-8000-000000000001",
+    "callVersion": "1",
+    "expiresAt": "2026-11-21T00:00:30.000Z",
+    "registrationId": "30000000-0000-4000-8000-000000000001",
+    "registrationVersion": "1",
+    "bindingId": "40000000-0000-4000-8000-000000000001"
+  },
+  "cases": [
+    {"name": "valid invitation", "override": {}, "expected": "show"},
+    {"name": "valid terminal", "override": {"type": "call.terminal", "callVersion": "2"}, "expected": "dismiss"},
+    {"name": "expired invitation", "override": {"expiresAt": "2026-11-20T23:59:59.000Z"}, "expected": "ignore"},
+    {"name": "wrong binding", "override": {"bindingId": "40000000-0000-4000-8000-000000000002"}, "expected": "ignore"},
+    {"name": "wrong registration generation", "override": {"registrationVersion": "2"}, "expected": "ignore"},
+    {"name": "invalid schema", "override": {"schemaVersion": "2"}, "expected": "ignore"},
+    {"name": "invalid call version", "override": {"callVersion": "0"}, "expected": "ignore"},
+    {"name": "extra field", "override": {"url": "https://invalid.example/"}, "expected": "ignore"},
+    {"name": "invalid date", "override": {"expiresAt": "2026-02-31T00:00:00.000Z"}, "expected": "ignore"}
+  ]
+}

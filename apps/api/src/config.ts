@@ -6,6 +6,7 @@ export interface Config {
   videoCallsEnabled?: boolean;
   privateReviewDirectory?: string;
   staffReviewPolicyFile?: string;
+  push?: {projectId:string;packageName:string;credentialFile:string;digestKey:string;encryptionKey:string};
   staffAuth?: {origin:string;digestKey:string;policyVersion:string;sessionSeconds:number};
   phoneAuth?: {
     provider?: 'msg91'|'firebase';
@@ -65,7 +66,17 @@ export function loadConfig(env = process.env): Config {
   }
   const staffReviewPolicyFile=env.STAFF_REVIEW_POLICY_FILE||undefined;
   if(staffReviewPolicyFile&&(!staffAuth||!isAbsolute(staffReviewPolicyFile)))throw new Error('STAFF_REVIEW_POLICY_FILE requires configured staff access and an absolute approved policy file');
+  let push:Config['push'];
+  if(env.FCM_SEND_ENABLED!==undefined&&!['true','false'].includes(env.FCM_SEND_ENABLED))throw new Error('FCM_SEND_ENABLED must be true or false');
+  if(env.FCM_SEND_ENABLED==='true'){
+    if(phoneAuth?.provider!=='firebase'||env.FCM_PROJECT_ID!==phoneAuth.projectId||!env.FCM_SENDER_CREDENTIALS_FILE||!isAbsolute(env.FCM_SENDER_CREDENTIALS_FILE)
+      ||! /^[a-f0-9]{64}$/.test(env.FCM_TOKEN_ENCRYPTION_KEY??'')||(env.FCM_TOKEN_DIGEST_KEY?.length??0)<32||(env.FCM_TOKEN_DIGEST_KEY?.length??0)>256
+      ||env.FCM_TOKEN_DIGEST_KEY===env.FCM_TOKEN_ENCRYPTION_KEY||env.FCM_TOKEN_DIGEST_KEY===phoneAuth.digestKey)
+      throw new Error('Push requires native phone identity, matching project, separate private credentials and distinct strong token keys');
+    push={projectId:env.FCM_PROJECT_ID!,packageName:'com.agilandeenadhayalan.nightshift',credentialFile:env.FCM_SENDER_CREDENTIALS_FILE,
+      digestKey:env.FCM_TOKEN_DIGEST_KEY!,encryptionKey:env.FCM_TOKEN_ENCRYPTION_KEY!};
+  }
   return { databaseUrl: env.DATABASE_URL, redisUrl: env.REDIS_URL, port,
     devAccessKey: env.DEV_ACCESS_KEY!, agoraAppId: env.AGORA_APP_ID,
-    agoraAppCertificate: env.AGORA_APP_CERTIFICATE, videoCallsEnabled: env.VIDEO_CALLS_ENABLED === 'true', phoneAuth,privateReviewDirectory,staffAuth,staffReviewPolicyFile };
+    agoraAppCertificate: env.AGORA_APP_CERTIFICATE, videoCallsEnabled: env.VIDEO_CALLS_ENABLED === 'true', phoneAuth,privateReviewDirectory,staffAuth,staffReviewPolicyFile,push };
 }

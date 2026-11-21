@@ -16,6 +16,8 @@ void main() {
     'displayName': 'Test Listener',
     'languages': ['en'],
     'available': true,
+    'online': true,
+    'reachability': 'foreground',
     'rate': rateJson(),
     'videoRate': rateJson(video: true),
   });
