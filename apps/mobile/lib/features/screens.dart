@@ -12,6 +12,7 @@ import 'discovery_view.dart';
 import '../core/discovery.dart';
 import 'invitation_settings.dart';
 import 'call_allowance.dart';
+import 'media_diagnostics.dart';
 
 class PageBody extends StatelessWidget {
   const PageBody({super.key, required this.children});
@@ -703,6 +704,7 @@ class CallScreen extends ConsumerWidget {
               SelectableText(
                   state.text('Call ID: ${call.id}', 'அழைப்பு எண்: ${call.id}'),
                   style: Theme.of(context).textTheme.bodySmall),
+              MediaDiagnosticsButton(state: state, callId: call.id),
             ])));
   }
 }
@@ -970,6 +972,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                               state.text('Call ID: ${call.id}',
                                   'அழைப்பு எண்: ${call.id}'),
                               style: Theme.of(context).textTheme.bodySmall),
+                          MediaDiagnosticsButton(state: state, callId: call.id),
                           TextButton.icon(
                               onPressed: state.busy
                                   ? null
@@ -1008,7 +1011,9 @@ Future<void> showSafetyDialog(
       context: context, builder: (context) => _SafetyDialog(controller: state));
   if (result != null && owner == state.accountIdentity) {
     await state.submitSafety(call, result.$1, block: result.$2);
-    if (context.mounted && owner == state.accountIdentity && state.error == null) {
+    if (context.mounted &&
+        owner == state.accountIdentity &&
+        state.error == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(state.text(
               'Your action was saved.', 'உங்கள் செயல் சேமிக்கப்பட்டது.'))));

@@ -21,6 +21,7 @@ import 'staff_transport.dart';
 import 'matching.dart';
 import 'call_invitations.dart';
 import 'call_stop_intent.dart';
+import 'media_diagnostics.dart';
 
 final appControllerProvider = ChangeNotifierProvider<AppController>((ref) {
   final controller = AppController(
@@ -44,9 +45,20 @@ class AppController extends ChangeNotifier {
       StaffCookies? staffCookies,
       StaffTransport? staffTransport,
       InvitationDevice? invitationDevice,
+      Duration Function()? diagnosticsNow,
+      Timer Function(Duration, void Function())? diagnosticsTimerFactory,
       this.startTimers = true,
       this.developmentEnabled = !kReleaseMode})
       : firebase = identityClient ?? NativeFirebaseIdentityClient() {
+    _mediaDiagnostics = MediaDiagnostics(
+        owner: () => _disposed || user == null ? null : accountIdentity,
+        origin: () => api.baseUrl,
+        monotonicNow: diagnosticsNow,
+        timerFactory: diagnosticsTimerFactory,
+        onChanged: () {
+          // Observation never enters _notify's discovery/matching reconciler.
+          if (!_disposed) notifyListeners();
+        });
     this.staffWorkspace = staffWorkspace ??
         StaffWorkspace(
             identity: () => user == null ? null : accountIdentity,
@@ -138,6 +150,79 @@ class AppController extends ChangeNotifier {
   late final CallInvitations invitations;
   late final StaffWorkspace staffWorkspace;
   Object get accountIdentity => (user?.id, _identityRevision, api.baseUrl);
+  late final MediaDiagnostics _mediaDiagnostics;
+  MediaDiagnosticSink? _callDiagnosticSink;
+  Object? _diagnosticOwner;
+  String? _diagnosticCallId;
+  bool _diagnosticJoinAttempted = false;
+
+  MediaDiagnosticReceipt? get mediaDiagnostics => _mediaDiagnostics.snapshot;
+
+  MediaDiagnosticReceipt? mediaDiagnosticsFor(String callId) {
+    final receipt = mediaDiagnostics;
+    return receipt?.callId == callId ? receipt : null;
+  }
+
+  String? exportMediaDiagnostics(
+      {required Object expectedOwner,
+      required String callId,
+      required String receiptId,
+      DiagnosticSymptom? symptom}) {
+    if (_disposed || user == null || expectedOwner != accountIdentity) {
+      return null;
+    }
+    final receipt = mediaDiagnosticsFor(callId);
+    if (receipt == null || receipt.receiptId != receiptId) return null;
+    final value = _mediaDiagnostics.export(symptom: symptom);
+    return value == null ? null : jsonEncode(value);
+  }
+
+  void _observeDiagnosticCall(CallSession call) {
+    final ownerId = user?.id;
+    if (_disposed ||
+        ownerId == null ||
+        (call.customerId != ownerId && call.listenerId != ownerId)) {
+      return;
+    }
+    if (_diagnosticOwner != accountIdentity || _diagnosticCallId != call.id) {
+      _diagnosticOwner = accountIdentity;
+      _diagnosticCallId = call.id;
+      _diagnosticJoinAttempted = false;
+      _callDiagnosticSink = _mediaDiagnostics.begin(
+          owner: accountIdentity,
+          callId: call.id,
+          mediaType: call.isVideo
+              ? DiagnosticMediaType.video
+              : DiagnosticMediaType.audio);
+      _callDiagnosticSink?.milestone(DiagnosticMilestone.callObserved);
+    }
+    // An ended, declined, cancelled or timed-out invitation does not establish
+    // acceptance. This is an observation, never a claimed server timestamp.
+    if (['connecting', 'connected', 'reconnecting'].contains(call.state)) {
+      _callDiagnosticSink?.milestone(DiagnosticMilestone.acceptedObserved);
+    }
+    if (call.ended) {
+      _callDiagnosticSink?.milestone(DiagnosticMilestone.callEndedObserved);
+    }
+  }
+
+  MediaDiagnosticSink? _beginDiagnosticJoin(CallSession call) {
+    _observeDiagnosticCall(call);
+    if (_diagnosticOwner != accountIdentity || _diagnosticCallId != call.id) {
+      return null;
+    }
+    if (_diagnosticJoinAttempted) {
+      _callDiagnosticSink = _mediaDiagnostics.begin(
+          owner: accountIdentity,
+          callId: call.id,
+          mediaType: call.isVideo
+              ? DiagnosticMediaType.video
+              : DiagnosticMediaType.audio);
+    }
+    _diagnosticJoinAttempted = true;
+    return _callDiagnosticSink;
+  }
+
   bool canCallListener(ListenerProfile listener, {bool video = false}) =>
       foreground &&
       user != null &&
@@ -844,6 +929,7 @@ class AppController extends ChangeNotifier {
       held = walletHeld;
       listeners = directory;
       snapshotLoaded = true;
+      if (next != null) _observeDiagnosticCall(next);
       if (_errorFromSnapshot) {
         error = null;
         errorCode = null;
@@ -1051,6 +1137,7 @@ class AppController extends ChangeNotifier {
             idempotencyKey: newId());
         if (_disposed || session != _sessionRevision) return;
         activeCall = CallSession.fromJson(response);
+        _observeDiagnosticCall(activeCall!);
         _videoConsentCallId = video && foreground ? activeCall!.id : null;
         _revision++;
         if (!foreground) await _endAfterFailure();
@@ -1074,7 +1161,15 @@ class AppController extends ChangeNotifier {
               'VIDEO_UNAVAILABLE', 'Video calling is unavailable.');
         }
         await closeVideoPreview();
-        await audio.checkPermission();
+        try {
+          await audio.checkPermission();
+        } catch (failure) {
+          if (_sameOwner(owner, origin) && activeCall?.id == call.id) {
+            _observeDiagnosticCall(call);
+            _callDiagnosticSink?.failure(_diagnosticFailure(failure));
+          }
+          rethrow;
+        }
         if (!_sameOwner(owner, origin) ||
             !foreground ||
             activeCall?.id != call.id ||
@@ -1096,6 +1191,7 @@ class AppController extends ChangeNotifier {
         return;
       }
       final updated = CallSession.fromJson(result);
+      _observeDiagnosticCall(updated);
       _revision++;
       if (updated.ended) {
         activeCall = null;
@@ -1252,6 +1348,9 @@ class AppController extends ChangeNotifier {
       return;
     }
     final attempt = ++_joinAttempt;
+    // Capture before token/permission/native work; callbacks may outlive it.
+    final diagnostics = _beginDiagnosticJoin(call);
+    var credentialsObtained = false;
     _joiningId = call.id;
     final session = _sessionRevision;
     bool authorized() =>
@@ -1271,7 +1370,13 @@ class AppController extends ChangeNotifier {
         throw const ApiFailure(
             'INVALID_RESPONSE', 'Media authorization does not match the call.');
       }
-      if (call.isVideo) {
+      credentialsObtained = true;
+      diagnostics?.milestone(DiagnosticMilestone.joinRequested);
+      if (audio is CallAudioDiagnostics && diagnostics != null) {
+        await (audio as CallAudioDiagnostics).joinWithDiagnostics(
+            credentials, token,
+            video: call.isVideo, sink: diagnostics);
+      } else if (call.isVideo) {
         await video!.joinVideo(credentials, token);
       } else {
         await audio.join(credentials, token);
@@ -1285,12 +1390,29 @@ class AppController extends ChangeNotifier {
       }
     } catch (e) {
       if (!authorized()) return;
+      diagnostics?.failure(_diagnosticFailure(e,
+          fallback: credentialsObtained
+              ? DiagnosticFailure.joinFailed
+              : DiagnosticFailure.credentialsUnavailable));
       _showError(e);
       await _endAfterFailure(call);
     } finally {
       if (attempt == _joinAttempt) _joiningId = '';
       _notify();
     }
+  }
+
+  DiagnosticFailure _diagnosticFailure(Object failure,
+      {DiagnosticFailure fallback = DiagnosticFailure.mediaFailure}) {
+    if (failure is ApiFailure) {
+      if (failure.code == 'MICROPHONE_DENIED') {
+        return DiagnosticFailure.microphoneDenied;
+      }
+      if (failure.code == 'CAMERA_DENIED') {
+        return DiagnosticFailure.cameraDenied;
+      }
+    }
+    return fallback;
   }
 
   Future<void> reportMedia() async {
@@ -1423,6 +1545,7 @@ class AppController extends ChangeNotifier {
             throw const ApiFailure(
                 'END_PENDING', 'Waiting for the server to end the call.');
           }
+          _observeDiagnosticCall(ended);
           _revision++;
           activeCall = null;
           lastCall = ended;
@@ -1445,6 +1568,7 @@ class AppController extends ChangeNotifier {
                   call.listenerId != intent.ownerId)) {
             throw const ApiFailure('INVALID_RESPONSE', 'Invalid call state.');
           }
+          _observeDiagnosticCall(call);
           intent = CallStopIntent.forCall(intent.ownerId, intent.origin, call);
           _stopIntent = intent;
           _persistStop(intent, owner);
@@ -1714,6 +1838,11 @@ class AppController extends ChangeNotifier {
   }
 
   void _invalidateSessionRequests() {
+    _mediaDiagnostics.clear();
+    _callDiagnosticSink = null;
+    _diagnosticOwner = null;
+    _diagnosticCallId = null;
+    _diagnosticJoinAttempted = false;
     invitations.invalidate();
     staffWorkspace.close();
     discovery.reset();
@@ -1793,6 +1922,8 @@ class AppController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _mediaDiagnostics.dispose();
+    _callDiagnosticSink = null;
     staffWorkspace.removeListener(_notify);
     staffWorkspace.dispose();
     _videoPreviewRequest++;

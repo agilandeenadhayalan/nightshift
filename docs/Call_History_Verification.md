@@ -30,7 +30,7 @@ Local Windows checks and actual named-zone Linux CI results are recorded separat
 | Direct `node --test` from `audio/` | 3 passed | `call-history-audio-reference-final.log` |
 | Repository/contracts/boundaries/secret guard | Passed, including 11 tooling tests | `history-repo-check.log` |
 | Independent query, test and CI review | No blocking findings | Recorded in the PR |
-| Four named-zone Linux probes and final-commit CI | Pending | Recorded in the PR after completion |
+| Four named-zone Linux probes and final-commit CI | UTC, Kolkata and Kiritimati: 8 passed each; New York: 11 passed. Other-zone cases explicitly skipped per process. Backend, Android and staff CI all passed for `3d76f5d41bb31bd7c922f6c2d529dfc2e7465bd9` | [PR84 / run44871582338](https://github.com/agilandeenadhayalan/nightshift/actions/runs/44871582338) |
 
 The eight database cases cover 45 distinct microsecond timestamps inside one millisecond, identical full-precision timestamp ties, empty and boundary-sized pages, 121 rows across both participant positions, foreign/missing/malformed cursors and details, unauthenticated access, insertion between pages and zero-charge failed history without financial or event writes. HTTP responses validate against the real `CallPage` schema.
 
