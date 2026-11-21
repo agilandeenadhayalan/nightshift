@@ -998,7 +998,7 @@ Future<void> showSafetyDialog(
       context: context, builder: (context) => _SafetyDialog(controller: state));
   if (result != null && owner == state.accountIdentity) {
     await state.submitSafety(call, result.$1, block: result.$2);
-    if (context.mounted && state.error == null) {
+    if (context.mounted && owner == state.accountIdentity && state.error == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(state.text(
               'Your action was saved.', 'உங்கள் செயல் சேமிக்கப்பட்டது.'))));
