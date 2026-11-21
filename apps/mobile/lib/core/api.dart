@@ -242,6 +242,11 @@ class NightShiftApi {
             generated.ListenerStatusRequest.fromJson(data)!);
       case 'GET /calls':
         return api.listCalls(cursor: uri.queryParameters['cursor']);
+      case 'GET /me/match':
+        return api.getCurrentMatchingRequest();
+      case 'POST /matches':
+        return api.createMatchingRequest(
+            key(), generated.CreateMatchingRequest.fromJson(data)!);
       case 'POST /calls':
         return api.createCall(
             key(), generated.CreateCallRequest.fromJson(data)!);
@@ -258,6 +263,16 @@ class NightShiftApi {
         return api.getEvents(cursor: uri.queryParameters['cursor']);
     }
     final parts = uri.pathSegments;
+    if (parts.length >= 2 && parts[0] == 'matches') {
+      final id = Uri.encodeComponent(parts[1]);
+      if (parts.length == 2 && method == 'GET') {
+        return api.getMatchingRequest(id);
+      }
+      if (parts.length == 3 && parts[2] == 'cancel' && method == 'POST') {
+        return api.cancelMatchingRequest(
+            id, key(), generated.CancelMatchingRequest.fromJson(data)!);
+      }
+    }
     if (parts.length >= 2 && parts[0] == 'listener-applications') {
       final id = Uri.encodeComponent(parts[1]);
       if (parts.length == 2 && method == 'PUT') {

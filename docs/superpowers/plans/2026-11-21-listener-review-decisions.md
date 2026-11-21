@@ -57,7 +57,7 @@ Authorization and deletion/revocation races; precise material version; retry aft
 - [x] Inspect whole diff against acceptance criteria and dependency order; fix material findings and rerun their regressions.
 - [x] Run required repository guards, full backend suite, staff/browser suite, Flutter checks when changed, and `node --test` from `audio/`.
 - [x] Update verification/status records with actual evidence and unresolved owner/provider gates; prepare the next dependency work.
-- [ ] Commit and open a draft PR against `codex/listener-review-reads`; verify exact-head CI. No merge, production activation or issue closure from partial evidence.
+- [x] Commit and open draft PR79 against `codex/listener-review-reads`; exact-head `00c97105f97e0f512bae4ce95bde702afeff8621` passed backend, Android and staff in run44856588700. No merge, production activation or issue closure from partial evidence.
 
 ## Preflight conclusions
 

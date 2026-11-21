@@ -17,6 +17,7 @@ import 'directory_events.dart';
 import 'staff_workspace.dart';
 import 'staff_session.dart';
 import 'staff_transport.dart';
+import 'matching.dart';
 
 final appControllerProvider = ChangeNotifierProvider<AppController>((ref) {
   final controller = AppController(
@@ -70,6 +71,19 @@ class AppController extends ChangeNotifier {
             directoryEvents ?? (startTimers ? SocketDirectoryEvents() : null),
         startTimer: startTimers)
       ..addListener(_notify);
+    matching = Matching(
+        api: api,
+        identity: () => user == null ? null : accountIdentity,
+        enabled: () =>
+            !_disposed &&
+            user != null &&
+            snapshotLoaded &&
+            !needsOnboarding &&
+            !isListener &&
+            api.token != null,
+        foreground: () => foreground,
+        startTimer: startTimers)
+      ..addListener(_matchingChanged);
     audio.onChanged = _audioChanged;
     audio.onFailure = (code) => unawaited(_audioFailed(code));
     phoneSignIn = PhoneSignIn(
@@ -99,6 +113,7 @@ class AppController extends ChangeNotifier {
       ..addListener(_notify);
   }
   late final Discovery discovery;
+  late final Matching matching;
   late final StaffWorkspace staffWorkspace;
   Object get accountIdentity => (user?.id, _identityRevision, api.baseUrl);
   bool canCallListener(ListenerProfile listener) =>
@@ -106,6 +121,7 @@ class AppController extends ChangeNotifier {
       user != null &&
       !isListener &&
       !hasCall &&
+      !matching.blocked &&
       !offline &&
       (discovery.tracking || discovery.observed(listener.id)
           ? discovery.callable(listener.id)
@@ -160,7 +176,49 @@ class AppController extends ChangeNotifier {
   bool get hasCall => activeCall != null && !activeCall!.ended;
   bool get endingLocally =>
       activeCall != null && activeCall!.id == _abandonedCallId;
-  bool get canSwitch => user?.listenerApproved == true && !hasCall && !busy;
+  bool get canSwitch =>
+      user?.listenerApproved == true && !hasCall && !busy && !matching.blocked;
+  bool get showMatching =>
+      !isListener && matching.ownsScreen && !(hasCall && !activeCall!.ringing);
+
+  Object? _matchCallSeen;
+  void _matchingChanged() {
+    _notify();
+    final request = matching.request;
+    final signature = (request?.id, request?.version, request?.callId);
+    if (request?.callId != null && foreground && signature != _matchCallSeen) {
+      _matchCallSeen = signature;
+      unawaited(refresh());
+    }
+  }
+
+  Future<void> startMatching(
+          {required String language, required bool consent}) =>
+      perform(() async {
+        final owner = accountIdentity;
+        final presentation = matching.presentationRevision;
+        if (!consent ||
+            !matching.presented ||
+            hasCall ||
+            isListener ||
+            !foreground ||
+            matching.blocked ||
+            user?.languages.contains(language) != true) {
+          return;
+        }
+        await closeVideoPreview();
+        await audio.checkPermission();
+        if (_disposed ||
+            owner != accountIdentity ||
+            !foreground ||
+            hasCall ||
+            !matching.presented ||
+            presentation != matching.presentationRevision ||
+            user?.languages.contains(language) != true) {
+          return;
+        }
+        await matching.start(language: language, consent: consent);
+      });
   CallVideo? get video => audio is CallVideo ? audio as CallVideo : null;
   bool get needsVideoConsent =>
       hasCall &&
@@ -316,6 +374,7 @@ class AppController extends ChangeNotifier {
       }
       if (api.token != null && !needsOnboarding) {
         await refresh();
+        await matching.recover();
         if (user != null && !hasCall && lastPath == '/history') {
           await loadHistory();
         }
@@ -384,6 +443,7 @@ class AppController extends ChangeNotifier {
         user = UserProfile.fromJson(result['user'] as Json);
         await heartbeat();
         await refresh();
+        await matching.recover();
       });
 
   Future<void> _acceptPhoneSession(FirebaseTokens tokens, Json result,
@@ -435,6 +495,7 @@ class AppController extends ChangeNotifier {
       await loadOnboarding();
     } else {
       await refresh();
+      await matching.recover();
     }
     _notify();
   }
@@ -809,6 +870,7 @@ class AppController extends ChangeNotifier {
       });
 
   Future<void> switchMode() => perform(() async {
+        if (matching.blocked) return;
         if (!canSwitch &&
             !(busy && user?.listenerApproved == true && !hasCall)) {
           return;
@@ -851,6 +913,12 @@ class AppController extends ChangeNotifier {
         final identity = accountIdentity;
         bool current() =>
             !_disposed && identity == accountIdentity && foreground;
+        if (!matching.restored && !isListener) await matching.recover();
+        if (!current()) return;
+        if (!matching.restored) {
+          throw const ApiFailure(
+              'MATCH_STATUS_UNKNOWN', 'Recover search status first.');
+        }
         if (!canCallListener(listener)) {
           throw const ApiFailure(
               'LISTENER_UNAVAILABLE', 'Refresh availability before calling.');
@@ -1227,6 +1295,7 @@ class AppController extends ChangeNotifier {
     foreground = value;
     staffWorkspace.reconcile();
     discovery.reconcile();
+    matching.reconcile();
     if (!value) {
       final identity = _identityRevision, intent = ++_availabilityIntent;
       final owner = user?.id, origin = api.baseUrl;
@@ -1255,6 +1324,7 @@ class AppController extends ChangeNotifier {
       if (current() &&
           backgroundCall != null &&
           activeCall?.id == backgroundCall.id &&
+          !(backgroundCall.ringing && matching.blocked) &&
           hasCall) {
         await _endAfterFailure();
       }
@@ -1267,6 +1337,7 @@ class AppController extends ChangeNotifier {
       }
     } else {
       await heartbeat();
+      await matching.recover();
       await refresh();
     }
     _notify();
@@ -1359,6 +1430,8 @@ class AppController extends ChangeNotifier {
   void _invalidateSessionRequests() {
     staffWorkspace.close();
     discovery.reset();
+    matching.reset();
+    _matchCallSeen = null;
     _identityRevision++;
     _sessionRevision++;
     _availabilityIntent++;
@@ -1422,6 +1495,7 @@ class AppController extends ChangeNotifier {
     if (!_disposed) {
       staffWorkspace.reconcile();
       discovery.reconcile();
+      matching.reconcile();
       notifyListeners();
     }
   }
@@ -1442,6 +1516,8 @@ class AppController extends ChangeNotifier {
     unawaited(audio.leave());
     discovery.removeListener(_notify);
     discovery.dispose();
+    matching.removeListener(_matchingChanged);
+    matching.dispose();
     api.close();
     phoneSignIn.removeListener(_notify);
     phoneSignIn.dispose();

@@ -1,4 +1,4 @@
-import { ArgumentsHost, Body, Catch, Controller, Delete, ExceptionFilter, Get, HttpException, Inject, Module,
+import { ArgumentsHost, Body, Catch, Controller, Delete, ExceptionFilter, Get, HttpCode, HttpException, Inject, Module,
   Param, Post, Put, Query, Req, Res, UseGuards, CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { Request, Response, raw } from 'express';
@@ -127,6 +127,11 @@ class AppController {
   @Get('calls') history(@Req() req:AuthenticatedRequest,@Query('cursor') cursor?:string){return this.service.history(req.actor.id,cursor);}
   @Get('calls/:id') call(@Req() req:AuthenticatedRequest,@Param('id') id:string){return this.service.call(req.actor.id,id);}
   @Post('calls') create(@Req() req:AuthenticatedRequest,@Body() body:unknown){return this.service.createCall(req.actor,body,req.headers['idempotency-key']);}
+  @Post('matches') @HttpCode(200) createMatch(@Req()req:AuthenticatedRequest,@Body()body:unknown,@Query()query:unknown){this.matchQuery(query);return this.service.matching.start(req.actor,body,req.headers['idempotency-key']);}
+  @Get('me/match') currentMatch(@Req()req:AuthenticatedRequest,@Query()query:unknown){this.matchQuery(query);return this.service.matching.current(req.actor);}
+  @Get('matches/:id') match(@Req()req:AuthenticatedRequest,@Param('id')id:string,@Query()query:unknown){this.matchQuery(query);return this.service.matching.get(req.actor,id);}
+  @Post('matches/:id/cancel') @HttpCode(200) cancelMatch(@Req()req:AuthenticatedRequest,@Param('id')id:string,@Body()body:unknown,@Query()query:unknown){this.matchQuery(query);return this.service.matching.cancel(req.actor,id,body,req.headers['idempotency-key']);}
+  private matchQuery(query:unknown){requireThat(!query||Object.keys(query).length===0,400,'INVALID_FIELD','No matching query fields are accepted.');}
   @Post('calls/:id/media') media(@Req() req:AuthenticatedRequest,@Param('id') id:string,@Body() body:unknown){return this.service.media(req.actor,id,body);}
   @Post('calls/:id/rtc-token') rtcToken(@Req() req:AuthenticatedRequest,@Param('id') id:string){return this.service.rtcToken(req.actor,id);}
   @Get('rtc/config') rtcConfig(){return this.service.rtcConfig();}
@@ -265,6 +270,14 @@ export async function createApplication(config:Config,clock:()=>number=Date.now,
       }));
     }finally{directoryRunning=false;}
   })(),1000);directoryTimer.unref();
+  // Matching has its own bounded pass so candidate liveness I/O cannot delay
+  // existing media recovery or call-event delivery.
+  let matchingRunning=false;
+  const matchingTimer=setInterval(()=>void(async()=>{
+    if(matchingRunning)return;matchingRunning=true;
+    try{await service.matching.processPending();}catch{/* Durable work retries without logging private records. */}
+    finally{matchingRunning=false;}
+  })(),1000);matchingTimer.unref();
   // Privacy recovery is bounded and independent of the call/media control loop.
   let privacyRunning=false;
   const privacyTimer=setInterval(()=>void(async()=>{
@@ -276,5 +289,5 @@ export async function createApplication(config:Config,clock:()=>number=Date.now,
     finally{privacyRunning=false;}
   })(),30000);privacyTimer.unref();
   await app.init();
-  return {app,db,presence,auth,service,phone,lifecycle,applications,decisions,async close(){clearInterval(timer);clearInterval(directoryTimer);clearInterval(privacyTimer);await io.close();await app.close();await staffRuntime.close();await phone.close();await presence.close();await db.close();}};
+  return {app,db,presence,auth,service,phone,lifecycle,applications,decisions,async close(){clearInterval(timer);clearInterval(directoryTimer);clearInterval(matchingTimer);clearInterval(privacyTimer);await io.close();await app.close();await staffRuntime.close();await phone.close();await presence.close();await db.close();}};
 }

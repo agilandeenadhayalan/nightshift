@@ -11,6 +11,7 @@ import 'features/account_screens.dart';
 import 'features/privacy_screens.dart';
 import 'features/listener_application_screen.dart';
 import 'features/staff_workspace_screen.dart';
+import 'features/matching_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final state = ref.read(appControllerProvider);
@@ -34,9 +35,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             ? null
             : '/onboarding';
       }
+      if (state.showMatching) return path == '/matching' ? null : '/matching';
       if (state.hasCall) return path == '/call' ? null : '/call';
-      if (['/login', '/phone-login', '/onboarding', '/loading', '/call']
-          .contains(path)) {
+      if ([
+        '/login',
+        '/phone-login',
+        '/onboarding',
+        '/loading',
+        '/call',
+        '/matching'
+      ].contains(path)) {
         return state.lastPath;
       }
       return null;
@@ -55,6 +63,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
           path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
       GoRoute(path: '/call', builder: (_, __) => const CallScreen()),
+      GoRoute(path: '/matching', builder: (_, __) => const MatchingScreen()),
       GoRoute(path: '/privacy', builder: (_, __) => const PrivacyScreen()),
       GoRoute(path: '/staff', builder: (_, __) => const StaffWorkspaceScreen()),
       GoRoute(

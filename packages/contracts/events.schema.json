@@ -350,6 +350,216 @@
       ],
       "additionalProperties": false
     },
+    "CreateMatchingRequest": {
+      "type": "object",
+      "properties": {
+        "language": {
+          "type": "string",
+          "enum": [
+            "ta",
+            "en"
+          ]
+        },
+        "mediaType": {
+          "type": "string",
+          "const": "audio"
+        },
+        "quoteId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "consent": {
+          "type": "boolean",
+          "const": true
+        },
+        "consentVersion": {
+          "type": "string",
+          "const": "matching-search-v1"
+        }
+      },
+      "required": [
+        "language",
+        "mediaType",
+        "quoteId",
+        "consent",
+        "consentVersion"
+      ],
+      "additionalProperties": false
+    },
+    "CancelMatchingRequest": {
+      "type": "object",
+      "properties": {
+        "expectedVersion": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "expectedVersion"
+      ],
+      "additionalProperties": false
+    },
+    "MatchingRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "searching",
+            "ringing",
+            "matched",
+            "cancelled",
+            "exhausted",
+            "expired",
+            "failed"
+          ]
+        },
+        "language": {
+          "type": "string",
+          "enum": [
+            "ta",
+            "en"
+          ]
+        },
+        "mediaType": {
+          "type": "string",
+          "const": "audio"
+        },
+        "quoteId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "attemptCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "maxAttempts": {
+          "type": "integer",
+          "const": 3
+        },
+        "waitBudgetSeconds": {
+          "type": "integer",
+          "const": 90
+        },
+        "invitationSeconds": {
+          "type": "integer",
+          "const": 30
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "deadlineAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "currentCallId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "terminalReason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "no_supply",
+            "all_declined",
+            "attempts_exhausted",
+            "wait_budget_elapsed",
+            "customer_cancelled",
+            "source_session_ended",
+            "account_restricted",
+            "safety_blocked",
+            "insufficient_balance",
+            "quote_unavailable",
+            null
+          ]
+        },
+        "selectionReasons": {
+          "type": "array",
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "language_match",
+              "currently_available",
+              "fair_rotation"
+            ]
+          }
+        },
+        "serverTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "testOnly": {
+          "type": "boolean",
+          "const": true
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "state",
+        "language",
+        "mediaType",
+        "quoteId",
+        "attemptCount",
+        "maxAttempts",
+        "waitBudgetSeconds",
+        "invitationSeconds",
+        "createdAt",
+        "deadlineAt",
+        "endedAt",
+        "currentCallId",
+        "terminalReason",
+        "selectionReasons",
+        "serverTime",
+        "testOnly"
+      ],
+      "additionalProperties": false
+    },
+    "CurrentMatchingRequest": {
+      "type": "object",
+      "properties": {
+        "request": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MatchingRequest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "request"
+      ],
+      "additionalProperties": false
+    },
     "ListenerPage": {
       "type": "object",
       "properties": {
