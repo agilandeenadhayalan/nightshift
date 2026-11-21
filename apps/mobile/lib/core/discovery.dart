@@ -362,8 +362,11 @@ class Discovery extends ChangeNotifier {
           value['online'] is! bool ||
           value['busy'] is! bool ||
           value['favorite'] is! bool ||
+          !['foreground', 'background_eligible', 'offline']
+              .contains(value['reachability']) ||
+          value['online'] != (value['reachability'] == 'foreground') ||
           value['available'] !=
-              (value['online'] == true && value['busy'] == false)) {
+              (value['reachability'] != 'offline' && value['busy'] == false)) {
         throw const FormatException('Invalid live availability');
       }
     }

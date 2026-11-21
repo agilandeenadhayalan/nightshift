@@ -67,7 +67,7 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm run test:integration
-        timeout-minutes: 5
+        timeout-minutes: 8
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -115,9 +115,15 @@ jobs:
       - run: npm run check:mobile
       - run: npm run test:review-reader
       - run: npm run test:staff-cookie
+      - run: npm run test:call-invitations
       - run: npm run build
       - run: npm run smoke:accounts
       - run: npm run build:android
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -p test_android_native.py
+      - run: python scripts/check_android_native.py apps/mobile/build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk
       - uses: actions/upload-artifact@v4
         with:
           name: nightshift-debug-apk

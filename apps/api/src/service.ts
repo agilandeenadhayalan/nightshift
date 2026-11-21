@@ -8,6 +8,8 @@ import { ApiError, requireThat, fields, object, string, uuid } from './errors';
 import { MICRO, TEST_RATE, TEST_VIDEO_RATE, testCharge, testEarning } from '@nightshift/backend-domain';
 import { Directory } from './directory';
 import { MATCHING_LIMITS,MatchingCoordinator,assertNoActiveMatching } from './matching';
+import {PushService} from './push';
+import {PushTransport} from './push-transport';
 
 type Row = Record<string, any>;
 type Query = Pick<PoolClient, 'query'>;
@@ -16,16 +18,19 @@ const iso = (value: unknown) => value ? new Date(value as string).toISOString() 
 export class NightShiftService {
   readonly directory:Directory;
   readonly matching:MatchingCoordinator;
+  readonly push:PushService;
   constructor(readonly db: Database, readonly presence: Presence, readonly config: Config,
-    private readonly clock: () => number = Date.now) {
-    this.directory=new Directory(db,presence,()=>this.videoAvailable(),clock,(c,actor)=>this.liveOwner(c,actor));
+    private readonly clock: () => number = Date.now,dependencies:{pushTransport?:PushTransport}={}) {
+    this.push=new PushService(db,presence,config,clock,dependencies.pushTransport);
+    this.directory=new Directory(db,presence,()=>this.videoAvailable(),clock,(c,actor)=>this.liveOwner(c,actor),(c,ids)=>this.push.reachable(c,ids));
     this.matching=new MatchingCoordinator(db,presence,{
       authorize:(c,actor)=>this.liveOwner(c,actor),
       reserve:async(c,actor,listenerId,quoteId,expiresAt,requestId,language)=>{
         await this.liveOwner(c,actor);
         const users=(await c.query('SELECT * FROM users WHERE id=ANY($1::uuid[])',[[actor.id,listenerId]])).rows;
         return this.reserveCall(c,actor,{listenerId,quoteId,mediaType:'audio'},users,{expiresAt,requestId,language});
-      },advance:(c,call,now)=>this.advance(c,call,now),finish:(c,call,reason,now)=>this.finish(c,call,reason,now)
+      },advance:(c,call,now)=>this.advance(c,call,now),finish:(c,call,reason,now)=>this.finish(c,call,reason,now),
+      reachable:async ids=>new Set((await this.push.reachable(this.db.pool,ids)).keys())
     },clock);
   }
 
@@ -45,13 +50,13 @@ export class NightShiftService {
   private async liveOwner(c: PoolClient, actor: Actor, requireAdult = true) {
     const { rows } = await c.query('SELECT * FROM users WHERE id=$1 FOR NO KEY UPDATE', [actor.id]);
     requireThat(rows.length && !rows[0].suspended, 401, 'UNAUTHENTICATED', 'Sign in again');
-    const session = await c.query(`SELECT 1 FROM auth_sessions s LEFT JOIN devices d ON d.id=s.device_record_id
+    const session = await c.query(`SELECT s.expires_at FROM auth_sessions s LEFT JOIN devices d ON d.id=s.device_record_id
       WHERE s.user_id=$1 AND s.token_hash=$2 AND s.revoked_at IS NULL AND s.expires_at>$3
       AND (s.auth_kind='development' OR (d.active AND d.revoked_at IS NULL AND d.last_token_hash=s.token_hash))`,
     [actor.id, actor.sessionHash, new Date(this.clock())]);
     requireThat(session.rows.length, 401, 'UNAUTHENTICATED', 'Sign in again');
     requireThat(!requireAdult || rows[0].adult_confirmed, 403, 'ONBOARDING_REQUIRED', 'Complete adult onboarding first.');
-    return rows[0];
+    return {...rows[0],session_expires_at:session.rows[0].expires_at};
   }
 
   /** A Redis value alone never establishes reachability. A stale writer after
@@ -226,6 +231,7 @@ export class NightShiftService {
     const id=randomUUID(); const payload=await this.view(c,r);
     await c.query('INSERT INTO call_events(id,call_id,version,kind,payload,created_at) VALUES($1,$2,$3,$4,$5,$6)',[id,r.id,r.version,kind,payload,new Date(this.clock())]);
     for(const recipient of [r.customer_id,r.listener_id])await c.query('INSERT INTO outbox_events(id,event_id,recipient_id) VALUES($1,$2,$3)',[randomUUID(),id,recipient]);
+    await this.push.enqueue(c,id,r);
   }
   async createCall(actor: Actor,raw: unknown,key: unknown) {
     const body=object(raw);fields(body,['listenerId','quoteId','mediaType','videoConsent']); const listenerId=uuid(body.listenerId);
@@ -253,7 +259,9 @@ export class NightShiftService {
       const customer=users.find(u=>u.id===actor.id),listener=users.find(u=>u.id===listenerId);
       requireThat(customer?.mode==='customer'&&!customer.suspended&&customer.adult_confirmed,403,'CUSTOMER_MODE_REQUIRED','Switch to Customer mode');
       await assertNoActiveMatching(c,actor.id,matching?.requestId);
-      requireThat(listener?.listener_approved&&listener.adult_confirmed&&!listener.suspended&&listener.mode==='listener'&&listener.desired_online&&(await this.reachable([listenerId],c)).has(listenerId),409,'LISTENER_OFFLINE','Listener is unavailable');
+      const channel=(await this.push.reachable(c,[listenerId])).get(listenerId);
+      requireThat(listener?.listener_approved&&listener.adult_confirmed&&!listener.suspended&&listener.mode==='listener'&&listener.desired_online
+        &&channel&&(mediaType==='audio'||channel==='foreground'),409,'LISTENER_OFFLINE','Listener is unavailable');
       requireThat(customer.languages.some((language:string)=>listener.languages.includes(language)),409,'LANGUAGE_MISMATCH','Choose a listener who speaks one of your conversation languages');
       requireThat(!matching||customer.languages.includes(matching.language)&&listener.languages.includes(matching.language),409,'LANGUAGE_MISMATCH','The selected language must match both participants.');
       const blocked=await c.query('SELECT 1 FROM blocks WHERE (actor_id=$1 AND target_id=$2) OR (actor_id=$2 AND target_id=$1)',[actor.id,listenerId]);
@@ -265,13 +273,15 @@ export class NightShiftService {
       requireThat(maxDuration>=60,409,'INSUFFICIENT_BALANCE',`At least ${60*rate.microcreditsPerSecond/MICRO} test credits are required`);
       // User locks serialize revocation, but cannot stop time from advancing
       // while Redis responds. Recheck both sessions after that external wait.
-      await this.liveOwner(c,actor);
-      const now=this.clock(),id=randomUUID();
-      const listenerSession=await c.query(`SELECT 1 FROM auth_sessions s LEFT JOIN devices d ON d.id=s.device_record_id
+      const currentOwner=await this.liveOwner(c,actor);
+      const listenerSession=await c.query(`SELECT s.expires_at FROM auth_sessions s LEFT JOIN devices d ON d.id=s.device_record_id
         WHERE s.user_id=$1 AND s.revoked_at IS NULL AND s.expires_at>$2
         AND (s.auth_kind='development' OR (d.active AND d.revoked_at IS NULL AND d.last_token_hash=s.token_hash))`,
-        [listenerId,new Date(now)]);
-      requireThat(listenerSession.rowCount,409,'LISTENER_OFFLINE','Listener is unavailable');
+        [listenerId,new Date(this.clock())]);
+      requireThat(channel!=='background_eligible'||await this.push.backgroundEligible(c,listenerId),409,'LISTENER_OFFLINE','Listener is unavailable');
+      const now=this.clock(),id=randomUUID();
+      requireThat(dateMs(currentOwner.session_expires_at)>now,401,'UNAUTHENTICATED','Sign in again');
+      requireThat(listenerSession.rows.some(s=>dateMs(s.expires_at)>now),409,'LISTENER_OFFLINE','Listener is unavailable');
       requireThat(!matching||matching.expiresAt-now>=MATCHING_LIMITS.minRingMs,409,'MATCH_DEADLINE','The search wait budget has ended.');
       const {rows}=await c.query(`INSERT INTO call_sessions(id,customer_id,listener_id,state,rate_id,rate_snapshot,max_duration_seconds,created_at,expires_at,media_type,customer_video_consent_at)
         VALUES($1,$2,$3,'ringing',$4,$5,$6,$7,$8,$9,$10) RETURNING *`,[id,actor.id,listenerId,rate.id,rate,maxDuration,new Date(now),new Date(matching?.expiresAt??now+30_000),mediaType,mediaType==='video'?new Date(now):null]);

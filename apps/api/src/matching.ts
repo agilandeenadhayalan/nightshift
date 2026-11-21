@@ -22,6 +22,7 @@ export interface MatchingCallPort {
   reserve(c:PoolClient,actor:Actor,listenerId:string,quoteId:string,expiresAt:number,requestId:string,language:string):Promise<Row>;
   advance(c:PoolClient,call:Row,now:number):Promise<void>;
   finish(c:PoolClient,call:Row,reason:string,now:number):Promise<void>;
+  reachable(ids:string[]):Promise<Set<string>>;
 }
 export type MatchingState='searching'|'ringing'|'matched'|'cancelled'|'exhausted'|'expired'|'failed';
 export type MatchingReason='no_supply'|'all_declined'|'attempts_exhausted'|'wait_budget_elapsed'|'customer_cancelled'|'source_session_ended'|'account_restricted'|'safety_blocked'|'insufficient_balance'|'quote_unavailable';
@@ -131,7 +132,7 @@ export class MatchingCoordinator {
       AND ($7::timestamptz IS NULL OR (coalesce(f.last_offered_at,(SELECT min(e.created_at) FROM listener_review_entitlements e WHERE e.user_id=u.id),u.created_at),u.id)>($7::timestamptz,$8::uuid))
       ORDER BY coalesce(f.last_offered_at,(SELECT min(e.created_at) FROM listener_review_entitlements e WHERE e.user_id=u.id),u.created_at),u.id LIMIT 50`,
       [r.customer_id,r.language,excluded,r.id,new Date(this.clock()-MATCHING_LIMITS.declineCooldownMs),new Date(this.clock()),afterTime,afterId])).rows;
-    const online=new Set(await this.presence.online(rows.map(r=>r.id),new Map(rows.map(r=>[r.id,String(r.presence_version)]))));
+    const online=await this.calls.reachable(rows.map(r=>r.id));
     const ranked=rankMatchingCandidates(rows.filter(r=>online.has(r.id)).map(r=>({id:r.id,eligibleSince:ms(r.eligible_since),lastOfferedAt:r.last_offered_at?ms(r.last_offered_at):null,
       recentAccepted:Number(r.recent_accepted),recentOffered:Number(r.recent_offered)})),r.selection_seed);
     if(ranked.length)return{id:ranked[0]!.id,afterTime,afterId,complete:false};

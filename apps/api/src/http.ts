@@ -1,7 +1,7 @@
 import { ArgumentsHost, Body, Catch, Controller, Delete, ExceptionFilter, Get, HttpCode, HttpException, Inject, Module,
   Param, Post, Put, Query, Req, Res, UseGuards, CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { Request, Response, raw } from 'express';
+import { Request, Response, raw, json } from 'express';
 import { randomUUID } from 'node:crypto';
 import { Auth, Actor, tokenHash } from './auth';
 import { NightShiftService } from './service';
@@ -23,6 +23,8 @@ import { StaffReviewController } from './staff/review-http';
 import { StaffReviewDecisions } from './staff/review-decisions';
 import { StaffReviewDecisionController } from './staff/review-decision-http';
 import { createStaffReviewDecisions,loadApprovedReviewPolicy } from './staff/review-factory';
+import { FcmHttpTransport,PushTransport } from './push-transport';
+import { createPushAccessToken } from './push-credentials';
 
 type AuthenticatedRequest=Request & {actor:Actor;requestId:string};
 @Injectable()
@@ -112,6 +114,11 @@ class AppController {
   @Post('listener-applications/:id/submit') submitApplication(@Req() req:AuthenticatedRequest,@Param('id') id:string){return this.applications.submit(req.actor,id,req.headers['idempotency-key']);}
   @Post('listener-applications/:id/withdraw') withdrawApplication(@Req() req:AuthenticatedRequest,@Param('id') id:string){return this.applications.withdraw(req.actor,id,req.headers['idempotency-key']);}
   @Get('me') me(@Req() req:AuthenticatedRequest){return this.service.user(req.actor.id);}
+  @Put('me/push/registration') preparePush(@Req()req:AuthenticatedRequest,@Body()body:unknown,@Query()query:unknown){this.pushQuery(query);return this.service.push.prepare(req.actor,body,req.headers['idempotency-key']);}
+  @Post('me/push/registration/activate') @HttpCode(200) activatePush(@Req()req:AuthenticatedRequest,@Body()body:unknown,@Query()query:unknown){this.pushQuery(query);return this.service.push.activate(req.actor,body,req.headers['idempotency-key']);}
+  @Get('me/push/registration') getPush(@Req()req:AuthenticatedRequest,@Query()query:unknown){this.pushQuery(query);return this.service.push.get(req.actor);}
+  @Delete('me/push/registration') revokePush(@Req()req:AuthenticatedRequest,@Body()body:unknown,@Query()query:unknown){this.pushQuery(query);return this.service.push.revoke(req.actor,body,req.headers['idempotency-key']);}
+  private pushQuery(query:unknown){requireThat(!query||Object.keys(query).length===0,400,'INVALID_PUSH_REGISTRATION','No notification query fields are accepted.');}
   @Get('snapshot') snapshot(@Req() req:AuthenticatedRequest,@Query('language') language?:string){return this.service.snapshot(req.actor,language);}
   @Put('me/mode') mode(@Req() req:AuthenticatedRequest,@Body() body:unknown){return this.service.mode(req.actor,body);}
   @Put('me/availability') availability(@Req() req:AuthenticatedRequest,@Body() body:unknown){return this.service.availability(req.actor,body);}
@@ -146,7 +153,7 @@ class AppController {
   @Get('events') events(@Req() req:AuthenticatedRequest,@Query('cursor') cursor?:string){return this.service.events(req.actor,cursor);}
 }
 
-export async function createApplication(config:Config,clock:()=>number=Date.now,identityTestAdapters?:PhoneAuthDependencies){
+export async function createApplication(config:Config,clock:()=>number=Date.now,identityTestAdapters?:PhoneAuthDependencies,pushTestAdapters?:{pushTransport:PushTransport}){
   requireThat(!config.staffReviewPolicyFile||config.staffAuth,503,'REVIEW_POLICY_UNAVAILABLE','Approved review policy requires configured staff authority.');
   const approvedReviewPolicy=await loadApprovedReviewPolicy(config.staffReviewPolicyFile);
   const db=new Database(config.databaseUrl),presence=new Presence(config.redisUrl);
@@ -154,13 +161,21 @@ export async function createApplication(config:Config,clock:()=>number=Date.now,
   let phone:PhoneAuthentication;
   try{phone=await createPhoneAuthentication(db,presence,config,clock,identityTestAdapters);}
   catch(error){await presence.close();await db.close();throw error;}
-  const auth=new Auth(db,presence,config,phone,clock),service=new NightShiftService(db,presence,config,clock);
+  let pushCredentials:Awaited<ReturnType<typeof createPushAccessToken>>|undefined,pushTransport=pushTestAdapters?.pushTransport;
+  try{
+    if(config.push&&!pushTransport){
+      pushCredentials=await createPushAccessToken(config.push.credentialFile,config.push.projectId);
+      pushTransport=new FcmHttpTransport({projectId:config.push.projectId,packageName:config.push.packageName,accessToken:pushCredentials.accessToken,clock});
+    }
+  }catch(error){await phone.close();await presence.close();await db.close();throw error;}
+  const closePush=async()=>{await pushTransport?.close?.();await pushCredentials?.close();};
+  const auth=new Auth(db,presence,config,phone,clock),service=new NightShiftService(db,presence,config,clock,{pushTransport});
   const onboarding=new Onboarding(db,clock,async actor=>{await service.logoutCall(actor);await service.withdrawPresence(actor.id);});
   const reviewStorage=config.privateReviewDirectory?new LocalReviewStorage(config.privateReviewDirectory):undefined;
   const applications=new ListenerApplications(db,{storage:reviewStorage,capabilityKey:config.devAccessKey},clock);
   const lifecycle=new AccountLifecycle(db,clock,userId=>service.withdrawPresence(userId),userId=>applications.erasePrivateMaterials(userId));
   let staffRuntime:ReturnType<typeof createStaffAuthority>;
-  try{staffRuntime=createStaffAuthority(db,auth,config,clock);}catch(error){await phone.close();await presence.close();await db.close();throw error;}
+  try{staffRuntime=createStaffAuthority(db,auth,config,clock);}catch(error){await closePush();await phone.close();await presence.close();await db.close();throw error;}
   const staff=staffRuntime.authority;
   // The fallback key cannot enable a disabled staff authority; it only keeps
   // the read service constructible in the existing default-off bootstrap.
@@ -172,6 +187,13 @@ export async function createApplication(config:Config,clock:()=>number=Date.now,
   app.use((req:AuthenticatedRequest,res:Response,next:()=>void)=>{
     req.requestId=randomUUID();res.setHeader('X-Request-Id',req.requestId);res.setHeader('Cache-Control','no-store');
     res.setHeader('X-Content-Type-Options','nosniff');next();
+  });
+  const parsePush=json({limit:8192,inflate:false,strict:true});
+  app.use('/v1/me/push/registration',(req:AuthenticatedRequest,res:Response,next:()=>void)=>{
+    parsePush(req,res,(error?:{type?:string})=>{
+      if(!error){next();return;}
+      const oversized=error.type==='entity.too.large';res.status(oversized?413:400).json({error:{code:'INVALID_PUSH_REGISTRATION',message:'The notification registration could not be read.'},requestId:req.requestId});
+    });
   });
   const parseReviewWave=raw({type:'audio/wav',limit:2097152,inflate:false});
   app.use('/v1/listener-applications',(req:AuthenticatedRequest,res:Response,next:()=>void)=>{
@@ -278,6 +300,13 @@ export async function createApplication(config:Config,clock:()=>number=Date.now,
     try{await service.matching.processPending();}catch{/* Durable work retries without logging private records. */}
     finally{matchingRunning=false;}
   })(),1000);matchingTimer.unref();
+  // Provider I/O has independent durable receipts and never blocks call recovery.
+  let pushRunning=false;
+  const pushTimer=setInterval(()=>void(async()=>{
+    if(pushRunning)return;pushRunning=true;
+    try{await service.push.processPending();}catch{/* Retry bounded durable work without logging private targets. */}
+    finally{pushRunning=false;}
+  })(),1000);pushTimer.unref();
   // Privacy recovery is bounded and independent of the call/media control loop.
   let privacyRunning=false;
   const privacyTimer=setInterval(()=>void(async()=>{
@@ -289,5 +318,5 @@ export async function createApplication(config:Config,clock:()=>number=Date.now,
     finally{privacyRunning=false;}
   })(),30000);privacyTimer.unref();
   await app.init();
-  return {app,db,presence,auth,service,phone,lifecycle,applications,decisions,async close(){clearInterval(timer);clearInterval(directoryTimer);clearInterval(matchingTimer);clearInterval(privacyTimer);await io.close();await app.close();await staffRuntime.close();await phone.close();await presence.close();await db.close();}};
+  return {app,db,presence,auth,service,phone,lifecycle,applications,decisions,async close(){clearInterval(timer);clearInterval(directoryTimer);clearInterval(matchingTimer);clearInterval(pushTimer);clearInterval(privacyTimer);await closePush();await io.close();await app.close();await staffRuntime.close();await phone.close();await presence.close();await db.close();}};
 }

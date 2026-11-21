@@ -18,6 +18,7 @@ Json member(String id,
       'languages': [language],
       'available': available,
       'online': available,
+      'reachability': available ? 'foreground' : 'offline',
       'busy': busy,
       'favorite': favorite,
       'rate': rateJson()

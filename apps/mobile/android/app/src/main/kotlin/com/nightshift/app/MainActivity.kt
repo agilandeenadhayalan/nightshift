@@ -27,6 +27,7 @@ class MainActivity: FlutterActivity() {
     private val reviewHandler = Handler(Looper.getMainLooper())
     private var reviewChannel: MethodChannel? = null
     private var staffSessionBridge: StaffSessionBridge? = null
+    private var callInvitationBridge: CallInvitationBridge? = null
     private var reviewSelection: ReviewSelection? = null
     private val allocatedReviewCodes = mutableSetOf<Int>()
 
@@ -80,6 +81,8 @@ class MainActivity: FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         staffSessionBridge?.close()
         staffSessionBridge = StaffSessionBridge(this, flutterEngine)
+        callInvitationBridge?.close()
+        callInvitationBridge = CallInvitationBridge(this, flutterEngine)
         reviewChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "nightshift/private_review_sample").also { channel ->
             channel.setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -210,6 +213,8 @@ class MainActivity: FlutterActivity() {
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        callInvitationBridge?.close()
+        callInvitationBridge = null
         staffSessionBridge?.close()
         staffSessionBridge = null
         cancelReviewSelection()
@@ -219,6 +224,8 @@ class MainActivity: FlutterActivity() {
     }
 
     override fun onDestroy() {
+        callInvitationBridge?.close()
+        callInvitationBridge = null
         staffSessionBridge?.close()
         staffSessionBridge = null
         cancelReviewSelection()
@@ -227,10 +234,21 @@ class MainActivity: FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CallInvitationRuntime.opened(this, intent)
         // Keep capture protection in release/profile and ordinary debug builds.
         // Device QA can explicitly opt a debug APK into Vysor mirroring.
         if (BuildConfig.BUILD_TYPE != "debug" || !BuildConfig.ALLOW_DEBUG_SCREEN_CAPTURE) {
             window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        CallInvitationRuntime.opened(this, intent)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        if (requestCode == CallInvitationBridge.PERMISSION_CODE && callInvitationBridge?.permissionResult() == true) return
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 }

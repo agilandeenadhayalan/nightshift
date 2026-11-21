@@ -24,6 +24,7 @@
     "test:tooling": "node --test scripts/*.test.mjs",
     "test:review-reader": "node scripts/test-review-reader.mjs",
     "test:staff-cookie": "node scripts/test-staff-cookie.mjs",
+    "test:call-invitations": "node scripts/test-call-invitations.mjs",
     "test:economics": "python -m unittest discover -s tests -p test_*.py",
     "db:migrate": "turbo run db:migrate --filter=@nightshift/api",
     "db:seed": "turbo run db:seed --filter=@nightshift/api",

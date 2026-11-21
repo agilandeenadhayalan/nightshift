@@ -17,6 +17,10 @@ String availabilityLabel(AppController state, String id) {
   }
   if (card == null) return state.text('Unavailable', 'கிடைக்கவில்லை');
   if (card.busy) return state.text('Busy', 'பிஸியாக உள்ளார்');
+  if (card.available && card.reachability == 'background_eligible') {
+    return state.text('Audio invitation enabled · delivery may vary',
+        'ஆடியோ அழைப்பிதழ் இயக்கப்பட்டுள்ளது · அறிவிப்பு கிடைப்பது மாறலாம்');
+  }
   return card.available
       ? state.text('Available now', 'இப்போது கிடைக்கிறார்')
       : state.text('Offline', 'ஆஃப்லைன்');
@@ -358,7 +362,8 @@ class ListenerCard extends StatelessWidget {
                         'Video · ${testRateLabel(state, listener.videoRate!)}',
                         'வீடியோ · ${testRateLabel(state, listener.videoRate!)}')),
                     OutlinedButton.icon(
-                        onPressed: canCall
+                        onPressed: canCall &&
+                                state.canCallListener(listener, video: true)
                             ? () async {
                                 final owner = state.accountIdentity;
                                 final agreed = await showVideoPreflight(
@@ -370,7 +375,8 @@ class ListenerCard extends StatelessWidget {
                                 if (agreed &&
                                     context.mounted &&
                                     owner == state.accountIdentity &&
-                                    state.canCallListener(listener)) {
+                                    state.canCallListener(listener,
+                                        video: true)) {
                                   await state.startCall(listener,
                                       video: true, cameraConsent: true);
                                 }

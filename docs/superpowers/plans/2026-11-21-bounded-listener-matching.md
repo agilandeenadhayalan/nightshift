@@ -43,7 +43,7 @@ Baseline: `00c97105f97e0f512bae4ce95bde702afeff8621`, PR79. Existing linked work
 
 - [x] Inspect the diff against FA-024 and the frozen interface. Resolve findings and run appropriate complete backend/mobile/contracts/repository checks plus `node --test` from audio/.
 - [x] Record actual evidence and remaining dependencies in a verification document and issue register. Update Play observation to the saved Trader status without copying private contact details.
-- [ ] Commit and publish a draft PR stacked on PR79; verify exact-head CI. No live migration, app installation, provider sends, automatic issue closure or production release follows from synthetic verification.
+- [x] Commit and publish draft PR80 stacked on PR79; exact head `603a4cb52882e648eb17d2dd3e85e86306322e54` passed backend, Android and staff CI in run44859554440. No live migration, app installation, provider sends, automatic issue closure or production release follows from synthetic verification.
 
 ## Isolation and review boundaries
 

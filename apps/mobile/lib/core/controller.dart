@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'api.dart';
@@ -18,6 +19,7 @@ import 'staff_workspace.dart';
 import 'staff_session.dart';
 import 'staff_transport.dart';
 import 'matching.dart';
+import 'call_invitations.dart';
 
 final appControllerProvider = ChangeNotifierProvider<AppController>((ref) {
   final controller = AppController(
@@ -40,6 +42,7 @@ class AppController extends ChangeNotifier {
       StaffWorkspace? staffWorkspace,
       StaffCookies? staffCookies,
       StaffTransport? staffTransport,
+      InvitationDevice? invitationDevice,
       this.startTimers = true,
       this.developmentEnabled = !kReleaseMode})
       : firebase = identityClient ?? NativeFirebaseIdentityClient() {
@@ -84,6 +87,23 @@ class AppController extends ChangeNotifier {
         foreground: () => foreground,
         startTimer: startTimers)
       ..addListener(_matchingChanged);
+    invitations = CallInvitations(
+        api: api,
+        identity: () => user == null ? null : accountIdentity,
+        ownerKey: _invitationOwnerKey,
+        eligible: () =>
+            !_disposed &&
+            user != null &&
+            !needsOnboarding &&
+            isListener &&
+            user!.listenerApproved &&
+            _invitationOwnerKey() != null,
+        foreground: () => foreground,
+        locale: () => locale,
+        onOpen: _openInvitation,
+        device: invitationDevice,
+        startTimer: startTimers)
+      ..addListener(_notify);
     audio.onChanged = _audioChanged;
     audio.onFailure = (code) => unawaited(_audioFailed(code));
     phoneSignIn = PhoneSignIn(
@@ -114,18 +134,72 @@ class AppController extends ChangeNotifier {
   }
   late final Discovery discovery;
   late final Matching matching;
+  late final CallInvitations invitations;
   late final StaffWorkspace staffWorkspace;
   Object get accountIdentity => (user?.id, _identityRevision, api.baseUrl);
-  bool canCallListener(ListenerProfile listener) =>
+  bool canCallListener(ListenerProfile listener, {bool video = false}) =>
       foreground &&
       user != null &&
       !isListener &&
       !hasCall &&
       !matching.blocked &&
       !offline &&
+      (!video ||
+          (discovery.lookup(listener.id) ?? listener).reachability ==
+              'foreground') &&
       (discovery.tracking || discovery.observed(listener.id)
           ? discovery.callable(listener.id)
           : listener.available);
+
+  String? _invitationOwnerKey() {
+    if (_phoneTokens == null || user == null) return null;
+    try {
+      final claims = jsonDecode(utf8.decode(base64Url.decode(
+          base64Url.normalize(_phoneTokens!.idToken.split('.')[1])))) as Json;
+      final authTime = claims['auth_time'];
+      if (authTime is! int || authTime <= 0) return null;
+      // Local association only; the server verifies canonical identity and lineage.
+      return sha256
+          .convert(
+              utf8.encode('${user!.id}|$_deviceId|$authTime|${api.baseUrl}'))
+          .toString();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _openInvitation(Json hint) async {
+    final owner = accountIdentity, origin = api.baseUrl;
+    final id = hint['callId'];
+    final remaining = hint['remainingMilliseconds'];
+    final opening = Stopwatch()..start();
+    if (id is! String ||
+        remaining is! int ||
+        remaining <= 0 ||
+        remaining > 30000 ||
+        !foreground ||
+        !isListener ||
+        user?.listenerApproved != true) {
+      return;
+    }
+    bool current() =>
+        !_disposed && foreground && owner == accountIdentity && isListener;
+    final result = await api.privateRequest('GET', '/calls/$id',
+        origin: origin, isCurrent: current);
+    if (!current() || opening.elapsedMilliseconds >= remaining) return;
+    final call = CallSession.fromJson(result);
+    if (call.id != id ||
+        call.listenerId != user?.id ||
+        !call.ringing ||
+        call.isVideo ||
+        call.version != int.tryParse('${hint['callVersion']}')) {
+      return;
+    }
+    // GET is only a hint refresh; the normal Answer action performs the server
+    // expected-version/deadline transition and permission check separately.
+    await refresh();
+  }
+
   final NightShiftApi api;
   final SessionStore store;
   final CallAudio audio;
@@ -379,6 +453,7 @@ class AppController extends ChangeNotifier {
           await loadHistory();
         }
       }
+      await invitations.recover();
     } catch (e) {
       _showError(e);
     }
@@ -919,7 +994,7 @@ class AppController extends ChangeNotifier {
           throw const ApiFailure(
               'MATCH_STATUS_UNKNOWN', 'Recover search status first.');
         }
-        if (!canCallListener(listener)) {
+        if (!canCallListener(listener, video: video)) {
           throw const ApiFailure(
               'LISTENER_UNAVAILABLE', 'Refresh availability before calling.');
         }
@@ -935,7 +1010,7 @@ class AppController extends ChangeNotifier {
         await closeVideoPreview();
         await audio.checkPermission();
         if (!current()) return;
-        if (!canCallListener(listener)) {
+        if (!canCallListener(listener, video: video)) {
           throw const ApiFailure(
               'LISTENER_UNAVAILABLE', 'Listener is no longer available.');
         }
@@ -1309,13 +1384,14 @@ class AppController extends ChangeNotifier {
           api.token != null;
       // Cached online=false can hide an enable still in flight. Queue withdrawal
       // now, for this owner only, and retain it across a quick foreground return.
-      final withdrawal = isListener && user?.listenerApproved == true
-          ? _writeAvailability(false, isCurrent: current)
-              .catchError((Object _) {
-              // Presence TTL expires when the control connection is unavailable.
-              return null;
-            })
-          : Future<Json?>.value();
+      final withdrawal =
+          isListener && user?.listenerApproved == true && !invitations.active
+              ? _writeAvailability(false, isCurrent: current)
+                  .catchError((Object _) {
+                  // Presence TTL expires when the control connection is unavailable.
+                  return null;
+                })
+              : Future<Json?>.value();
       _revision++;
       _videoConsentCallId = null;
       await closeVideoPreview();
@@ -1324,7 +1400,11 @@ class AppController extends ChangeNotifier {
       if (current() &&
           backgroundCall != null &&
           activeCall?.id == backgroundCall.id &&
-          !(backgroundCall.ringing && matching.blocked) &&
+          !(backgroundCall.ringing &&
+              (matching.blocked ||
+                  (isListener &&
+                      !backgroundCall.isVideo &&
+                      invitations.active))) &&
           hasCall) {
         await _endAfterFailure();
       }
@@ -1339,6 +1419,7 @@ class AppController extends ChangeNotifier {
       await heartbeat();
       await matching.recover();
       await refresh();
+      await invitations.recover();
     }
     _notify();
   }
@@ -1369,6 +1450,7 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> logout() => perform(() async {
+        invitations.invalidate();
         staffWorkspace.close();
         _videoConsentCallId = null;
         await closeVideoPreview();
@@ -1428,6 +1510,7 @@ class AppController extends ChangeNotifier {
   }
 
   void _invalidateSessionRequests() {
+    invitations.invalidate();
     staffWorkspace.close();
     discovery.reset();
     matching.reset();
@@ -1518,6 +1601,8 @@ class AppController extends ChangeNotifier {
     discovery.dispose();
     matching.removeListener(_matchingChanged);
     matching.dispose();
+    invitations.removeListener(_notify);
+    invitations.dispose();
     api.close();
     phoneSignIn.removeListener(_notify);
     phoneSignIn.dispose();

@@ -185,10 +185,14 @@ class ApiClient {
           return value is DateTime ? value : DateTime.tryParse(value);
         case 'AcceptCallRequest':
           return AcceptCallRequest.fromJson(value);
+        case 'ActivatePushRegistration':
+          return ActivatePushRegistration.fromJson(value);
         case 'BlockUser200Response':
           return BlockUser200Response.fromJson(value);
         case 'Call':
           return Call.fromJson(value);
+        case 'CallInvitationPush':
+          return CallInvitationPush.fromJson(value);
         case 'CallPage':
           return CallPage.fromJson(value);
         case 'CancelCallRequest':
@@ -211,6 +215,8 @@ class ApiClient {
           return CreateReportRequest.fromJson(value);
         case 'CurrentMatchingRequest':
           return CurrentMatchingRequest.fromJson(value);
+        case 'CurrentPushRegistration':
+          return CurrentPushRegistration.fromJson(value);
         case 'DeclineCallRequest':
           return DeclineCallRequest.fromJson(value);
         case 'DeletionNotice':
@@ -293,6 +299,10 @@ class ApiClient {
           return PhoneSession.fromJson(value);
         case 'PhoneSessionRequest':
           return PhoneSessionRequest.fromJson(value);
+        case 'PreparePushRegistration':
+          return PreparePushRegistration.fromJson(value);
+        case 'PushRegistration':
+          return PushRegistration.fromJson(value);
         case 'Rate':
           return Rate.fromJson(value);
         case 'ReportMediaReadyRequest':
@@ -307,6 +317,8 @@ class ApiClient {
           return ReviewUpload.fromJson(value);
         case 'ReviewUploadRequest':
           return ReviewUploadRequest.fromJson(value);
+        case 'RevokePushRegistration':
+          return RevokePushRegistration.fromJson(value);
         case 'RtcConfig':
           return RtcConfig.fromJson(value);
         case 'RtcToken':

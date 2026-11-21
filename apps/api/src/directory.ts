@@ -17,7 +17,8 @@ export const DIRECTORY_LIMITS={members:2000,views:4,page:20,visible:40,lifetimeM
 export class Directory {
   constructor(private readonly db:Database,private readonly presence:Presence,
     private readonly videoAvailable:()=>boolean,private readonly clock:()=>number,
-    private readonly liveOwner:(c:PoolClient,actor:Actor)=>Promise<unknown>){}
+    private readonly liveOwner:(c:PoolClient,actor:Actor)=>Promise<unknown>,
+    private readonly reachability?:(c:Query,ids:string[])=>Promise<Map<string,'foreground'|'background_eligible'>>){}
 
   private language(raw:unknown='ta'):string {
     requireThat(raw==='ta'||raw==='en',400,'INVALID_LANGUAGE','Select Tamil or English');return raw;
@@ -41,14 +42,16 @@ export class Directory {
     const values=[owner,language,ids??null,favorites,new Date(this.clock())];
     const {rows}=await c.query(sql,values);
     const reachable=rows.filter(r=>r.desired_online&&r.live_session);
-    const online=new Set(await this.presence.online(reachable.map(r=>r.id),new Map(reachable.map(r=>[r.id,String(r.presence_version)]))));
+    const channels=this.reachability?await this.reachability(c,reachable.map(r=>r.id)):
+      new Map((await this.presence.online(reachable.map(r=>r.id),new Map(reachable.map(r=>[r.id,String(r.presence_version)])))).map(id=>[id,'foreground' as const]));
+    const online=new Set([...channels].filter(([,kind])=>kind==='foreground').map(([id])=>id));
     // Redis can be slow. Do not return names/eligibility or a green dot captured
     // before a concurrent deletion, approval withdrawal or new presence intent.
     const current=(await c.query(sql,[owner,language,ids??null,favorites,new Date(this.clock())])).rows;
     const versions=new Map(reachable.map(r=>[r.id,String(r.presence_version)]));
-    for(const r of current)if(!r.desired_online||!r.live_session||versions.get(r.id)!==String(r.presence_version))online.delete(r.id);
+    for(const r of current)if(!r.desired_online||!r.live_session||versions.get(r.id)!==String(r.presence_version)){online.delete(r.id);channels.delete(r.id);}
     return current.map(r=>({id:r.id as string,displayName:r.display_name as string,languages:r.languages as string[],
-      online:online.has(r.id),available:online.has(r.id)&&!r.busy,busy:!!r.busy,favorite:!!r.favorite,
+      online:online.has(r.id),reachability:channels.get(r.id)??'offline' as const,available:channels.has(r.id)&&!r.busy,busy:!!r.busy,favorite:!!r.favorite,
       testOnly:true,rate:TEST_RATE,videoRate:this.videoAvailable()?TEST_VIDEO_RATE:null}));
   }
   async preview(owner:string,language='ta') {

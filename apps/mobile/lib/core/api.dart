@@ -244,6 +244,17 @@ class NightShiftApi {
         return api.listCalls(cursor: uri.queryParameters['cursor']);
       case 'GET /me/match':
         return api.getCurrentMatchingRequest();
+      case 'GET /me/push/registration':
+        return api.getPushRegistration();
+      case 'PUT /me/push/registration':
+        return api.preparePushRegistration(
+            key(), generated.PreparePushRegistration.fromJson(data)!);
+      case 'POST /me/push/registration/activate':
+        return api.activatePushRegistration(
+            key(), generated.ActivatePushRegistration.fromJson(data)!);
+      case 'DELETE /me/push/registration':
+        return api.revokePushRegistration(
+            key(), generated.RevokePushRegistration.fromJson(data)!);
       case 'POST /matches':
         return api.createMatchingRequest(
             key(), generated.CreateMatchingRequest.fromJson(data)!);

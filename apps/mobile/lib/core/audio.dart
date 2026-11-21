@@ -43,6 +43,7 @@ class _OwnedRtcEngine {
   final RtcEngine engine;
   final bool video, previewOnly;
   bool closed = false;
+  bool audioInterrupted = false;
   Future<void> _tail = Future<void>.value();
   Future<void>? _closing;
 
@@ -355,11 +356,16 @@ class AgoraCallAudio implements CallVideo {
       },
       onLocalAudioStateChanged: (connection, state, reason) {
         if (!_current(session) || session.previewOnly) return;
-        _recording =
-            state == LocalAudioStreamState.localAudioStreamStateRecording ||
-                state == LocalAudioStreamState.localAudioStreamStateEncoding;
+        final interrupted = reason ==
+                LocalAudioStreamReason.localAudioStreamReasonInterrupted ||
+            reason == LocalAudioStreamReason.localAudioStreamReasonDeviceBusy ||
+            state == LocalAudioStreamState.localAudioStreamStateFailed;
+        session.audioInterrupted = session.audioInterrupted || interrupted;
+        _recording = !session.audioInterrupted &&
+            (state == LocalAudioStreamState.localAudioStreamStateRecording ||
+                state == LocalAudioStreamState.localAudioStreamStateEncoding);
         onChanged?.call();
-        if (state == LocalAudioStreamState.localAudioStreamStateFailed) {
+        if (interrupted) {
           onFailure?.call('RTC_MICROPHONE_FAILED');
         }
       },

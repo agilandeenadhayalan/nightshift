@@ -10,6 +10,7 @@ import 'video_preflight.dart';
 import 'video_view.dart';
 import 'discovery_view.dart';
 import '../core/discovery.dart';
+import 'invitation_settings.dart';
 
 class PageBody extends StatelessWidget {
   const PageBody({super.key, required this.children});
@@ -1111,6 +1112,8 @@ class ProfileScreen extends ConsumerWidget {
           ],
           onChanged: (value) => state.setLocale(value!)),
       const SizedBox(height: 24),
+      if (state.isListener && state.user?.listenerApproved == true)
+        InvitationSettings(controller: state),
       StatusCard(
           title: state.text('Test wallet', 'சோதனை பணப்பை'),
           message: state.text(

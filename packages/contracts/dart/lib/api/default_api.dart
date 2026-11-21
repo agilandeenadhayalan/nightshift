@@ -75,6 +75,65 @@ class DefaultApi {
     return null;
   }
 
+  /// Explicit bounded audio-invitation opt-in after native binding installation. Does not enable ongoing background audio or prove notification delivery. Same-key replay never renews a lease.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [String] idempotencyKey (required):
+  ///
+  /// * [ActivatePushRegistration] activatePushRegistration (required):
+  Future<Response> activatePushRegistrationWithHttpInfo(String idempotencyKey, ActivatePushRegistration activatePushRegistration, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/me/push/registration/activate';
+
+    // ignore: prefer_final_locals
+    Object? postBody = activatePushRegistration;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    headerParams[r'Idempotency-Key'] = parameterToString(idempotencyKey);
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Explicit bounded audio-invitation opt-in after native binding installation. Does not enable ongoing background audio or prove notification delivery. Same-key replay never renews a lease.
+  ///
+  /// Parameters:
+  ///
+  /// * [String] idempotencyKey (required):
+  ///
+  /// * [ActivatePushRegistration] activatePushRegistration (required):
+  Future<PushRegistration?> activatePushRegistration(String idempotencyKey, ActivatePushRegistration activatePushRegistration, { Future<void>? abortTrigger, }) async {
+    final response = await activatePushRegistrationWithHttpInfo(idempotencyKey, activatePushRegistration, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'PushRegistration',) as PushRegistration;
+    
+    }
+    return null;
+  }
+
   /// Performs an HTTP 'PUT /v1/blocks/{id}' operation and returns the [Response].
   /// Parameters:
   ///
@@ -1428,6 +1487,48 @@ class DefaultApi {
     return null;
   }
 
+  /// Performs an HTTP 'GET /v1/me/push/registration' operation and returns the [Response].
+  Future<Response> getPushRegistrationWithHttpInfo({ Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/me/push/registration';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  Future<CurrentPushRegistration?> getPushRegistration({ Future<void>? abortTrigger, }) async {
+    final response = await getPushRegistrationWithHttpInfo(abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'CurrentPushRegistration',) as CurrentPushRegistration;
+    
+    }
+    return null;
+  }
+
   /// Performs an HTTP 'GET /v1/rates' operation and returns the [Response].
   Future<Response> getRatesWithHttpInfo({ Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
@@ -1978,6 +2079,65 @@ class DefaultApi {
     return null;
   }
 
+  /// Prepare a current verified-device registration. Token is write-only; install the native binding durably before explicit activation. Unknown outcomes require a read before explicit retry.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [String] idempotencyKey (required):
+  ///
+  /// * [PreparePushRegistration] preparePushRegistration (required):
+  Future<Response> preparePushRegistrationWithHttpInfo(String idempotencyKey, PreparePushRegistration preparePushRegistration, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/me/push/registration';
+
+    // ignore: prefer_final_locals
+    Object? postBody = preparePushRegistration;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    headerParams[r'Idempotency-Key'] = parameterToString(idempotencyKey);
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'PUT',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Prepare a current verified-device registration. Token is write-only; install the native binding durably before explicit activation. Unknown outcomes require a read before explicit retry.
+  ///
+  /// Parameters:
+  ///
+  /// * [String] idempotencyKey (required):
+  ///
+  /// * [PreparePushRegistration] preparePushRegistration (required):
+  Future<PushRegistration?> preparePushRegistration(String idempotencyKey, PreparePushRegistration preparePushRegistration, { Future<void>? abortTrigger, }) async {
+    final response = await preparePushRegistrationWithHttpInfo(idempotencyKey, preparePushRegistration, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'PushRegistration',) as PushRegistration;
+    
+    }
+    return null;
+  }
+
   /// Authenticated applicant-only private sample; never a public capability URL.
   ///
   /// Note: This method returns the HTTP [Response].
@@ -2261,6 +2421,60 @@ class DefaultApi {
     // FormatException when trying to decode an empty string.
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
       return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'OtpChallenge',) as OtpChallenge;
+    
+    }
+    return null;
+  }
+
+  /// Performs an HTTP 'DELETE /v1/me/push/registration' operation and returns the [Response].
+  /// Parameters:
+  ///
+  /// * [String] idempotencyKey (required):
+  ///
+  /// * [RevokePushRegistration] revokePushRegistration (required):
+  Future<Response> revokePushRegistrationWithHttpInfo(String idempotencyKey, RevokePushRegistration revokePushRegistration, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/me/push/registration';
+
+    // ignore: prefer_final_locals
+    Object? postBody = revokePushRegistration;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    headerParams[r'Idempotency-Key'] = parameterToString(idempotencyKey);
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'DELETE',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Parameters:
+  ///
+  /// * [String] idempotencyKey (required):
+  ///
+  /// * [RevokePushRegistration] revokePushRegistration (required):
+  Future<PushRegistration?> revokePushRegistration(String idempotencyKey, RevokePushRegistration revokePushRegistration, { Future<void>? abortTrigger, }) async {
+    final response = await revokePushRegistrationWithHttpInfo(idempotencyKey, revokePushRegistration, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'PushRegistration',) as PushRegistration;
     
     }
     return null;
