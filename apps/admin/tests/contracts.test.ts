@@ -61,7 +61,7 @@ test('submitted review queue decoder matches public contract without private fie
     const broken = {...page} as Record<string, unknown>; delete broken[key];
     assert.equal(schema(broken), false); assert.equal(reviewPageValue(broken), false);
   }
-  for (const broken of [{...page, decisionsEnabled: true}, {...page, nextCursor: 'invalid'}, {...page, phone: 'private'},
+  for (const broken of [{...page, decisionsEnabled: 'yes'}, {...page, nextCursor: 'invalid'}, {...page, phone: 'private'},
     {...page, items: [{...page.items[0], state: 'needs_information'}]}, {...page, items: [{...page.items[0], languages: ['fr']}]},
     {...page, items: [{...page.items[0], languages: ['ta', 'ta']}]}, {...page, items: [{...page.items[0], voiceSampleAvailable: null}]}]) {
     assert.equal(schema(broken), false); assert.equal(reviewPageValue(broken), false);
@@ -82,4 +82,8 @@ test('review detail exposes only submitted self-declared data with exact materia
   }
   const absent = {...detail, application: {...detail.application, voiceSample: null}};
   assert.ok(schema(absent)); assert.ok(reviewDetailValue(absent));
+  const unicode = {...detail, decisionsEnabled: true, application: {...detail.application, bio: '😀'.repeat(600) + 'தமிழ்'}};
+  assert.ok(schema(unicode)); assert.ok(reviewDetailValue(unicode));
+  const tooLong = {...detail, application: {...detail.application, bio: '😀'.repeat(1001)}};
+  assert.equal(schema(tooLong), false); assert.equal(reviewDetailValue(tooLong), false);
 });

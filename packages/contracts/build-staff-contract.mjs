@@ -8,6 +8,13 @@ const permission = {type:'string',enum:['listener.review.read','listener.review.
 const reviewCursor = {type:'string',pattern:'^[A-Za-z0-9_-]+\\.[a-f0-9]{64}$',maxLength:2048};
 const languages = {type:'array',items:{type:'string',enum:['ta','en']},minItems:1,maxItems:2,uniqueItems:true};
 const reviewCard = {id:{type:'string',format:'uuid'},alias:{type:'string',minLength:1,maxLength:80},state:{type:'string',const:'submitted'},languages,submittedAt:timestamp};
+const slug={type:'string',pattern:'^[a-z][a-z0-9_]{0,63}$'};
+const boundedText=max=>({type:'string',minLength:1,maxLength:max,pattern:'^[^\\u0000-\\u001f\\u007f]+$'});
+const label=object({en:boundedText(160),ta:boundedText(160)});
+const evidence={type:'array',items:{type:'string',enum:['application','voice_sample','self_declaration']},maxItems:3,uniqueItems:true};
+const outcome={type:'string',enum:['approved','rejected','needs_information']};
+const reasonList={type:'array',minItems:1,maxItems:20,items:object({code:slug,label})};
+const finding=object({id:slug,result:{type:'string',enum:['pass','fail','not_checked']},evidenceKinds:evidence});
 const schemas = {
   StaffAuthStatus: object({configured:{type:'boolean'},available:{type:'boolean'},reasonCode:{type:['string','null'],enum:['STAFF_AUTH_UNAVAILABLE',null]}}),
   StaffChallenge: object({csrfToken:csrf,expiresAt:timestamp}),
@@ -16,9 +23,14 @@ const schemas = {
   StaffAccessRequest: object({requestId:{type:'string',format:'uuid'},accountReference:{type:'string',format:'uuid'},status:{type:'string',enum:['pending','provisioned']},expiresAt:timestamp}),
   StaffLogout: object({signedOut:{type:'boolean',const:true}}),
   StaffEmptyBody: object({}),
-  StaffReviewQueue: object({items:{type:'array',maxItems:20,items:object({...reviewCard,voiceSampleAvailable:{type:'boolean'}})},nextCursor:{anyOf:[reviewCursor,{type:'null'}]},decisionsEnabled:{type:'boolean',const:false}}),
+  StaffReviewQueue: object({items:{type:'array',maxItems:20,items:object({...reviewCard,voiceSampleAvailable:{type:'boolean'}})},nextCursor:{anyOf:[reviewCursor,{type:'null'}]},decisionsEnabled:{type:'boolean'}}),
   StaffReviewDetail: object({application:object({...reviewCard,bio:{type:'string',maxLength:1000},topics:{type:'array',items:{type:'string',enum:['everyday','work','study','hobbies','language-practice']},maxItems:5,uniqueItems:true},
-    materialVersion:csrf,adultStatus:{type:'string',const:'self_declared'},voiceSample:{anyOf:[object({contentType:{type:'string',const:'audio/wav'},byteLength:{type:'integer',minimum:44,maximum:2097152}}),{type:'null'}]}}),decisionsEnabled:{type:'boolean',const:false}}),
+    materialVersion:csrf,adultStatus:{type:'string',const:'self_declared'},voiceSample:{anyOf:[object({contentType:{type:'string',const:'audio/wav'},byteLength:{type:'integer',minimum:44,maximum:2097152}}),{type:'null'}]}}),decisionsEnabled:{type:'boolean'}}),
+  StaffReviewPolicy:{oneOf:[object({enabled:{type:'boolean',const:false},reasonCode:{type:'string',const:'REVIEW_POLICY_UNAVAILABLE'}}),
+    object({enabled:{type:'boolean',const:true},reasonCode:{type:'null'},version:boundedText(80),digest:csrf,checks:{type:'array',minItems:1,maxItems:20,items:object({id:slug,label,requiredForApproval:{type:'boolean'},evidenceKinds:{...evidence,minItems:1}})},reasons:object({approved:reasonList,rejected:reasonList,needs_information:reasonList})})]},
+  StaffReviewDecision:object({expectedMaterialVersion:csrf,policyVersion:boundedText(80),policyDigest:csrf,outcome,checks:{type:'array',minItems:1,maxItems:20,items:finding},reasonCode:slug}),
+  StaffReviewReceipt:object({decisionId:{type:'string',format:'uuid'},applicationId:{type:'string',format:'uuid'},outcome,policyVersion:boundedText(80),materialVersion:csrf,reasonCode:slug,recordedAt:timestamp,
+    effects:object({entitlement:{type:'string',enum:['not_applicable','pending','active','withheld']},notification:{type:'string',enum:['pending','available','suppressed']}})}),
   StaffError: object({error:object({code:{type:'string'},message:{type:'string'},retryAfterSeconds:{type:'integer',minimum:1}},['code','message']),requestId:{type:'string',format:'uuid'}}),
 };
 const json = schema => ({'application/json':{schema}});
@@ -38,6 +50,7 @@ const reviewResponses = schema => ({
     .map(([status,description])=>[status,{description,headers:noStore,content:json(ref('StaffError'))}]))
 });
 const applicationId = {name:'id',in:'path',required:true,schema:{type:'string',format:'uuid'}};
+const decisionKey={name:'Idempotency-Key',in:'header',required:true,schema:{type:'string',minLength:1,maxLength:128,pattern:'^[^\\u0000-\\u001f\\u007f]+$'},description:'Stable key for one immutable command, scoped to the current staff principal and application. Never an authorization credential.'};
 const sampleResponses = reviewResponses(ref('StaffError'));
 sampleResponses[200] = {description:'Complete WAV at most2MiB. Range is ignored; no partial responses. Material version is a consistency value, never an authorization credential.',
   headers:{...reviewHeaders,'Content-Length':{schema:{type:'integer',minimum:44,maximum:2097152}},'Content-Disposition':{schema:{type:'string',const:'inline; filename="review-sample.wav"'}},'X-Review-Material-Version':{schema:csrf}},
@@ -58,6 +71,9 @@ const contract = {
     '/v1/admin/listener-applications':{get:{operationId:'getStaffReviewQueue',parameters:[{name:'language',in:'query',schema:{type:'string',enum:['ta','en']}},{name:'cursor',in:'query',schema:reviewCursor}],responses:reviewResponses(ref('StaffReviewQueue')),description:'Requires listener.review.read. Twenty submitted applications ordered by exact submitted timestamp and ID. Signed cursor binds staff session, language and five-minute cutoff; later removal may produce short pages. Known self and editable needs_information applications are excluded.'}},
     '/v1/admin/listener-applications/{id}':{get:{operationId:'getStaffReviewDetail',parameters:[applicationId],responses:reviewResponses(ref('StaffReviewDetail')),description:'Requires both listener.review.read and listener.review.evidence.read. No query fields accepted. Only current submitted private material and self-declared adult status; no DOB, phone, provider identity or financial fields.'}},
     '/v1/admin/listener-applications/{id}/voice-sample':{get:{operationId:'getStaffReviewSample',parameters:[applicationId,{name:'version',in:'query',required:true,schema:csrf}],responses:sampleResponses,description:'Requires both listener.review.read and listener.review.evidence.read. Reads private storage outside locks, then rechecks provider identity, local staff/app authority, applicant state/consent and byte integrity. One targeted access event records successful authorized access.'}},
+    '/v1/admin/listener-review-policy':{get:{operationId:'getStaffReviewPolicy',responses:reviewResponses(ref('StaffReviewPolicy')),description:'Requires listener.review.read. Missing approved configuration returns enabled:false. No real checklist is bundled. Policy metadata is not permission to decide.'}},
+    '/v1/admin/listener-applications/{id}/decisions':{post:{operationId:'recordStaffReviewDecision',parameters:[applicationId,origin,csrfHeader,decisionKey],requestBody:body(ref('StaffReviewDecision')),responses:reviewResponses(ref('StaffReviewReceipt')),description:'Requires read, evidence.read and decide permissions, current policy/material, explicit findings and policy-approved reason. All policy check IDs occur exactly once; pass/fail need permitted evidence, not_checked has none. Approval requires every mandatory check pass; rejection requires a failed check; needs_information requires a failed or unchecked check. Atomically records an immutable decision and durable effects; does not assert verified age/identity or turn availability on.'}},
+    '/v1/admin/listener-applications/{id}/decision-receipt':{get:{operationId:'getStaffReviewDecisionReceipt',parameters:[applicationId,decisionKey],responses:reviewResponses(ref('StaffReviewReceipt')),description:'Requires current read, evidence.read and decide permissions. Recovers the current principal/application/key result after uncertain delivery, including after terminal application state or policy disabled. Missing receipt returns404 REVIEW_DECISION_NOT_FOUND. Never retries the mutation.'}},
   },
   components:{securitySchemes:{
     nativeAppSession:{type:'http',scheme:'bearer',description:'Current registered Firebase phone app session. Native HTTP only; never supplied to the embedded browser.'},

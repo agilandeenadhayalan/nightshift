@@ -255,6 +255,12 @@ class ApiClient {
           return ListenerApplicationState.fromJson(value);
         case 'ListenerPage':
           return ListenerPage.fromJson(value);
+        case 'ListenerReviewNotice':
+          return ListenerReviewNotice.fromJson(value);
+        case 'ListenerReviewOutcome':
+          return ListenerReviewOutcome.fromJson(value);
+        case 'ListenerReviewState':
+          return ListenerReviewState.fromJson(value);
         case 'ListenerStatusRequest':
           return ListenerStatusRequest.fromJson(value);
         case 'ListenerStatuses':
@@ -283,6 +289,12 @@ class ApiClient {
           return Rate.fromJson(value);
         case 'ReportMediaReadyRequest':
           return ReportMediaReadyRequest.fromJson(value);
+        case 'ReviewLocalizedText':
+          return ReviewLocalizedText.fromJson(value);
+        case 'ReviewMissingCheck':
+          return ReviewMissingCheck.fromJson(value);
+        case 'ReviewMissingCheckLabel':
+          return ReviewMissingCheckLabel.fromJson(value);
         case 'ReviewUpload':
           return ReviewUpload.fromJson(value);
         case 'ReviewUploadRequest':

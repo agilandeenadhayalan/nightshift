@@ -54,7 +54,7 @@ test('missing, duplicate, foreign-host and cross-site credentials fail before di
 });
 test('private or non-submitted fields fail strict JSON validation without reflection', async () => {
   for (const value of [{...detail, application: {...detail.application, phone: 'private-synthetic'}}, {...detail, application: {...detail.application, state: 'needs_information'}},
-    {...detail, application: {...detail.application, adultStatus: 'verified'}}, {...detail, decisionsEnabled: true}, {...detail, application: {...detail.application, id: '2a1eec02-9d54-4c93-8806-5b9a763785d2'}}]) {
+    {...detail, application: {...detail.application, adultStatus: 'verified'}}, {...detail, decisionsEnabled: 'yes'}, {...detail, application: {...detail.application, id: '2a1eec02-9d54-4c93-8806-5b9a763785d2'}}]) {
     const result = await proxyReview(request(item), item, config, {fetch: async () => json(value)});
     assert.equal(result.status, 502); assert.doesNotMatch(await result.text(), /private-synthetic|needs_information|verified/);
   }

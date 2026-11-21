@@ -1657,6 +1657,573 @@
         },
         "description": "Requires both listener.review.read and listener.review.evidence.read. Reads private storage outside locks, then rechecks provider identity, local staff/app authority, applicant state/consent and byte integrity. One targeted access event records successful authorized access."
       }
+    },
+    "/v1/admin/listener-review-policy": {
+      "get": {
+        "operationId": "getStaffReviewPolicy",
+        "responses": {
+          "200": {
+            "description": "Submitted material only. No decisions or entitlements are changed.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store, private"
+                }
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string",
+                  "const": "Cookie"
+                }
+              },
+              "X-Content-Type-Options": {
+                "schema": {
+                  "type": "string",
+                  "const": "nosniff"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffReviewPolicy"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fields or owner/filter-bound cursor",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Staff or source app authority is revoked or expired",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Required read/evidence permission denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Application or sample is unavailable, restricted or known self",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Review material changed; reload detail",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Queue cursor expired; refresh queue",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Staff provider or private sample storage is unavailable or busy",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires listener.review.read. Missing approved configuration returns enabled:false. No real checklist is bundled. Policy metadata is not permission to decide."
+      }
+    },
+    "/v1/admin/listener-applications/{id}/decisions": {
+      "post": {
+        "operationId": "recordStaffReviewDecision",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "Must exactly match the configured staff origin."
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            },
+            "description": "Stable key for one immutable command, scoped to the current staff principal and application. Never an authorization credential."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffReviewDecision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Submitted material only. No decisions or entitlements are changed.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store, private"
+                }
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string",
+                  "const": "Cookie"
+                }
+              },
+              "X-Content-Type-Options": {
+                "schema": {
+                  "type": "string",
+                  "const": "nosniff"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffReviewReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fields or owner/filter-bound cursor",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Staff or source app authority is revoked or expired",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Required read/evidence permission denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Application or sample is unavailable, restricted or known self",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Review material changed; reload detail",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Queue cursor expired; refresh queue",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Staff provider or private sample storage is unavailable or busy",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires read, evidence.read and decide permissions, current policy/material, explicit findings and policy-approved reason. All policy check IDs occur exactly once; pass/fail need permitted evidence, not_checked has none. Approval requires every mandatory check pass; rejection requires a failed check; needs_information requires a failed or unchecked check. Atomically records an immutable decision and durable effects; does not assert verified age/identity or turn availability on."
+      }
+    },
+    "/v1/admin/listener-applications/{id}/decision-receipt": {
+      "get": {
+        "operationId": "getStaffReviewDecisionReceipt",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            },
+            "description": "Stable key for one immutable command, scoped to the current staff principal and application. Never an authorization credential."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Submitted material only. No decisions or entitlements are changed.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store, private"
+                }
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string",
+                  "const": "Cookie"
+                }
+              },
+              "X-Content-Type-Options": {
+                "schema": {
+                  "type": "string",
+                  "const": "nosniff"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffReviewReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fields or owner/filter-bound cursor",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Staff or source app authority is revoked or expired",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Required read/evidence permission denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Application or sample is unavailable, restricted or known self",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Review material changed; reload detail",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Queue cursor expired; refresh queue",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Staff provider or private sample storage is unavailable or busy",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires current read, evidence.read and decide permissions. Recovers the current principal/application/key result after uncertain delivery, including after terminal application state or policy disabled. Missing receipt returns404 REVIEW_DECISION_NOT_FOUND. Never retries the mutation."
+      }
     }
   },
   "components": {
@@ -1903,8 +2470,7 @@
             ]
           },
           "decisionsEnabled": {
-            "type": "boolean",
-            "const": false
+            "type": "boolean"
           }
         },
         "required": [
@@ -2019,13 +2585,417 @@
             "additionalProperties": false
           },
           "decisionsEnabled": {
-            "type": "boolean",
-            "const": false
+            "type": "boolean"
           }
         },
         "required": [
           "application",
           "decisionsEnabled"
+        ],
+        "additionalProperties": false
+      },
+      "StaffReviewPolicy": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "const": false
+              },
+              "reasonCode": {
+                "type": "string",
+                "const": "REVIEW_POLICY_UNAVAILABLE"
+              }
+            },
+            "required": [
+              "enabled",
+              "reasonCode"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "const": true
+              },
+              "reasonCode": {
+                "type": "null"
+              },
+              "version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              "digest": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "checks": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 20,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                    },
+                    "label": {
+                      "type": "object",
+                      "properties": {
+                        "en": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 160,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                        },
+                        "ta": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 160,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                        }
+                      },
+                      "required": [
+                        "en",
+                        "ta"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requiredForApproval": {
+                      "type": "boolean"
+                    },
+                    "evidenceKinds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "application",
+                          "voice_sample",
+                          "self_declaration"
+                        ]
+                      },
+                      "maxItems": 3,
+                      "uniqueItems": true,
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "requiredForApproval",
+                    "evidenceKinds"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "reasons": {
+                "type": "object",
+                "properties": {
+                  "approved": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                        },
+                        "label": {
+                          "type": "object",
+                          "properties": {
+                            "en": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 160,
+                              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                            },
+                            "ta": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 160,
+                              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                            }
+                          },
+                          "required": [
+                            "en",
+                            "ta"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "label"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "rejected": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                        },
+                        "label": {
+                          "type": "object",
+                          "properties": {
+                            "en": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 160,
+                              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                            },
+                            "ta": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 160,
+                              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                            }
+                          },
+                          "required": [
+                            "en",
+                            "ta"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "label"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "needs_information": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                        },
+                        "label": {
+                          "type": "object",
+                          "properties": {
+                            "en": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 160,
+                              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                            },
+                            "ta": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 160,
+                              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                            }
+                          },
+                          "required": [
+                            "en",
+                            "ta"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "label"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "approved",
+                  "rejected",
+                  "needs_information"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "enabled",
+              "reasonCode",
+              "version",
+              "digest",
+              "checks",
+              "reasons"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "StaffReviewDecision": {
+        "type": "object",
+        "properties": {
+          "expectedMaterialVersion": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "policyVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "policyDigest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected",
+              "needs_information"
+            ]
+          },
+          "checks": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "pass",
+                    "fail",
+                    "not_checked"
+                  ]
+                },
+                "evidenceKinds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "application",
+                      "voice_sample",
+                      "self_declaration"
+                    ]
+                  },
+                  "maxItems": 3,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "id",
+                "result",
+                "evidenceKinds"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "reasonCode": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+          }
+        },
+        "required": [
+          "expectedMaterialVersion",
+          "policyVersion",
+          "policyDigest",
+          "outcome",
+          "checks",
+          "reasonCode"
+        ],
+        "additionalProperties": false
+      },
+      "StaffReviewReceipt": {
+        "type": "object",
+        "properties": {
+          "decisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "applicationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected",
+              "needs_information"
+            ]
+          },
+          "policyVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "materialVersion": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "reasonCode": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "effects": {
+            "type": "object",
+            "properties": {
+              "entitlement": {
+                "type": "string",
+                "enum": [
+                  "not_applicable",
+                  "pending",
+                  "active",
+                  "withheld"
+                ]
+              },
+              "notification": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "available",
+                  "suppressed"
+                ]
+              }
+            },
+            "required": [
+              "entitlement",
+              "notification"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "decisionId",
+          "applicationId",
+          "outcome",
+          "policyVersion",
+          "materialVersion",
+          "reasonCode",
+          "recordedAt",
+          "effects"
         ],
         "additionalProperties": false
       },

@@ -39,6 +39,7 @@ class _ApplicationScreenState extends ConsumerState<ListenerApplicationScreen> {
     }
     final editing = state.canEdit;
     final status = state.application?['state'] as String? ?? 'new';
+    final review = state.reviewOutcome;
     return Scaffold(
         appBar: AppBar(
             title:
@@ -75,6 +76,45 @@ class _ApplicationScreenState extends ConsumerState<ListenerApplicationScreen> {
                     Text(app.text(
                         'This application was not approved. This decision does not change your Customer account.',
                         'இந்த விண்ணப்பம் அங்கீகரிக்கப்படவில்லை. இந்த முடிவு உங்கள் வாடிக்கையாளர் கணக்கை மாற்றாது.')),
+                  if (review != null) ...[
+                    const SizedBox(height: 16),
+                    Text(app.text('Review update', 'ஆய்வு முடிவு'),
+                        style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                        review['message'][app.locale == 'ta' ? 'ta' : 'en']
+                            as String,
+                        key: const Key('application-review-message')),
+                    for (final check in review['missingChecks'] as List)
+                      Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(check['label']
+                              [app.locale == 'ta' ? 'ta' : 'en'] as String)),
+                    if (review['outcome'] == 'approved')
+                      Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                              switch (review['entitlement']) {
+                                'active' => app.text(
+                                    'Listener access is active. Refresh your profile to switch modes when you are ready.',
+                                    'கேட்பவர் அணுகல் செயல்பாட்டில் உள்ளது. நீங்கள் தயாரானதும் முறையை மாற்ற உங்கள் சுயவிவரத்தை புதுப்பிக்கவும்.'),
+                                'withheld' => app.text(
+                                    'Listener access is currently unavailable. Your review decision is recorded.',
+                                    'கேட்பவர் அணுகல் தற்போது கிடைக்கவில்லை. உங்கள் ஆய்வு முடிவு பதிவு செய்யப்பட்டுள்ளது.'),
+                                _ => app.text(
+                                    'Approval recorded. Listener access is still being processed; check again shortly.',
+                                    'ஒப்புதல் பதிவு செய்யப்பட்டது. கேட்பவர் அணுகல் இன்னும் செயலாக்கப்படுகிறது; சிறிது நேரத்தில் மீண்டும் சரிபார்க்கவும்.'),
+                              },
+                              key:
+                                  const Key('application-review-entitlement'))),
+                  ],
+                  if (state.reviewErrorCode != null)
+                    Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Text(
+                            app.text(
+                                'The review update could not be loaded. Check your saved application status again.',
+                                'ஆய்வு முடிவை ஏற்ற முடியவில்லை. சேமித்த விண்ணப்ப நிலையை மீண்டும் சரிபார்க்கவும்.'),
+                            key: const Key('application-review-error'))),
                   if (state.busy)
                     const Padding(
                         padding: EdgeInsets.all(12),
