@@ -28,4 +28,4 @@ Run affected tests first, then required backend/mobile/contract checks proportio
 - [x] Implement accessible Customer/Listener audio/video display with confirmed allowance and distinct warnings.
 - [x] Independently review and verify: 447 Flutter, 396 full backend integration, 74 API, 7 domain, 3 audio reference and 11 tooling tests; 90 generated files match. The unchanged backend rerun passed after existing PostgreSQL/Redis services were restored from an outage; failed logs remain preserved.
 - [x] Build configured ARM64 APK6006, verify its signature and all 31 ELF/ZIP alignments, and record 215 source/four private input hashes. No installation.
-- [ ] Publish a draft PR stacked on PR82 and verify exact-head remote CI.
+- [x] Publish draft PR83 stacked on PR82; backend, Android and staff CI passed for final head `f9a9238c49cc0a28376ec498d2de9d755bd66a16` in run44870326491.

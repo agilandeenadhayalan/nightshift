@@ -113,6 +113,15 @@ jobs:
           cache: true
       - run: npm run check:client
       - run: npm run check:mobile
+      - name: Verify history calendar time zones
+        working-directory: apps/mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          for zone in UTC Asia/Kolkata America/New_York Pacific/Kiritimati; do
+            printf '\nHistory calendar zone: %s\n' "$zone"
+            TZ="$zone" NIGHTSHIFT_HISTORY_TEST_TZ="$zone" flutter test --no-pub --reporter expanded test/history_calendar_test.dart
+          done
       - run: npm run test:review-reader
       - run: npm run test:staff-cookie
       - run: npm run test:call-invitations

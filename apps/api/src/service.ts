@@ -202,9 +202,11 @@ export class NightShiftService {
   async history(actorId: string,cursor?: string) {
     let anchor: Row|undefined;
     if(cursor) anchor=await this.row(this.db.pool,actorId,cursor);
+    // Keep the stored tuple in PostgreSQL: a JS Date would truncate microseconds.
     const {rows}=await this.db.pool.query(`SELECT * FROM call_sessions WHERE (customer_id=$1 OR listener_id=$1)
-      AND ($2::timestamptz IS NULL OR (created_at,id)<($2::timestamptz,$3::uuid)) ORDER BY created_at DESC,id DESC LIMIT 21`,
-      [actorId,anchor?.created_at??null,anchor?.id??null]);
+      AND ($2::uuid IS NULL OR (created_at,id)<(SELECT anchor.created_at,anchor.id FROM call_sessions anchor
+        WHERE anchor.id=$2::uuid AND (anchor.customer_id=$1 OR anchor.listener_id=$1)))
+      ORDER BY created_at DESC,id DESC LIMIT 21`,[actorId,anchor?.id??null]);
     const selected=rows.slice(0,20);
     return { items:await Promise.all(selected.map(r=>this.view(this.db.pool,r))),nextCursor:rows.length>20?selected.at(-1)!.id:null };
   }
