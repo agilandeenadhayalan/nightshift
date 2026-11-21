@@ -148,6 +148,18 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                                         'Saved listeners are not guaranteed to be available.',
                                         'சேமித்த கேட்பவர்கள் எப்போதும் கிடைப்பார்கள் என்பது உறுதியல்ல.')),
                                   const SizedBox(height: 16),
+                                  if (widget.kind == DirectoryKind.discover)
+                                    OutlinedButton.icon(
+                                        onPressed: state.busy ||
+                                                state.hasCall ||
+                                                state.offline
+                                            ? null
+                                            : () => state.matching.open(),
+                                        icon: const Icon(
+                                            Icons.headset_mic_outlined),
+                                        label: Text(state.text(
+                                            'Find an audio Listener',
+                                            'ஆடியோ கேட்பவரைத் தேடு'))),
                                   DropdownButtonFormField<String>(
                                       value: state.language,
                                       isExpanded: true,

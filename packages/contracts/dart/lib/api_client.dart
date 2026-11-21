@@ -193,6 +193,8 @@ class ApiClient {
           return CallPage.fromJson(value);
         case 'CancelCallRequest':
           return CancelCallRequest.fromJson(value);
+        case 'CancelMatchingRequest':
+          return CancelMatchingRequest.fromJson(value);
         case 'CompleteOnboardingRequest':
           return CompleteOnboardingRequest.fromJson(value);
         case 'ConsentEvent':
@@ -201,10 +203,14 @@ class ApiClient {
           return ConsentHistory.fromJson(value);
         case 'CreateCallRequest':
           return CreateCallRequest.fromJson(value);
+        case 'CreateMatchingRequest':
+          return CreateMatchingRequest.fromJson(value);
         case 'CreateReport201Response':
           return CreateReport201Response.fromJson(value);
         case 'CreateReportRequest':
           return CreateReportRequest.fromJson(value);
+        case 'CurrentMatchingRequest':
+          return CurrentMatchingRequest.fromJson(value);
         case 'DeclineCallRequest':
           return DeclineCallRequest.fromJson(value);
         case 'DeletionNotice':
@@ -267,6 +273,8 @@ class ApiClient {
           return ListenerStatuses.fromJson(value);
         case 'Login':
           return Login.fromJson(value);
+        case 'MatchingRequest':
+          return MatchingRequest.fromJson(value);
         case 'OnboardingProfile':
           return OnboardingProfile.fromJson(value);
         case 'OnboardingState':

@@ -183,6 +183,70 @@ class DefaultApi {
     return null;
   }
 
+  /// Cancel only this search. An acceptance winning the race returns matched and must not be translated into ending the accepted call.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [String] idempotencyKey (required):
+  ///
+  /// * [CancelMatchingRequest] cancelMatchingRequest (required):
+  Future<Response> cancelMatchingRequestWithHttpInfo(String id, String idempotencyKey, CancelMatchingRequest cancelMatchingRequest, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/matches/{id}/cancel'
+      .replaceAll('{id}', id);
+
+    // ignore: prefer_final_locals
+    Object? postBody = cancelMatchingRequest;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    headerParams[r'Idempotency-Key'] = parameterToString(idempotencyKey);
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Cancel only this search. An acceptance winning the race returns matched and must not be translated into ending the accepted call.
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [String] idempotencyKey (required):
+  ///
+  /// * [CancelMatchingRequest] cancelMatchingRequest (required):
+  Future<MatchingRequest?> cancelMatchingRequest(String id, String idempotencyKey, CancelMatchingRequest cancelMatchingRequest, { Future<void>? abortTrigger, }) async {
+    final response = await cancelMatchingRequestWithHttpInfo(id, idempotencyKey, cancelMatchingRequest, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'MatchingRequest',) as MatchingRequest;
+    
+    }
+    return null;
+  }
+
   /// Atomically record an immutable adult date of birth, private proposed nickname, built-in avatar, separate UI/speaking languages, and versioned development consent. Pending nicknames are not published.
   ///
   /// Note: This method returns the HTTP [Response].
@@ -344,6 +408,65 @@ class DefaultApi {
     // FormatException when trying to decode an empty string.
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
       return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ListenerApplication',) as ListenerApplication;
+    
+    }
+    return null;
+  }
+
+  /// Explicit audio-only opt-in: at most three sequential invitations within a single 90-second deadline. Search and ringing are uncharged; existing test-credit call tariff applies after connection. Preserve this key and body on uncertain delivery; recover own current request before an explicit retry.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [String] idempotencyKey (required):
+  ///
+  /// * [CreateMatchingRequest] createMatchingRequest (required):
+  Future<Response> createMatchingRequestWithHttpInfo(String idempotencyKey, CreateMatchingRequest createMatchingRequest, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/matches';
+
+    // ignore: prefer_final_locals
+    Object? postBody = createMatchingRequest;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    headerParams[r'Idempotency-Key'] = parameterToString(idempotencyKey);
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Explicit audio-only opt-in: at most three sequential invitations within a single 90-second deadline. Search and ringing are uncharged; existing test-credit call tariff applies after connection. Preserve this key and body on uncertain delivery; recover own current request before an explicit retry.
+  ///
+  /// Parameters:
+  ///
+  /// * [String] idempotencyKey (required):
+  ///
+  /// * [CreateMatchingRequest] createMatchingRequest (required):
+  Future<MatchingRequest?> createMatchingRequest(String idempotencyKey, CreateMatchingRequest createMatchingRequest, { Future<void>? abortTrigger, }) async {
+    final response = await createMatchingRequestWithHttpInfo(idempotencyKey, createMatchingRequest, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'MatchingRequest',) as MatchingRequest;
     
     }
     return null;
@@ -834,6 +957,51 @@ class DefaultApi {
     return null;
   }
 
+  /// Authoritative owner-only current/latest matching request. Reading never creates a new search or invitation. Poll at most once per second while active; recover after resume.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  Future<Response> getCurrentMatchingRequestWithHttpInfo({ Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/me/match';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Authoritative owner-only current/latest matching request. Reading never creates a new search or invitation. Poll at most once per second while active; recover after resume.
+  Future<CurrentMatchingRequest?> getCurrentMatchingRequest({ Future<void>? abortTrigger, }) async {
+    final response = await getCurrentMatchingRequestWithHttpInfo(abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'CurrentMatchingRequest',) as CurrentMatchingRequest;
+    
+    }
+    return null;
+  }
+
   /// Development-only deletion effects and explicit retention limits before confirmation.
   ///
   /// Note: This method returns the HTTP [Response].
@@ -1119,6 +1287,55 @@ class DefaultApi {
     // FormatException when trying to decode an empty string.
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
       return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ListenerStatuses',) as ListenerStatuses;
+    
+    }
+    return null;
+  }
+
+  /// Performs an HTTP 'GET /v1/matches/{id}' operation and returns the [Response].
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  Future<Response> getMatchingRequestWithHttpInfo(String id, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/v1/matches/{id}'
+      .replaceAll('{id}', id);
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  Future<MatchingRequest?> getMatchingRequest(String id, { Future<void>? abortTrigger, }) async {
+    final response = await getMatchingRequestWithHttpInfo(id, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'MatchingRequest',) as MatchingRequest;
     
     }
     return null;

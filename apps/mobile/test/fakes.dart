@@ -273,6 +273,12 @@ class FakeApi extends NightShiftApi {
     if (path == '/auth/dev') {
       return {'token': 'test-session-token', 'user': user};
     }
+    if (path == '/me/match') return {'request': null};
+    if (path == '/rates') {
+      return {
+        'items': [rateJson()]
+      };
+    }
     if (path == '/rtc/config') {
       return {'appId': 'app', 'videoEnabled': videoEnabled, 'testOnly': true};
     }

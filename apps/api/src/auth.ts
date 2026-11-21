@@ -6,7 +6,7 @@ import { requireThat, fields, object, string } from './errors';
 import { PhoneAuthentication } from './identity/phone-auth';
 import { PoolClient } from 'pg';
 export const tokenHash = (token: string) => createHash('sha256').update(token).digest('hex');
-export interface Actor { id: string; sessionHash: string; identityAuthTime?: number; }
+export interface Actor { id: string; sessionHash: string; identityAuthTime?: number; identityBindingId?: string; }
 export class Auth {
   constructor(private readonly db: Database, private readonly presence: Presence, private readonly config: Config,
     private readonly phone?: PhoneAuthentication, private readonly clock: () => number = Date.now) {}
@@ -129,7 +129,8 @@ export class Auth {
         401,'SESSION_REVOKED','Sign in again with a fresh phone verification.');
     }
     requireThat(allowOnboarding || rows[0].adult_confirmed,403,'ONBOARDING_REQUIRED','Complete adult onboarding first.');
-    return {actor:{ id: rows[0].id, sessionHash: hash, ...(identityAuthTime===undefined?{}:{identityAuthTime}) },identity:verifiedIdentity};
+    return {actor:{ id: rows[0].id, sessionHash: hash, ...(identityAuthTime===undefined?{}:{identityAuthTime}),
+      ...(verifiedIdentity?{identityBindingId:verifiedIdentity.bindingId}:{}) },identity:verifiedIdentity};
   }
   async logout(actor: Actor, beforeRevoke?: (c:PoolClient)=>Promise<void>) {
     const presenceVersion = await this.db.tx(async c=>{
