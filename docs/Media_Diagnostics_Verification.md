@@ -44,7 +44,7 @@ Copy rechecks owner, call and receipt immediately before dispatch, with no inter
 | Repository/contracts/boundaries/secret guard | Passed, including 11 tooling cases | `media-diagnostics-repo-check.log` |
 | Independent source review | No remaining blocking findings | Model, callbacks, controller and UI reviewed |
 | Configured private APK | Built and statically verified; not installed | `media-diagnostics-build-record.json` |
-| Final-commit CI | Pending | Recorded in the PR after completion |
+| Final-commit CI | Backend, Android and staff passed for `45bb2aaa6463fba472de42ae68f15dddb48ae260` | [PR85 / run44873118015](https://github.com/agilandeenadhayalan/nightshift/actions/runs/44873118015) |
 
 Tests cover accepted-but-never-joined failures, synthetic loss/delay mapping, missing versus zero readings, intentional mute, foreign/stale callbacks, exact expiry, logout/relogin/origin changes, immutable/redacted bounded exports, original close completion after timeout and late server End. Collection does not invoke the controller's network reconciler or change readiness. The UI checks English/Tamil at 2x text, user-selected symptoms, held copy success/failure during logout, mounted expiry/origin/new-call hiding, and actual Call → End → Recents navigation with only the retained receipt's row eligible.
 
@@ -52,7 +52,7 @@ The model initially reproduced a dropped server-End observation after native rel
 
 ## Deployment boundary
 
-Configured private ARM64 APK 6007 (`nightshift-media-diagnostics-6007-arm64.apk`) is 163,341,167 bytes, SHA-256 `9b3eb77c9fac55e6a2a5e9cd8d009f77b6e182490248af290895abc64f57c0fc`. Its package is `com.agilandeenadhayalan.nightshift`, version 0.1.0/6007, using the previously registered debug signer. Flutter's ARM64 split adds 2000 to supplied build number 4007. The build took 40.83 seconds; all 222 source/test/SDK inputs and four ignored private inputs stayed unchanged. The build record is sealed to the final source commit when committed; earlier APK 6003–6006 remain preserved.
+Configured private ARM64 APK 6007 (`nightshift-media-diagnostics-6007-arm64.apk`) is 163,341,167 bytes, SHA-256 `9b3eb77c9fac55e6a2a5e9cd8d009f77b6e182490248af290895abc64f57c0fc`. Its package is `com.agilandeenadhayalan.nightshift`, version 0.1.0/6007, using the previously registered debug signer. Flutter's ARM64 split adds 2000 to supplied build number 4007. The build took 40.83 seconds; all 222 source/test/SDK inputs and four ignored private inputs stayed unchanged. The build record is sealed to `45bb2aaa6463fba472de42ae68f15dddb48ae260`: 193 byte-exact and 29 verified Git text CRLF→LF matches. Earlier APK 6003–6006 remain preserved.
 
 All 31 ARM64 native libraries passed ELF and stored-ZIP 16KB alignment, and official Android BuildTools 36 zipalign passed. The alignment record explicitly retains `runtime16kbTested:false`. These static checks do not establish a 16KB device result. This remains a debug compile/target 35 artifact; current Play target/release signing and runtime evidence remain separate. No APK was installed.
 

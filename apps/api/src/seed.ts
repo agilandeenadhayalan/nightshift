@@ -8,6 +8,13 @@ export async function seed(db: Database) {
     await c.query('SELECT pg_advisory_xact_lock(981276)');
     for (const rate of [TEST_RATE, TEST_VIDEO_RATE]) {
       await c.query('INSERT INTO rate_versions(id,policy,test_only) VALUES($1,$2,true) ON CONFLICT DO NOTHING', [rate.id, rate]);
+      // Version IDs must name the same policy on every seed. Compare JSONB in
+      // PostgreSQL and retain the row lock through all subsequent fixture writes.
+      const check = await c.query(`SELECT (policy=$2::jsonb AND test_only IS TRUE) AS matches
+        FROM rate_versions WHERE id=$1 FOR SHARE`, [rate.id, rate]);
+      if (check.rows[0]?.matches !== true) {
+        throw Object.assign(new Error('RATE_VERSION_CONFLICT'), {code: 'RATE_VERSION_CONFLICT'});
+      }
     }
     await c.query("INSERT INTO wallet_accounts(id,unit,kind) VALUES ('platform:test','TEST_MICROCREDIT','platform_test'),('subsidy:test','TEST_PAISE','subsidy_test') ON CONFLICT DO NOTHING");
     for (const handle of ['customer', 'customer2', 'listener']) {
