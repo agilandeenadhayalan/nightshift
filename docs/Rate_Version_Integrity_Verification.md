@@ -23,7 +23,7 @@ Existing conflicting rows survive migration unchanged and are rejected by subseq
 | Direct `node --test` from `audio/` | 3 passed | `rate-versions-audio-reference-final.log` |
 | Repository/contracts/boundaries/secret guard | Passed, including 11 tooling cases | `rate-versions-repo-check.log` |
 | Independent migration, seed and test review | No blocking findings | Recorded in the PR |
-| Final-commit CI | Pending | Recorded in the PR after completion |
+| Final-commit CI | Backend, Android and staff passed for `a3412e2e910c179eb8e13fd43bca3d6903e22513` | [PR #86](https://github.com/agilandeenadhayalan/nightshift/pull/86), [run 44874478124](https://github.com/agilandeenadhayalan/nightshift/actions/runs/44874478124) |
 
 The focused suite covers changed policy/ID/timestamp rejection, semantic no-op updates, unused-version deletion and actual cascading truncation, insertion of a new test version, key-order equivalence, repeat seeding, full rollback on first/second-rate conflict, eight concurrent seeders, and a conflicting insert committed while seeding demonstrably waits on its database lock. Forward17→18 fixtures preserve valid and conflicting rate rows, call snapshots, journal and outbox data, with stable prior migration checksums. The broader schema suite also exercises the older001/002 forward fixture.
 
