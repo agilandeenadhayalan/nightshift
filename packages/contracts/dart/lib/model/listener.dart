@@ -24,6 +24,8 @@ class Listener {
     required this.testOnly,
     required this.rate,
     this.avatarCode,
+    this.audioAvailable,
+    this.videoAvailable,
     this.videoRate,
   });
 
@@ -49,6 +51,24 @@ class Listener {
 
   ListenerAvatarCodeEnum? avatarCode;
 
+  /// Effective audio invitation eligibility, including saved preference, reachability and busy state.
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  bool? audioAvailable;
+
+  /// Effective video invitation eligibility, including saved preference, foreground reachability, server capability and busy state.
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  bool? videoAvailable;
+
   Rate? videoRate;
 
   @override
@@ -64,6 +84,8 @@ class Listener {
     other.testOnly == testOnly &&
     other.rate == rate &&
     other.avatarCode == avatarCode &&
+    other.audioAvailable == audioAvailable &&
+    other.videoAvailable == videoAvailable &&
     other.videoRate == videoRate;
 
   @override
@@ -80,6 +102,8 @@ class Listener {
     (testOnly.hashCode) +
     (rate.hashCode) +
     (avatarCode == null ? 0 : avatarCode!.hashCode) +
+    (audioAvailable == null ? 0 : audioAvailable!.hashCode) +
+    (videoAvailable == null ? 0 : videoAvailable!.hashCode) +
     (videoRate == null ? 0 : videoRate!.hashCode);
 
   @override
@@ -100,6 +124,12 @@ class Listener {
       json[r'rate'] = this.rate;
     if (this.avatarCode != null) {
       json[r'avatarCode'] = this.avatarCode;
+    }
+    if (this.audioAvailable != null) {
+      json[r'audioAvailable'] = this.audioAvailable;
+    }
+    if (this.videoAvailable != null) {
+      json[r'videoAvailable'] = this.videoAvailable;
     }
     if (this.videoRate != null) {
       json[r'videoRate'] = this.videoRate;
@@ -198,6 +228,12 @@ class Listener {
       if (json[r'rate'] == null) {
         throw const FormatException('Null Listener.rate');
       }
+      if (json[r'audioAvailable'] != null && json[r'audioAvailable'] is! bool) {
+        throw const FormatException('Invalid Listener.audioAvailable boolean');
+      }
+      if (json[r'videoAvailable'] != null && json[r'videoAvailable'] is! bool) {
+        throw const FormatException('Invalid Listener.videoAvailable boolean');
+      }
 
       return Listener(
         id: mapValueOfType<String>(json, r'id')!,
@@ -211,6 +247,8 @@ class Listener {
         testOnly: mapValueOfType<bool>(json, r'testOnly')!,
         rate: Rate.fromJson(json[r'rate'])!,
         avatarCode: ListenerAvatarCodeEnum.fromJson(json[r'avatarCode']),
+        audioAvailable: mapValueOfType<bool>(json, r'audioAvailable'),
+        videoAvailable: mapValueOfType<bool>(json, r'videoAvailable'),
         videoRate: Rate.fromJson(json[r'videoRate']),
       );
     }

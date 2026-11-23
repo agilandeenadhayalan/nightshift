@@ -132,12 +132,39 @@ class _ListenerDashboard extends StatelessWidget {
   final AppController state;
   @override
   Widget build(BuildContext context) {
-    final online = state.user?.online == true;
+    final audioEnabled = state.listenerAudioEnabled;
+    final videoEnabled = state.listenerVideoEnabled;
+    final live = state.user?.online == true &&
+        state.foreground &&
+        !state.offline &&
+        !state.hasCall &&
+        (audioEnabled || videoEnabled);
+    final status = state.offline
+        ? state.text('Connection unavailable', 'இணைப்பு கிடைக்கவில்லை')
+        : state.user?.listenerApproved != true
+            ? state.text('Listener approval required', 'கேட்பவர் ஒப்புதல் தேவை')
+            : state.hasCall
+                ? state.text('In a call · New calls paused',
+                    'அழைப்பில் உள்ளீர்கள் · புதிய அழைப்புகள் நிறுத்தப்பட்டுள்ளன')
+                : live
+                    ? audioEnabled && videoEnabled
+                        ? state.text('Live · Accepting audio & video',
+                            'நேரலையில் · ஆடியோ மற்றும் வீடியோ அழைப்புகள்')
+                        : audioEnabled
+                            ? state.text('Live · Audio only',
+                                'நேரலையில் · ஆடியோ மட்டும்')
+                            : state.text('Live · Video only',
+                                'நேரலையில் · வீடியோ மட்டும்')
+                    : audioEnabled || videoEnabled
+                        ? state.text('Reconnecting · Calls paused',
+                            'மீண்டும் இணைகிறது · அழைப்புகள் நிறுத்தப்பட்டுள்ளன')
+                        : state.text(
+                            'Standby · Offline', 'காத்திருப்பு · ஆஃப்லைன்');
     final earned = state.history
         .where((call) => call.listenerId == state.user?.id)
         .fold<int>(0, (sum, call) => sum + call.earningPaise);
     return RefreshIndicator(
-        onRefresh: state.refresh,
+        onRefresh: state.refreshListenerAvailability,
         child: PageBody(children: [
           const ErrorNotice(),
           Row(children: [
@@ -167,25 +194,11 @@ class _ListenerDashboard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(13),
                   border: Border.all(color: NsColors.violet.withAlpha(55))),
               child: Row(children: [
-                Icon(
-                    online && !state.offline
-                        ? Icons.circle
-                        : Icons.pause_circle_outline,
-                    size: 13,
-                    color: online && !state.offline
-                        ? NsColors.cyan
-                        : NsColors.muted),
+                Icon(live ? Icons.circle : Icons.pause_circle_outline,
+                    size: 13, color: live ? NsColors.cyan : NsColors.muted),
                 const SizedBox(width: 9),
                 Expanded(
-                    child: Text(
-                        state.offline
-                            ? state.text('Connection unavailable',
-                                'இணைப்பு கிடைக்கவில்லை')
-                            : online
-                                ? state.text('You are online',
-                                    'நீங்கள் ஆன்லைனில் உள்ளீர்கள்')
-                                : state.text('You are offline',
-                                    'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள்'),
+                    child: Text(status,
                         style: const TextStyle(
                             fontSize: 12, fontWeight: FontWeight.w600)))
               ])),
@@ -204,31 +217,56 @@ class _ListenerDashboard extends StatelessWidget {
                         SizedBox(
                             width: width,
                             child: _MediaAvailabilityTile(
+                                switchKey: const ValueKey(
+                                    'listener-audio-availability'),
                                 icon: Icons.headset_mic_outlined,
                                 title: state.text('Audio', 'ஆடியோ'),
-                                message: state.text(
-                                    'Your voice, a real conversation',
-                                    'உங்கள் குரல், உண்மையான உரையாடல்'))),
+                                label: state.text('Audio call availability',
+                                    'ஆடியோ அழைப்பு கிடைப்பது'),
+                                enabled: audioEnabled,
+                                color: NsColors.cyan,
+                                status: audioEnabled
+                                    ? state.text('On', 'இயக்கம்')
+                                    : state.text('Off', 'முடக்கம்'),
+                                onChanged: state.canSetMediaAvailability
+                                    ? (value) =>
+                                        state.setMediaAvailability(audio: value)
+                                    : null)),
                         SizedBox(
                             width: width,
                             child: _MediaAvailabilityTile(
+                                switchKey: const ValueKey(
+                                    'listener-video-availability'),
                                 icon: Icons.videocam_outlined,
                                 title: state.text('Video', 'வீடியோ'),
-                                message: state.text(
-                                    'Camera consent for each call',
-                                    'ஒவ்வொரு அழைப்பிற்கும் கேமரா ஒப்புதல்'))),
+                                label: state.text('Video call availability',
+                                    'வீடியோ அழைப்பு கிடைப்பது'),
+                                enabled: videoEnabled,
+                                color: const Color(0xFF34D399),
+                                status: state.listenerVideoCapabilityLoading
+                                    ? state.text('Checking…', 'சரிபார்க்கிறது…')
+                                    : !state.listenerVideoSupported
+                                        ? state.text(
+                                            'Unavailable', 'கிடைக்கவில்லை')
+                                        : videoEnabled
+                                            ? state.text('On', 'இயக்கம்')
+                                            : state.text('Off', 'முடக்கம்'),
+                                onChanged: state.canSetMediaAvailability &&
+                                        state.listenerVideoSupported
+                                    ? (value) =>
+                                        state.setMediaAvailability(video: value)
+                                    : null)),
                       ]);
                     }),
                     const SizedBox(height: 14),
-                    FilledButton.icon(
-                        onPressed: state.busy || state.offline
-                            ? null
-                            : () => state.setOnline(!online),
-                        icon: Icon(online ? Icons.pause : Icons.headset_mic),
-                        label: Text(online
-                            ? state.text('Go offline', 'ஆஃப்லைன் செல்லவும்')
-                            : state.text('Go online', 'ஆன்லைன் செல்லவும்'))),
-                    const SizedBox(height: 10),
+                    if (state.availabilityUpdating)
+                      Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Text(
+                              state.text('Saving availability…',
+                                  'கிடைக்கும் நிலை சேமிக்கப்படுகிறது…'),
+                              style: const TextStyle(
+                                  color: NsColors.cyan, fontSize: 12))),
                     Text(
                         state.text(
                             'Keep the app open for live calls. Camera permission is requested for each video call.',
@@ -301,22 +339,52 @@ class _ListenerDashboard extends StatelessWidget {
 
 class _MediaAvailabilityTile extends StatelessWidget {
   const _MediaAvailabilityTile(
-      {required this.icon, required this.title, required this.message});
+      {required this.switchKey,
+      required this.icon,
+      required this.title,
+      required this.label,
+      required this.status,
+      required this.enabled,
+      required this.color,
+      required this.onChanged});
+  final Key switchKey;
   final IconData icon;
-  final String title, message;
+  final String title, label, status;
+  final bool enabled;
+  final Color color;
+  final ValueChanged<bool>? onChanged;
   @override
   Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-          color: NsColors.card, borderRadius: BorderRadius.circular(18)),
-      child: Column(children: [
-        Icon(icon, color: NsColors.cyan, size: 34),
-        const SizedBox(height: 12),
-        Text(title, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        Text(message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: NsColors.muted, fontSize: 12))
+          color: NsColors.card,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+              color:
+                  enabled ? color.withAlpha(75) : Colors.white.withAlpha(14))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Expanded(
+              child:
+                  Text(title, style: Theme.of(context).textTheme.titleMedium)),
+          const SizedBox(width: 8),
+          Icon(icon, color: enabled ? color : NsColors.muted, size: 22),
+        ]),
+        const SizedBox(height: 6),
+        Row(children: [
+          Expanded(
+              child: Text(status,
+                  style: TextStyle(
+                      color: enabled ? color : NsColors.muted, fontSize: 11))),
+          Semantics(
+              label: label,
+              child: Switch(
+                  key: switchKey,
+                  value: enabled,
+                  activeColor: Colors.white,
+                  activeTrackColor: color,
+                  onChanged: onChanged)),
+        ])
       ]));
 }
 

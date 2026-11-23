@@ -20,6 +20,7 @@ class User {
     required this.listenerApproved,
     required this.online,
     this.avatarCode,
+    this.availability,
   });
 
   String id;
@@ -36,6 +37,14 @@ class User {
 
   UserAvatarCodeEnum? avatarCode;
 
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  ListenerAvailability? availability;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is User &&
     other.id == id &&
@@ -44,7 +53,8 @@ class User {
     other.mode == mode &&
     other.listenerApproved == listenerApproved &&
     other.online == online &&
-    other.avatarCode == avatarCode;
+    other.avatarCode == avatarCode &&
+    other.availability == availability;
 
   @override
   int get hashCode =>
@@ -55,7 +65,8 @@ class User {
     (mode.hashCode) +
     (listenerApproved.hashCode) +
     (online.hashCode) +
-    (avatarCode == null ? 0 : avatarCode!.hashCode);
+    (avatarCode == null ? 0 : avatarCode!.hashCode) +
+    (availability == null ? 0 : availability!.hashCode);
 
   @override
   // Never include tokens, access keys or private fields in diagnostics.
@@ -71,6 +82,9 @@ class User {
       json[r'online'] = this.online;
     if (this.avatarCode != null) {
       json[r'avatarCode'] = this.avatarCode;
+    }
+    if (this.availability != null) {
+      json[r'availability'] = this.availability;
     }
     return json;
   }
@@ -140,6 +154,7 @@ class User {
         listenerApproved: mapValueOfType<bool>(json, r'listenerApproved')!,
         online: mapValueOfType<bool>(json, r'online')!,
         avatarCode: UserAvatarCodeEnum.fromJson(json[r'avatarCode']),
+        availability: ListenerAvailability.fromJson(json[r'availability']),
       );
     }
     return null;

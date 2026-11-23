@@ -200,7 +200,7 @@ void main() {
     await tester.tap(find.text('Switch to Listener'));
     await tester.pumpAndSettle();
     expect(state.isListener, isTrue);
-    expect(find.text('You are offline'), findsOneWidget);
+    expect(find.text('Standby · Offline'), findsOneWidget);
     expect(find.text('Availability'), findsOneWidget);
     expect(store.values['lastPath'], '/home');
     expect(

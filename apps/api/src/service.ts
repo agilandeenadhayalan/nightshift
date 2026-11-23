@@ -91,7 +91,8 @@ export class NightShiftService {
     requireThat(rows.length, 404, 'NOT_FOUND', 'Account not found');
     const u = rows[0];
     return { id: u.id, displayName: u.display_name, ...(u.avatar_code?{avatarCode:u.avatar_code as string}:{}), languages: u.languages, mode: u.mode,
-      listenerApproved: u.listener_approved, online: (await this.reachable([id], c)).has(id) };
+      listenerApproved: u.listener_approved, online: (await this.reachable([id], c)).has(id),
+      availability:{online:u.desired_online as boolean,audioEnabled:u.audio_enabled as boolean,videoEnabled:u.video_enabled as boolean} };
   }
   async wallet(id: string, c: Query = this.db.pool) {
     const balance = await c.query('SELECT coalesce(sum(amount),0)::text total FROM journal_lines WHERE account_id=$1', [`customer:${id}`]);
@@ -130,12 +131,16 @@ export class NightShiftService {
     return this.user(actor.id);
   }
   async availability(actor: Actor, raw: unknown) {
-    const body = object(raw); fields(body, ['online']);
+    const body = object(raw); fields(body, ['online','audioEnabled','videoEnabled']);
     requireThat(typeof body.online === 'boolean', 400, 'INVALID_FIELD', 'online must be a boolean');
+    for(const field of ['audioEnabled','videoEnabled'])requireThat(body[field]===undefined||typeof body[field]==='boolean',400,'INVALID_FIELD',`${field} must be a boolean`);
     const version = await this.db.tx(async c => {
       const user = await this.liveOwner(c, actor);
       requireThat(user.listener_approved && user.mode === 'listener', 403, 'LISTENER_NOT_APPROVED', 'Use approved Listener mode');
-      const updated = await c.query('UPDATE users SET desired_online=$2,presence_version=presence_version+1 WHERE id=$1 RETURNING presence_version', [actor.id, body.online]);
+      requireThat(body.videoEnabled!==true||this.videoAvailable(),503,'VIDEO_UNAVAILABLE','Private test video is not available');
+      const updated = await c.query(`UPDATE users SET desired_online=$2,audio_enabled=COALESCE($3,audio_enabled),
+        video_enabled=COALESCE($4,video_enabled),presence_version=presence_version+1 WHERE id=$1 RETURNING presence_version`,
+        [actor.id,body.online,body.audioEnabled??null,body.videoEnabled??null]);
       return String(updated.rows[0].presence_version);
     });
     if (body.online) await this.presence.heartbeat(actor.id, version); else await this.presence.clear(actor.id, version);
@@ -269,6 +274,8 @@ export class NightShiftService {
       const channel=(await this.push.reachable(c,[listenerId])).get(listenerId);
       requireThat(listener?.listener_approved&&listener.adult_confirmed&&!listener.suspended&&listener.mode==='listener'&&listener.desired_online
         &&channel&&(mediaType==='audio'||channel==='foreground'),409,'LISTENER_OFFLINE','Listener is unavailable');
+      requireThat(mediaType==='audio'?listener.audio_enabled:listener.video_enabled,
+        409,'LISTENER_MEDIA_UNAVAILABLE','The Listener is not accepting this call type');
       requireThat(customer.languages.some((language:string)=>listener.languages.includes(language)),409,'LANGUAGE_MISMATCH','Choose a listener who speaks one of your conversation languages');
       requireThat(!matching||customer.languages.includes(matching.language)&&listener.languages.includes(matching.language),409,'LANGUAGE_MISMATCH','The selected language must match both participants.');
       const blocked=await c.query('SELECT 1 FROM blocks WHERE (actor_id=$1 AND target_id=$2) OR (actor_id=$2 AND target_id=$1)',[actor.id,listenerId]);

@@ -22,6 +22,12 @@ String availabilityLabel(AppController state, String id) {
     return state.text('Audio invitation enabled · delivery may vary',
         'ஆடியோ அழைப்பிதழ் இயக்கப்பட்டுள்ளது · அறிவிப்பு கிடைப்பது மாறலாம்');
   }
+  if (card.available && card.audioAvailable == false) {
+    return state.text('Available for video', 'வீடியோ அழைப்புக்கு கிடைக்கிறார்');
+  }
+  if (card.available && card.videoAvailable == false) {
+    return state.text('Available for audio', 'ஆடியோ அழைப்புக்கு கிடைக்கிறார்');
+  }
   return card.available
       ? state.text('Available now', 'இப்போது கிடைக்கிறார்')
       : state.text('Offline', 'ஆஃப்லைன்');
@@ -419,7 +425,8 @@ class ListenerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final directory = state.discovery,
-        canCall = state.canCallListener(listener) && !state.busy;
+        canCall = state.canCallListener(listener) && !state.busy,
+        canVideo = state.canCallListener(listener, video: true) && !state.busy;
     final retry = directory.favoriteRetry[listener.id];
     final portrait = avatarAssetPath(listener.avatarCode);
     return Container(
@@ -472,7 +479,9 @@ class ListenerCard extends StatelessWidget {
                     Text(availabilityLabel(state, listener.id),
                         style: TextStyle(
                             fontSize: 10,
-                            color: canCall ? NsColors.cyan : NsColors.muted)),
+                            color: canCall || canVideo
+                                ? NsColors.cyan
+                                : NsColors.muted)),
                     const SizedBox(height: 5),
                     Text(
                         listener.languages
@@ -541,8 +550,7 @@ class ListenerCard extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 5, vertical: 8),
                               minimumSize: const Size(44, 42)),
-                          onPressed: canCall &&
-                                  state.canCallListener(listener, video: true)
+                          onPressed: canVideo
                               ? () async {
                                   final owner = state.accountIdentity;
                                   final agreed = await showVideoPreflight(

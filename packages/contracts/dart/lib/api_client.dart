@@ -265,6 +265,8 @@ class ApiClient {
           return ListenerApplicationInput.fromJson(value);
         case 'ListenerApplicationState':
           return ListenerApplicationState.fromJson(value);
+        case 'ListenerAvailability':
+          return ListenerAvailability.fromJson(value);
         case 'ListenerPage':
           return ListenerPage.fromJson(value);
         case 'ListenerReviewNotice':

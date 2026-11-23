@@ -28,7 +28,7 @@ export class Directory {
     const ids=raw.map(uuid);requireThat(new Set(ids).size===ids.length,400,'INVALID_DIRECTORY_SLICE','Listener IDs must be unique');return ids;
   }
   private async cards(c:Query,owner:string,language:string,ids?:string[],favorites=false) {
-    const sql=`SELECT u.id,u.display_name,p.avatar_code,u.languages,u.desired_online,u.mode,u.presence_version,
+    const sql=`SELECT u.id,u.display_name,p.avatar_code,u.languages,u.desired_online,u.audio_enabled,u.video_enabled,u.mode,u.presence_version,
       EXISTS(SELECT 1 FROM active_participant_claims a WHERE a.user_id=u.id) busy,
       EXISTS(SELECT 1 FROM favorites f WHERE f.actor_id=$1 AND f.target_id=u.id) favorite,
       EXISTS(SELECT 1 FROM auth_sessions s LEFT JOIN devices d ON d.id=s.device_record_id
@@ -50,10 +50,13 @@ export class Directory {
     const current=(await c.query(sql,[owner,language,ids??null,favorites,new Date(this.clock())])).rows;
     const versions=new Map(reachable.map(r=>[r.id,String(r.presence_version)]));
     for(const r of current)if(!r.desired_online||!r.live_session||versions.get(r.id)!==String(r.presence_version)){online.delete(r.id);channels.delete(r.id);}
-    return current.map(r=>({id:r.id as string,displayName:r.display_name as string,languages:r.languages as string[],
+    return current.map(r=>{const audioAvailable=channels.has(r.id)&&!r.busy&&r.audio_enabled===true;
+      const videoAvailable=online.has(r.id)&&!r.busy&&r.video_enabled===true&&this.videoAvailable();
+      return {id:r.id as string,displayName:r.display_name as string,languages:r.languages as string[],
       ...(r.avatar_code?{avatarCode:r.avatar_code as string}:{}),
-      online:online.has(r.id),reachability:channels.get(r.id)??'offline' as const,available:channels.has(r.id)&&!r.busy,busy:!!r.busy,favorite:!!r.favorite,
-      testOnly:true,rate:TEST_RATE,videoRate:this.videoAvailable()?TEST_VIDEO_RATE:null}));
+      online:online.has(r.id),reachability:channels.get(r.id)??'offline' as const,available:audioAvailable||videoAvailable,
+      audioAvailable,videoAvailable,busy:!!r.busy,favorite:!!r.favorite,
+      testOnly:true,rate:TEST_RATE,videoRate:this.videoAvailable()?TEST_VIDEO_RATE:null};});
   }
   async preview(owner:string,language='ta') {
     const rows=await this.cards(this.db.pool,owner,this.language(language));

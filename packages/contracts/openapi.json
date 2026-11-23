@@ -2767,6 +2767,12 @@
                 "properties": {
                   "online": {
                     "type": "boolean"
+                  },
+                  "audioEnabled": {
+                    "type": "boolean"
+                  },
+                  "videoEnabled": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -6282,6 +6288,27 @@
       }
     },
     "schemas": {
+      "ListenerAvailability": {
+        "type": "object",
+        "properties": {
+          "online": {
+            "type": "boolean",
+            "description": "Saved master availability intent; not a presence or provider capability proof."
+          },
+          "audioEnabled": {
+            "type": "boolean"
+          },
+          "videoEnabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "online",
+          "audioEnabled",
+          "videoEnabled"
+        ],
+        "additionalProperties": false
+      },
       "User": {
         "type": "object",
         "properties": {
@@ -6383,6 +6410,9 @@
               "female_29",
               "female_30"
             ]
+          },
+          "availability": {
+            "$ref": "#/components/schemas/ListenerAvailability"
           }
         },
         "required": [
@@ -6579,6 +6609,14 @@
               "female_29",
               "female_30"
             ]
+          },
+          "audioAvailable": {
+            "type": "boolean",
+            "description": "Effective audio invitation eligibility, including saved preference, reachability and busy state."
+          },
+          "videoAvailable": {
+            "type": "boolean",
+            "description": "Effective video invitation eligibility, including saved preference, foreground reachability, server capability and busy state."
           },
           "videoRate": {
             "anyOf": [

@@ -71,6 +71,7 @@ part 'model/listener.dart';
 part 'model/listener_application.dart';
 part 'model/listener_application_input.dart';
 part 'model/listener_application_state.dart';
+part 'model/listener_availability.dart';
 part 'model/listener_page.dart';
 part 'model/listener_review_notice.dart';
 part 'model/listener_review_outcome.dart';

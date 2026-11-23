@@ -81,6 +81,25 @@ CallRate _callRate(Json json) {
   return rate;
 }
 
+class ListenerAvailability {
+  const ListenerAvailability(
+      {required this.online,
+      required this.audioEnabled,
+      required this.videoEnabled});
+  factory ListenerAvailability.fromJson(Json json) {
+    if (json['online'] is! bool ||
+        json['audioEnabled'] is! bool ||
+        json['videoEnabled'] is! bool) {
+      throw const FormatException('Invalid listener availability');
+    }
+    return ListenerAvailability(
+        online: json['online'] as bool,
+        audioEnabled: json['audioEnabled'] as bool,
+        videoEnabled: json['videoEnabled'] as bool);
+  }
+  final bool online, audioEnabled, videoEnabled;
+}
+
 class UserProfile {
   const UserProfile(
       {required this.id,
@@ -88,6 +107,7 @@ class UserProfile {
       required this.mode,
       required this.listenerApproved,
       required this.online,
+      this.availability,
       this.avatarCode,
       required this.languages});
   factory UserProfile.fromJson(Json json) => UserProfile(
@@ -97,12 +117,16 @@ class UserProfile {
         mode: json['mode'] == 'listener' ? AppMode.listener : AppMode.customer,
         listenerApproved: json['listenerApproved'] == true,
         online: json['online'] == true,
+        availability: json['availability'] == null
+            ? null
+            : ListenerAvailability.fromJson(json['availability'] as Json),
         languages: List<String>.from(json['languages'] ?? ['ta', 'en']),
       );
   final String id, name;
   final String? avatarCode;
   final AppMode mode;
   final bool listenerApproved, online;
+  final ListenerAvailability? availability;
   final List<String> languages;
 }
 
@@ -112,6 +136,8 @@ class ListenerProfile {
       required this.name,
       required this.languages,
       required this.available,
+      this.audioAvailable,
+      this.videoAvailable,
       this.busy = false,
       this.favorite = false,
       this.reachability = 'foreground',
@@ -128,6 +154,8 @@ class ListenerProfile {
                 ? json['available'] == true
                 : json['status'] == 'available' || json['online'] == true),
         busy: json['busy'] == true,
+        audioAvailable: json['audioAvailable'] as bool?,
+        videoAvailable: json['videoAvailable'] as bool?,
         favorite: json['favorite'] == true,
         reachability: json['reachability'] as String? ??
             (json['online'] == true ? 'foreground' : 'offline'),
@@ -139,6 +167,13 @@ class ListenerProfile {
   final String id, name;
   final List<String> languages;
   final bool available, busy, favorite;
+  final bool? audioAvailable, videoAvailable;
+  bool acceptsMedia({bool video = false}) =>
+      available &&
+      !busy &&
+      (video
+          ? (videoAvailable ?? videoRate != null)
+          : (audioAvailable ?? true));
   final String reachability;
   final String? avatarCode;
   ListenerProfile withFavorite(bool value) => ListenerProfile(
@@ -147,6 +182,8 @@ class ListenerProfile {
       avatarCode: avatarCode,
       languages: languages,
       available: available,
+      audioAvailable: audioAvailable,
+      videoAvailable: videoAvailable,
       busy: busy,
       favorite: value,
       reachability: reachability,

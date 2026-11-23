@@ -7,6 +7,7 @@ const object=(properties,required=Object.keys(properties))=>({type:'object',prop
 const avatarCode={type:'string',enum:['moon','star','leaf','wave',...['male','female'].flatMap(prefix=>Array.from({length:30},(_,i)=>`${prefix}_${String(i+1).padStart(2,'0')}`))]};
 const mediaType={type:'string',enum:['audio','video']};
 const schemas={
+  ListenerAvailability:object({online:{...bool,description:'Saved master availability intent; not a presence or provider capability proof.'},audioEnabled:bool,videoEnabled:bool}),
   User:object({id,displayName:str,languages:array({type:'string',enum:['ta','en']}),mode:{type:'string',enum:['customer','listener']},listenerApproved:bool,online:bool}),
   Rate:object({id:{enum:['test-audio-v1','test-video-v1'],type:'string'},coinsPerMinute:integer,microcreditsPerCoin:integer,microcreditsPerSecond:integer,freeThroughSeconds:integer,minimumChargedSeconds:integer,listenerPaisePerHour:integer,testOnly:{const:true,type:'boolean'}}),
   Wallet:object({balanceMicrocredits:integer,heldMicrocredits:integer,availableMicrocredits:integer,testOnly:{const:true,type:'boolean'}}),
@@ -67,7 +68,10 @@ const schemas={
 };
 // Additive optional fields preserve old durable event/idempotency payloads.
 schemas.User.properties.avatarCode=avatarCode;
+schemas.User.properties.availability=ref('ListenerAvailability');
 schemas.Listener.properties.avatarCode=avatarCode;
+schemas.Listener.properties.audioAvailable={...bool,description:'Effective audio invitation eligibility, including saved preference, reachability and busy state.'};
+schemas.Listener.properties.videoAvailable={...bool,description:'Effective video invitation eligibility, including saved preference, foreground reachability, server capability and busy state.'};
 schemas.Call.properties.customerAvatarCode=avatarCode;
 schemas.Call.properties.listenerAvatarCode=avatarCode;
 schemas.Call.properties.mediaType=mediaType;
@@ -110,7 +114,7 @@ const paths={
   '/v1/me':{get:{operationId:'getMe',responses:responses(ref('User'))}},
   '/v1/snapshot':{get:{operationId:'getSnapshot',parameters:[{name:'language',in:'query',schema:{type:'string',enum:['ta','en'],default:'ta'}}],responses:responses(ref('Snapshot'))}},
   '/v1/me/mode':{put:{operationId:'setMode',requestBody:json(object({mode:{type:'string',enum:['customer','listener']}})),responses:responses(ref('User'))}},
-  '/v1/me/availability':{put:{operationId:'setAvailability',requestBody:json(object({online:bool})),responses:responses(ref('User'))}},
+  '/v1/me/availability':{put:{operationId:'setAvailability',requestBody:json(object({online:bool,audioEnabled:bool,videoEnabled:bool},['online'])),responses:responses(ref('User'))}},
   '/v1/me/languages':{put:{operationId:'setLanguages',requestBody:json(object({languages:array({type:'string',enum:['ta','en']})})),responses:responses(ref('User'))}},
   '/v1/presence/heartbeat':{post:{operationId:'heartbeat',responses:responses(object({serverTime:date}))}},
   '/v1/listeners':{get:{operationId:'listListeners',parameters:directoryParameters,description:'Twenty-card pages from a five-minute owner/filter-bound frozen view. Live eligibility is rechecked without reranking; refresh creates a new view. At most four active views per owner and 2000 IDs per view. A truncated view must not be presented as complete or as proof of no language supply.',responses:directoryResponses}},

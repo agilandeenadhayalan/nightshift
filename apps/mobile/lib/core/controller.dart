@@ -223,19 +223,23 @@ class AppController extends ChangeNotifier {
     return _callDiagnosticSink;
   }
 
-  bool canCallListener(ListenerProfile listener, {bool video = false}) =>
-      foreground &&
-      user != null &&
-      !isListener &&
-      !hasCall &&
-      !matching.blocked &&
-      !offline &&
-      (!video ||
-          (discovery.lookup(listener.id) ?? listener).reachability ==
-              'foreground') &&
-      (discovery.tracking || discovery.observed(listener.id)
-          ? discovery.callable(listener.id)
-          : listener.available);
+  bool canCallListener(ListenerProfile listener, {bool video = false}) {
+    final current = discovery.lookup(listener.id) ?? listener;
+    return foreground &&
+        user != null &&
+        !isListener &&
+        !hasCall &&
+        !matching.blocked &&
+        !offline &&
+        current.acceptsMedia(video: video) &&
+        (!video ||
+            (this.video != null &&
+                current.videoRate != null &&
+                current.reachability == 'foreground')) &&
+        (discovery.tracking || discovery.observed(listener.id)
+            ? discovery.callable(listener.id)
+            : listener.available);
+  }
 
   String? _invitationOwnerKey() {
     if (_phoneTokens == null || user == null) return null;
@@ -312,6 +316,10 @@ class AppController extends ChangeNotifier {
   int _identityRevision = 0;
   int _availabilityIntent = 0;
   Future<void> _availabilityWork = Future<void>.value();
+  Object? _videoCapabilityOwner, _videoCapabilityRequestOwner;
+  DateTime? _videoCapabilityCheckedAt;
+  bool? _serverVideoEnabled;
+  Object? _availabilityUpdateOwner;
   int balance = 0, held = 0;
   bool initializing = true, offline = false, foreground = true;
   bool _busy = false;
@@ -347,6 +355,28 @@ class AppController extends ChangeNotifier {
   DateTime? _lastServerContact;
   String text(String english, String tamil) => locale == 'ta' ? tamil : english;
   bool get isListener => user?.mode == AppMode.listener;
+  bool get listenerAudioEnabled =>
+      (user?.availability?.online ?? user?.online ?? false) &&
+      (user?.availability?.audioEnabled ?? true);
+  bool get listenerVideoSupported =>
+      video != null &&
+      _videoCapabilityOwner == accountIdentity &&
+      _serverVideoEnabled == true;
+  bool get listenerVideoCapabilityLoading =>
+      video != null &&
+      (_videoCapabilityOwner != accountIdentity || _serverVideoEnabled == null);
+  bool get listenerVideoEnabled =>
+      listenerVideoSupported &&
+      (user?.availability?.online ?? user?.online ?? false) &&
+      (user?.availability?.videoEnabled ?? true);
+  bool get availabilityUpdating => _availabilityUpdateOwner == accountIdentity;
+  bool get canSetMediaAvailability =>
+      isListener &&
+      user?.listenerApproved == true &&
+      snapshotLoaded &&
+      foreground &&
+      !offline &&
+      !busy;
   bool get hasCall => activeCall != null && !activeCall!.ended;
   bool get endingLocally =>
       activeCall != null && activeCall!.id == _abandonedCallId;
@@ -934,6 +964,9 @@ class AppController extends ChangeNotifier {
       held = walletHeld;
       listeners = directory;
       snapshotLoaded = true;
+      if (isListener && user?.listenerApproved == true) {
+        unawaited(_loadListenerVideoCapability());
+      }
       if (next != null) _observeDiagnosticCall(next);
       if (_errorFromSnapshot) {
         error = null;
@@ -1016,17 +1049,113 @@ class AppController extends ChangeNotifier {
   }
 
   Future<Json?> _writeAvailability(bool online,
-      {required bool Function() isCurrent}) {
+      {required bool Function() isCurrent,
+      bool? audioEnabled,
+      bool? videoEnabled}) {
     final previous = _availabilityWork;
     final operation = (() async {
       await previous;
       if (!isCurrent()) return null;
-      return api.request('PUT', '/me/availability', body: {'online': online});
+      return api.request('PUT', '/me/availability', body: {
+        'online': online,
+        if (audioEnabled != null) 'audioEnabled': audioEnabled,
+        if (videoEnabled != null) 'videoEnabled': videoEnabled,
+      });
     })();
     // Serialize withdrawal after any dispatched enable. A newer explicit enable
     // then follows withdrawal, so an old background completion cannot undo it.
     _availabilityWork = operation.then<void>((_) {}, onError: (Object _) {});
     return operation;
+  }
+
+  Future<void> _loadListenerVideoCapability({bool force = false}) async {
+    final owner = accountIdentity, origin = api.baseUrl;
+    if (_disposed || !isListener || !foreground || api.token == null) return;
+    if (_videoCapabilityRequestOwner == owner) return;
+    if (!force &&
+        _videoCapabilityOwner == owner &&
+        _videoCapabilityCheckedAt != null &&
+        DateTime.now().difference(_videoCapabilityCheckedAt!) <
+            const Duration(seconds: 30)) {
+      return;
+    }
+    _videoCapabilityRequestOwner = owner;
+    bool current() => _sameOwner(owner, origin) && isListener && foreground;
+    try {
+      final config = await api.privateRequest('GET', '/rtc/config',
+          origin: origin, isCurrent: current);
+      if (!current()) return;
+      _videoCapabilityOwner = owner;
+      _serverVideoEnabled = config['videoEnabled'] == true &&
+          config['appId'] is String &&
+          (config['appId'] as String).isNotEmpty;
+      _videoCapabilityCheckedAt = DateTime.now();
+    } catch (_) {
+      if (!current()) return;
+      _videoCapabilityOwner = owner;
+      _serverVideoEnabled = false;
+      _videoCapabilityCheckedAt = DateTime.now();
+    } finally {
+      if (_videoCapabilityRequestOwner == owner) {
+        _videoCapabilityRequestOwner = null;
+      }
+      if (current()) _notify();
+    }
+  }
+
+  Future<void> refreshListenerAvailability() async {
+    await refresh();
+    await _loadListenerVideoCapability(force: true);
+  }
+
+  /// The two switches are one atomic availability intent. Never revive a saved
+  /// but currently unchecked channel when enabling the other from offline.
+  Future<void> setMediaAvailability({bool? audio, bool? video}) async {
+    if (!canSetMediaAvailability || (audio == null && video == null)) return;
+    final owner = accountIdentity, origin = api.baseUrl;
+    bool ownerCurrent() => _sameOwner(owner, origin) && isListener;
+    await perform(() async {
+      if (!foreground || user?.listenerApproved != true) return;
+      if (video == true && !listenerVideoSupported) {
+        throw const ApiFailure(
+            'VIDEO_UNAVAILABLE', 'Video calling is unavailable.');
+      }
+      final audioEnabled = audio ?? listenerAudioEnabled;
+      final videoEnabled =
+          listenerVideoSupported && (video ?? listenerVideoEnabled);
+      final online = audioEnabled || videoEnabled;
+      final intent = ++_availabilityIntent;
+      bool current() => ownerCurrent() && intent == _availabilityIntent;
+      _availabilityUpdateOwner = owner;
+      _notify();
+      try {
+        final result = await _writeAvailability(online,
+            audioEnabled: audioEnabled,
+            videoEnabled: videoEnabled,
+            isCurrent: current);
+        if (!current() || result == null) return;
+        final profile = UserProfile.fromJson(result);
+        if (profile.id != user?.id || profile.mode != AppMode.listener) {
+          throw const ApiFailure(
+              'INVALID_RESPONSE', 'Invalid account response.');
+        }
+        _revision++;
+        user = profile;
+        if (online && foreground) await heartbeat();
+        if (current()) await refresh();
+      } catch (error) {
+        if (!current()) return;
+        if (error is ApiFailure && error.code == 'VIDEO_UNAVAILABLE') {
+          _videoCapabilityOwner = owner;
+          _serverVideoEnabled = false;
+          _videoCapabilityCheckedAt = DateTime.now();
+        }
+        rethrow;
+      } finally {
+        if (_availabilityUpdateOwner == owner) _availabilityUpdateOwner = null;
+        if (ownerCurrent()) _notify();
+      }
+    }, isCurrent: ownerCurrent);
   }
 
   Future<void> setOnline(bool value) => perform(() async {
