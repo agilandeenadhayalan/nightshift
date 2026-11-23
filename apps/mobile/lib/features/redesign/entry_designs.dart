@@ -328,7 +328,9 @@ class _EntryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
       appBar: Navigator.of(context).canPop()
-          ? AppBar(leading: const BackButton())
+          ? AppBar(
+              leading: const BackButton(),
+              title: const NightshiftBrand(size: 22))
           : null,
       body: NightshiftBackdrop(
           child: SafeArea(
@@ -336,9 +338,10 @@ class _EntryPage extends StatelessWidget {
                   child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 560),
                       child: ListView(
-                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                          padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
                           children: [
-                            const Center(child: NightshiftBrand()),
+                            if (!Navigator.of(context).canPop())
+                              const Center(child: NightshiftBrand()),
                             const SizedBox(height: 24),
                             Text(title,
                                 textAlign: TextAlign.center,
@@ -352,24 +355,10 @@ class _EntryPage extends StatelessWidget {
 class _EntryEmblem extends StatelessWidget {
   const _EntryEmblem({required this.icon});
   final IconData icon;
-  final double size = 112;
   @override
   Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 24),
-      child: Center(
-          child: Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                      colors: [Color(0xFF412074), Color(0xFF122B43)]),
-                  border: Border.all(color: NsColors.cyan.withAlpha(95)),
-                  boxShadow: [
-                    BoxShadow(
-                        color: NsColors.violet.withAlpha(45), blurRadius: 35)
-                  ]),
-              child: Icon(icon, size: size * .45, color: NsColors.cyan))));
+      child: Center(child: NightshiftIllustration(icon: icon, size: 88)));
 }
 
 final _phonePreviewChoice = StateProvider.autoDispose<int>((ref) => 0);

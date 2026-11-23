@@ -62,23 +62,36 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     return Column(children: [
       Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          child: SegmentedButton<bool>(
-              segments: [
-                ButtonSegment(
-                    value: false,
-                    label: Text(
-                        state.text('Recent calls', 'சமீபத்திய அழைப்புகள்'))),
-                ButtonSegment(
-                    value: true,
-                    label: Text(state.text('Favorites', 'விருப்பமானவர்கள்')))
-              ],
-              selected: {
-                _favorites
-              },
-              onSelectionChanged: (value) {
-                state.discovery.watchRecents([]);
-                setState(() => _favorites = value.single);
-              })),
+          child: LayoutBuilder(builder: (context, constraints) {
+            final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.5;
+            Widget tabLabel(String text) => largeText
+                ? SizedBox(
+                    width: constraints.maxWidth - 64,
+                    child: Text(text, textAlign: TextAlign.center))
+                : Text(text);
+            return SegmentedButton<bool>(
+                direction: largeText ? Axis.vertical : Axis.horizontal,
+                style: largeText
+                    ? ButtonStyle(
+                        shape: WidgetStatePropertyAll(RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18))))
+                    : null,
+                segments: [
+                  ButtonSegment(
+                      value: false,
+                      label: tabLabel(
+                          state.text('Recent calls', 'சமீபத்திய அழைப்புகள்'))),
+                  ButtonSegment(
+                      value: true,
+                      label:
+                          tabLabel(state.text('Favorites', 'விருப்பமானவர்கள்')))
+                ],
+                selected: {_favorites},
+                onSelectionChanged: (value) {
+                  state.discovery.watchRecents([]);
+                  setState(() => _favorites = value.single);
+                });
+          })),
       Expanded(
           child: _favorites
               ? DirectoryScreen(state: state, kind: DirectoryKind.favorites)
@@ -177,7 +190,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                           : call.listenerAvatarCode,
                       description:
                           '${call.isVideo ? state.text('Video call', 'வீடியோ அழைப்பு') : state.text('Audio call', 'ஆடியோ அழைப்பு')} · ${durationLabel(call.connectedMs)}',
-                      date: _localDate(call.createdAt),
+                      date: _summaryDate(call.createdAt),
                       video: call.isVideo,
                       missed: call.connectedMs == 0,
                       amount: call.listenerId == state.user?.id
@@ -197,16 +210,18 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                           icon: Icon(
                               _expanded.contains(call.id)
                                   ? Icons.expand_less
-                                  : call.isVideo
-                                      ? Icons.videocam_outlined
-                                      : Icons.call_outlined,
-                              color: NsColors.cyan))),
+                                  : Icons.chevron_right,
+                              color: NsColors.muted))),
                   if (_expanded.contains(call.id))
                     Padding(
                         padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
                         child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              Text(state.text(
+                                  'Started: ${_localDate(call.createdAt)}',
+                                  'தொடக்கம்: ${_localDate(call.createdAt)}')),
+                              const SizedBox(height: 6),
                               Text(state.text(
                                       'End reason: ', 'முடிவு காரணம்: ') +
                                   endReasonLabel(call.reason, state.locale)),
@@ -270,6 +285,16 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   String _localDate(DateTime time) {
     final local = time.toLocal();
     return '${local.day}/${local.month}/${local.year} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')} ${local.timeZoneName}';
+  }
+
+  String _summaryDate(DateTime time) {
+    final now = DateTime.now();
+    final local = time.toLocal();
+    final clock =
+        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    if (historyDay(time, now) != 'older') return clock;
+    final year = local.year == now.year ? '' : '/${local.year}';
+    return '${local.day}/${local.month}$year · $clock';
   }
 }
 

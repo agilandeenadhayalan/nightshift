@@ -25,20 +25,8 @@ class StatusCard extends StatelessWidget {
   final IconData icon;
   final Widget? action;
   @override
-  Widget build(BuildContext context) => Card(
-      child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon),
-              const SizedBox(height: 12),
-              Text(title, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Text(message),
-              if (action != null) ...[const SizedBox(height: 16), action!]
-            ],
-          )));
+  Widget build(BuildContext context) => NightshiftMessagePanel(
+      title: title, message: message, icon: icon, action: action);
 }
 
 class ErrorNotice extends ConsumerWidget {
@@ -72,4 +60,3 @@ class ErrorNotice extends ConsumerWidget {
     );
   }
 }
-

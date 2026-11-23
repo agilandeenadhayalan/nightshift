@@ -189,8 +189,11 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const Icon(Icons.toll_rounded,
-                                size: 54, color: NsColors.gold),
+                            const Center(
+                                child: NightshiftIllustration(
+                                    icon: Icons.toll_rounded,
+                                    size: 76,
+                                    color: NsColors.gold)),
                             const SizedBox(height: 18),
                             Text(
                                 state.text('Your next conversation',
@@ -275,9 +278,13 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                                     if (widget.kind ==
                                         DirectoryKind.discover) ...[
                                       NightshiftFeatureBanner(
+                                          compact: true,
+                                          icon: _featurePage == 0
+                                              ? Icons.toll_rounded
+                                              : Icons.auto_awesome,
                                           title: _featurePage == 0
-                                              ? state.text('Your test credits',
-                                                  'உங்கள் சோதனை நாணயங்கள்')
+                                              ? state.text(
+                                                  'Your test credits', 'உங்கள் சோதனை நாணயங்கள்')
                                               : _featurePage == 1
                                                   ? state.text(
                                                       'A little time to connect',
@@ -288,8 +295,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                                           subtitle: _featurePage == 0
                                               ? creditAmount(state.balance - state.held) +
                                                   state.text(
-                                                      ' test coins available · No purchase required',
-                                                      ' சோதனை நாணயங்கள் · வாங்க வேண்டியதில்லை')
+                                                      ' test coins available',
+                                                      ' சோதனை நாணயங்கள் கிடைக்கின்றன')
                                               : _featurePage == 1
                                                   ? state.text(
                                                       'Find an available audio Listener.',
@@ -298,7 +305,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                                                       'Choose a language and see who is available.',
                                                       'மொழியைத் தேர்ந்து கிடைப்பவர்களைப் பாருங்கள்.'),
                                           actionLabel: _featurePage == 0
-                                              ? state.text('Open wallet', 'பணப்பையைத் திற')
+                                              ? state.text('View test coins', 'சோதனை நாணயங்களைப் பார்')
                                               : _featurePage == 1
                                                   ? state.text('Find a Listener', 'கேட்பவரைத் தேடு')
                                                   : state.text('Choose filters', 'வடிகட்டிகளைத் தேர்ந்தெடு'),

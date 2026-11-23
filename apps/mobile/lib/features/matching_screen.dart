@@ -17,77 +17,33 @@ class MatchingScreen extends ConsumerStatefulWidget {
 /// Unknown candidates remain neutral. A portrait is shown only after the
 /// matching request identifies an actual call with a selected avatar code.
 class _MatchingPortraitRail extends StatelessWidget {
-  const _MatchingPortraitRail({this.avatarCode});
+  const _MatchingPortraitRail({this.avatarCode, this.compact = false});
+  final bool compact;
   final String? avatarCode;
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 28),
-      child: SizedBox(
-          height: 266,
-          child: Stack(alignment: Alignment.center, children: [
-            Positioned(
-                left: 4,
-                top: 34,
-                child: Transform.rotate(
-                    angle: -.12,
-                    child: Opacity(
-                        opacity: .36,
-                        child: _candidate(width: 122, height: 196)))),
-            Positioned(
-                right: 4,
-                top: 34,
-                child: Transform.rotate(
-                    angle: .12,
-                    child: Opacity(
-                        opacity: .36,
-                        child: _candidate(width: 122, height: 196)))),
-            Container(
-                width: 186,
-                height: 252,
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: NsColors.cyan, width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                          color: NsColors.cyan.withValues(alpha: .13),
-                          blurRadius: 36)
-                    ]),
-                child: ClipRRect(
-                    borderRadius: BorderRadius.circular(26),
-                    child: Stack(fit: StackFit.expand, children: [
-                      if (avatarAssetPath(avatarCode) case final asset?)
-                        AvatarPortrait(
-                            assetPath: asset, borderRadius: BorderRadius.zero)
-                      else
-                        _candidate(width: 180, height: 246),
-                      Align(
-                          alignment: const Alignment(0, .35),
-                          child: Container(
-                              height: 2,
-                              decoration: const BoxDecoration(
-                                  color: NsColors.cyan,
-                                  boxShadow: [
-                                    BoxShadow(
-                                        color: NsColors.cyan,
-                                        blurRadius: 14,
-                                        spreadRadius: 2)
-                                  ]))),
-                    ]))),
-          ])));
-
-  Widget _candidate({required double width, required double height}) =>
-      Container(
-          width: width,
-          height: height,
-          decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: Colors.white12),
-              gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF394565), Color(0xFF151B32)])),
-          child: const Center(child: NightshiftAvatar(name: '', size: 76)));
+      padding: EdgeInsets.symmetric(vertical: compact ? 16 : 28),
+      child: Center(
+          child: Container(
+              width: compact ? 112 : 200,
+              height: compact ? 120 : 220,
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(36),
+                  border:
+                      Border.all(color: NsColors.cyan.withValues(alpha: .3)),
+                  gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF263855), Color(0xFF151B32)])),
+              child: avatarAssetPath(avatarCode) != null
+                  ? AvatarPortrait(
+                      assetPath: avatarAssetPath(avatarCode)!,
+                      borderRadius: BorderRadius.circular(36))
+                  : const Center(
+                      child: NightshiftIllustration(
+                          icon: Icons.headset_mic_outlined,
+                          color: NsColors.cyan,
+                          size: 88)))));
 }
 
 class _MatchingScreenState extends ConsumerState<MatchingScreen> {
@@ -118,6 +74,24 @@ class _MatchingScreenState extends ConsumerState<MatchingScreen> {
     }
     final busy = matching.busy || state.busy;
     final pending = matching.uncertain;
+    final compact = MediaQuery.textScalerOf(context).scale(1) > 1.5 ||
+        MediaQuery.sizeOf(context).height < 700;
+    final budget = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+            color: const Color(0xAA11192A),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white12)),
+        child: Text(
+            matching.remainingSeconds > 0
+                ? state.text('Up to ${matching.remainingSeconds}s remaining',
+                    'அதிகபட்சம் ${matching.remainingSeconds} வினாடிகள் மீதம்')
+                : state.text(
+                    'The wait budget has elapsed. Checking the final status…',
+                    'காத்திருப்பு நேரம் முடிந்தது. இறுதி நிலையை சரிபார்க்கிறது…'),
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium));
     final showConsent =
         !matching.blocked && (request?.state != 'matched' || reviewNewSearch);
     return PopScope(
@@ -178,8 +152,13 @@ class _MatchingScreenState extends ConsumerState<MatchingScreen> {
                               label: state.text(
                                   'Keep this screen open while connecting',
                                   'இணைக்கும் வரை இந்த திரையை திறந்து வைக்கவும்'))),
+                    if (request.active && compact) ...[
+                      const SizedBox(height: 12),
+                      budget,
+                    ],
                     if (request.active)
                       _MatchingPortraitRail(
+                          compact: compact,
                           avatarCode: request.callId != null &&
                                   state.activeCall?.id == request.callId
                               ? state.activeCall?.listenerAvatarCode
@@ -189,7 +168,7 @@ class _MatchingScreenState extends ConsumerState<MatchingScreen> {
                         style: Theme.of(context)
                             .textTheme
                             .headlineLarge
-                            ?.copyWith(fontSize: 32)),
+                            ?.copyWith(fontSize: compact ? 18 : 28)),
                     const SizedBox(height: 16),
                     Text(
                         state.text(
@@ -198,15 +177,7 @@ class _MatchingScreenState extends ConsumerState<MatchingScreen> {
                         textAlign: TextAlign.center),
                     if (request.active) ...[
                       const SizedBox(height: 12),
-                      Text(
-                          matching.remainingSeconds > 0
-                              ? state.text(
-                                  'Up to ${matching.remainingSeconds}s remaining',
-                                  'அதிகபட்சம் ${matching.remainingSeconds} வினாடிகள் மீதம்')
-                              : state.text(
-                                  'The wait budget has elapsed. Checking the final status…',
-                                  'காத்திருப்பு நேரம் முடிந்தது. இறுதி நிலையை சரிபார்க்கிறது…'),
-                          textAlign: TextAlign.center),
+                      if (!compact) budget,
                       Text(
                           state.text(
                               'Searching and ringing use no test credits. Keep the app open for the call.',
@@ -254,9 +225,11 @@ class _MatchingScreenState extends ConsumerState<MatchingScreen> {
                     CallAttentionCard(
                         title: state.text('Request outcome not yet confirmed',
                             'கோரிக்கையின் முடிவு இன்னும் உறுதியாகவில்லை'),
-                        message: state.text(
-                            'Check status before retrying. No new search or cancellation is sent automatically.',
-                            'மீண்டும் முயற்சிக்கும் முன் நிலையை சரிபார்க்கவும். புதிய தேடலோ ரத்துசெய்தலோ தானாக அனுப்பப்படாது.'),
+                        message: matching.error != null
+                            ? _error(state, matching.error!.code)
+                            : state.text(
+                                'Check status before retrying. No new search or cancellation is sent automatically.',
+                                'மீண்டும் முயற்சிக்கும் முன் நிலையை சரிபார்க்கவும். புதிய தேடலோ ரத்துசெய்தலோ தானாக அனுப்பப்படாது.'),
                         action: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -273,7 +246,7 @@ class _MatchingScreenState extends ConsumerState<MatchingScreen> {
                                         'Retry the same request',
                                         'அதே கோரிக்கையை மீண்டும் முயற்சி'))),
                             ])),
-                  if (matching.error != null)
+                  if (matching.error != null && pending == null)
                     StatusCard(
                         title: state.text('Search status needs attention',
                             'தேடல் நிலையை சரிபார்க்கவும்'),

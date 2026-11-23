@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../core/controller.dart';
 import 'message_copy.dart';
+import 'state_widgets.dart';
 import 'redesign/design_system.dart';
 import 'redesign/entry_designs.dart';
 import 'redesign/entry_components.dart';
@@ -58,41 +59,13 @@ class _ApplicationScreenState extends ConsumerState<ListenerApplicationScreen> {
                     child: ListView(
                         padding: const EdgeInsets.fromLTRB(24, 12, 24, 36),
                         children: [
-                          const Center(child: NightshiftBrand()),
-                          const SizedBox(height: 28),
-                          if (status == 'submitted') ...[
-                            Text(
-                                app.text('Almost done…',
-                                    'கிட்டத்தட்ட முடிந்துவிட்டது…'),
-                                key: const Key('live-application-pending'),
-                                textAlign: TextAlign.center,
-                                style:
-                                    Theme.of(context).textTheme.headlineMedium),
-                            const SizedBox(height: 28),
-                            Center(
-                                child: Container(
-                                    width: 112,
-                                    height: 112,
-                                    decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        gradient: const LinearGradient(colors: [
-                                          Color(0xff412074),
-                                          Color(0xff122b43)
-                                        ]),
-                                        border: Border.all(
-                                            color:
-                                                NsColors.cyan.withAlpha(95))),
-                                    child: const Icon(
-                                        Icons.hourglass_top_rounded,
-                                        size: 46,
-                                        color: NsColors.cyan))),
-                            const SizedBox(height: 28),
-                            Text(
-                                app.text('Application received',
-                                    'விண்ணப்பம் பெறப்பட்டது'),
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.titleLarge),
-                          ] else ...[
+                          if (!state.loaded && state.errorCode == null) ...[
+                            LoadingNotice(
+                                label: app.text('Loading your application…',
+                                    'உங்கள் விண்ணப்பம் ஏற்றப்படுகிறது…')),
+                          ] else if (state.loaded && status == 'new') ...[
+                            const Center(child: NightshiftBrand()),
+                            const SizedBox(height: 24),
                             Text(
                                 app.text('Your voice is your superpower.',
                                     'உங்கள் குரலே உங்கள் பலம்.'),
@@ -109,108 +82,55 @@ class _ApplicationScreenState extends ConsumerState<ListenerApplicationScreen> {
                                     .textTheme
                                     .titleLarge
                                     ?.copyWith(color: NsColors.cyan)),
-                            const SizedBox(height: 24),
-                            NightshiftSurface(
-                                child: Column(children: [
-                              Text(
-                                  app.text('Customer + Listener',
-                                      'வாடிக்கையாளர் + கேட்பவர்'),
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium),
-                              const SizedBox(height: 8),
-                              Text(
-                                  app.text('One account. Two ways to connect.',
-                                      'ஒரு கணக்கு. இணைய இரு வழிகள்.'),
-                                  textAlign: TextAlign.center),
-                              const SizedBox(height: 14),
-                              Chip(
-                                  label: Text(app.text('Test earnings only',
-                                      'சோதனை வருமானம் மட்டுமே'))),
-                            ])),
-                          ],
-                          const SizedBox(height: 12),
-                          if (status == 'submitted') ...[
-                            Text(
-                                app.text(
-                                    'A person reviews each private application. A review time or approval is not guaranteed.',
-                                    'ஒவ்வொரு தனிப்பட்ட விண்ணப்பத்தையும் ஒருவர் ஆய்வு செய்வார். ஆய்வு நேரம் அல்லது அங்கீகாரம் உறுதியில்லை.'),
-                                textAlign: TextAlign.center),
-                            const SizedBox(height: 24),
-                            FilledButton.icon(
-                                onPressed: state.busy ? null : state.load,
-                                icon: const Icon(Icons.refresh),
-                                label: Text(app.text(
-                                    'Check saved application status',
-                                    'சேமித்த விண்ணப்ப நிலையை சரிபார்'))),
                             const SizedBox(height: 20),
-                          ] else ...[
                             Text(app.text(
                                 'Applying is free for adults aged 18+. A person reviews your private application. Approval, earnings and a review date are not guaranteed. This build uses test credits only.',
                                 '18 வயது நிரம்பிய பெரியவர்கள் இலவசமாக விண்ணப்பிக்கலாம். உங்கள் தனிப்பட்ட விண்ணப்பத்தை ஒருவர் ஆய்வு செய்வார். அங்கீகாரம், வருமானம் அல்லது ஆய்வுத் தேதி உறுதியில்லை. இந்தப் பதிப்பில் சோதனை நாணயங்கள் மட்டுமே பயன்படுத்தப்படும்.')),
                             const SizedBox(height: 20),
-                            Wrap(spacing: 8, runSpacing: 8, children: [
-                              for (final entry in [
-                                (
-                                  19,
-                                  app.text('Listener orientation',
-                                      'கேட்பவர் அறிமுகம்'),
-                                  Icons.school_outlined
-                                ),
-                                (
-                                  26,
-                                  app.text('Community guidelines',
-                                      'சமூக வழிகாட்டுதல்கள்'),
-                                  Icons.favorite_outline
-                                ),
-                                (
-                                  28,
-                                  app.text('Voice sample guide',
-                                      'குரல் மாதிரி வழிகாட்டி'),
-                                  Icons.graphic_eq
-                                ),
-                              ])
-                                OutlinedButton.icon(
-                                    key: Key('entry-guide-${entry.$1}'),
-                                    onPressed: () => Navigator.of(context).push(
-                                        MaterialPageRoute<void>(
-                                            builder: (_) => EntryDesignScreen(
-                                                designId: entry.$1,
-                                                preview: false))),
-                                    icon: Icon(entry.$3),
-                                    label: Text(entry.$2)),
-                            ]),
-                            const SizedBox(height: 20),
+                            _ApplicationGuides(app: app),
+                            const SizedBox(height: 24),
                           ],
-                          NightshiftSurface(
-                              child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                Icon(
-                                    status == 'submitted'
-                                        ? Icons.hourglass_top_rounded
-                                        : status == 'approved'
-                                            ? Icons.task_alt_rounded
-                                            : Icons.edit_note_rounded,
-                                    color: NsColors.cyan,
-                                    size: 28),
-                                const SizedBox(height: 12),
-                                Text(_status(status, app.locale),
-                                    key: const Key('application-status'),
-                                    style:
-                                        Theme.of(context).textTheme.titleLarge),
-                                const SizedBox(height: 12),
-                                Wrap(spacing: 8, runSpacing: 8, children: [
-                                  Chip(
-                                      label: Text(app.text('Private profile',
-                                          'தனிப்பட்ட சுயவிவரம்'))),
-                                  Chip(
-                                      label: Text(app.text(
-                                          'Voice sample', 'குரல் மாதிரி'))),
-                                  Chip(
-                                      label: Text(app.text(
-                                          'Human review', 'மனித ஆய்வு'))),
-                                ]),
-                              ])),
+                          if (state.loaded)
+                            NightshiftSurface(
+                                key: ValueKey(status == 'submitted'
+                                    ? 'live-application-pending'
+                                    : 'live-application-status'),
+                                child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      NightshiftIllustration(
+                                          icon: status == 'submitted'
+                                              ? Icons.hourglass_top_rounded
+                                              : status == 'approved'
+                                                  ? Icons.task_alt_rounded
+                                                  : Icons.edit_note_rounded,
+                                          size: 48),
+                                      const SizedBox(height: 12),
+                                      Text(_status(status, app.locale),
+                                          key: const Key('application-status'),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleLarge),
+                                      const SizedBox(height: 12),
+                                      Wrap(
+                                          spacing: 8,
+                                          runSpacing: 8,
+                                          children: [
+                                            Chip(
+                                                label: Text(app.text(
+                                                    'Private profile',
+                                                    'தனிப்பட்ட சுயவிவரம்'))),
+                                            Chip(
+                                                label: Text(app.text(
+                                                    'Voice sample',
+                                                    'குரல் மாதிரி'))),
+                                            Chip(
+                                                label: Text(app.text(
+                                                    'Human review',
+                                                    'மனித ஆய்வு'))),
+                                          ]),
+                                    ])),
                           const SizedBox(height: 16),
                           if (status == 'submitted')
                             Text(app.text(
@@ -266,7 +186,7 @@ class _ApplicationScreenState extends ConsumerState<ListenerApplicationScreen> {
                                         'ஆய்வு முடிவை ஏற்ற முடியவில்லை. சேமித்த விண்ணப்ப நிலையை மீண்டும் சரிபார்க்கவும்.'),
                                     key:
                                         const Key('application-review-error'))),
-                          if (state.busy)
+                          if (state.busy && state.loaded)
                             const Padding(
                                 padding: EdgeInsets.all(12),
                                 child: LinearProgressIndicator()),
@@ -274,24 +194,25 @@ class _ApplicationScreenState extends ConsumerState<ListenerApplicationScreen> {
                             Padding(
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 12),
-                                child: Text(
-                                    errorMessage(state.errorCode, app.locale),
+                                child: NightshiftMessagePanel(
                                     key: const Key('application-error'),
-                                    style: TextStyle(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .error))),
-                          if (status != 'submitted')
-                            OutlinedButton.icon(
-                                onPressed: state.busy ? null : state.load,
-                                icon: const Icon(Icons.refresh),
-                                label: Text(app.text(
-                                    state.dirty
-                                        ? 'Reload saved draft (discards edits)'
-                                        : 'Check saved application status',
-                                    state.dirty
-                                        ? 'சேமித்த வரைவை ஏற்று (மாற்றங்கள் நீங்கும்)'
-                                        : 'சேமித்த விண்ணப்ப நிலையை சரிபார்'))),
+                                    title: app.text(
+                                        'Application needs attention',
+                                        'விண்ணப்பத்தில் கவனம் தேவை'),
+                                    message: errorMessage(
+                                        state.errorCode, app.locale),
+                                    accent:
+                                        Theme.of(context).colorScheme.error)),
+                          OutlinedButton.icon(
+                              onPressed: state.busy ? null : state.load,
+                              icon: const Icon(Icons.refresh),
+                              label: Text(app.text(
+                                  state.dirty
+                                      ? 'Reload saved draft (discards edits)'
+                                      : 'Check saved application status',
+                                  state.dirty
+                                      ? 'சேமித்த வரைவை ஏற்று (மாற்றங்கள் நீங்கும்)'
+                                      : 'சேமித்த விண்ணப்ப நிலையை சரிபார்'))),
                           if (state.loaded) ...[
                             const SizedBox(height: 20),
                             Text(
@@ -308,14 +229,20 @@ class _ApplicationScreenState extends ConsumerState<ListenerApplicationScreen> {
                                 maxLines: 7,
                                 maxLength: 1000,
                                 decoration: InputDecoration(
-                                    labelText:
-                                        app.text('About you', 'உங்களைப் பற்றி'),
-                                    helperText: app.text(
-                                        'Do not include phone numbers or contact details.',
-                                        'தொலைபேசி எண் அல்லது தொடர்பு விவரங்களை சேர்க்க வேண்டாம்.'),
-                                    helperMaxLines: 3),
+                                    labelText: app.text(
+                                        'About you', 'உங்களைப் பற்றி')),
                                 onChanged: (value) =>
                                     state.edit(newBio: value)),
+                            const SizedBox(height: 6),
+                            Text(
+                                app.text(
+                                    'Do not include phone numbers or contact details.',
+                                    'தொலைபேசி எண் அல்லது தொடர்பு விவரங்களை சேர்க்க வேண்டாம்.'),
+                                key: const Key('application-bio-guidance'),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: NsColors.muted)),
                             const SizedBox(height: 16),
                             Text(
                                 app.text('Conversation topics',
@@ -482,8 +409,50 @@ class _ApplicationScreenState extends ConsumerState<ListenerApplicationScreen> {
                                       'Remove sample and withdraw consent',
                                       'மாதிரியை நீக்கி ஒப்புதலை திரும்பப் பெறு'))),
                           ],
+                          if (state.loaded && status != 'new') ...[
+                            const SizedBox(height: 24),
+                            ExpansionTile(
+                                tilePadding: EdgeInsets.zero,
+                                title: Text(app.text('Application guides',
+                                    'விண்ணப்ப வழிகாட்டிகள்')),
+                                children: [_ApplicationGuides(app: app)]),
+                          ],
                         ])))));
   }
+}
+
+class _ApplicationGuides extends StatelessWidget {
+  const _ApplicationGuides({required this.app});
+  final AppController app;
+  @override
+  Widget build(BuildContext context) =>
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final entry in [
+          (
+            19,
+            app.text('Listener orientation', 'கேட்பவர் அறிமுகம்'),
+            Icons.school_outlined
+          ),
+          (
+            26,
+            app.text('Community guidelines', 'சமூக வழிகாட்டுதல்கள்'),
+            Icons.favorite_outline
+          ),
+          (
+            28,
+            app.text('Voice sample guide', 'குரல் மாதிரி வழிகாட்டி'),
+            Icons.graphic_eq
+          ),
+        ])
+          OutlinedButton.icon(
+              key: Key('entry-guide-${entry.$1}'),
+              onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                      builder: (_) => EntryDesignScreen(
+                          designId: entry.$1, preview: false))),
+              icon: Icon(entry.$3),
+              label: Text(entry.$2)),
+      ]);
 }
 
 String _status(String value, String locale) {

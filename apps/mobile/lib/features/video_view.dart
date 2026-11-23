@@ -3,13 +3,6 @@ import 'package:flutter/material.dart';
 import '../core/audio.dart';
 import 'redesign/design_system.dart';
 
-double _fullBleedVideoInset(BuildContext context) {
-  final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
-  return MediaQuery.paddingOf(context).top +
-      100 +
-      (scale - 1).clamp(0, 2) * 140;
-}
-
 /// Only an explicitly prepared/joined adapter supplies native view controllers.
 class VideoCameraPane extends StatelessWidget {
   const VideoCameraPane(
@@ -19,18 +12,20 @@ class VideoCameraPane extends StatelessWidget {
       required this.placeholder,
       this.avatarCode,
       this.aspectRatio = 16 / 9,
-      this.expand = false});
+      this.expand = false,
+      this.compact = false,
+      this.showPlaceholder = true});
   final VideoViewController? controller;
   final String label, placeholder;
   final String? avatarCode;
   final double aspectRatio;
-  final bool expand;
+  final bool expand, compact, showPlaceholder;
 
   @override
   Widget build(BuildContext context) {
     final content = _content(context);
     return Semantics(
-        label: label,
+        label: controller == null ? '$label · $placeholder' : label,
         image: controller != null,
         child: ClipRRect(
             borderRadius: BorderRadius.circular(expand ? 0 : 26),
@@ -58,30 +53,26 @@ class VideoCameraPane extends StatelessWidget {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [Color(0xFF263855), Color(0xFF141627)]))),
-            Align(
-                alignment: expand ? Alignment.topLeft : Alignment.center,
-                child: Padding(
-                    padding: expand
-                        ? EdgeInsets.only(
-                            left: 22, top: _fullBleedVideoInset(context) + 12)
-                        : const EdgeInsets.all(16),
-                    child: SizedBox(
-                        width: expand
-                            ? (MediaQuery.sizeOf(context).width - 190)
-                                .clamp(100, 220)
-                            : null,
-                        child:
-                            Column(mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(Icons.videocam_off_outlined,
-                              color: NsColors.cyan, size: 38),
+            if (showPlaceholder)
+              Align(
+                  alignment: Alignment.center,
+                  child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: SizedBox(
+                          child:
+                              Column(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.videocam_off_outlined,
+                            color: Colors.white, size: compact ? 26 : 38),
+                        if (!compact) ...[
                           const SizedBox(height: 8),
                           Flexible(
                               child: Text(placeholder,
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(color: Colors.white))),
-                        ])))),
+                        ],
+                      ])))),
           ]),
-        if (label.isNotEmpty)
+        if (label.isNotEmpty && !compact)
           Align(
               alignment: Alignment.topLeft,
               child: Container(
@@ -107,11 +98,13 @@ class VideoCallView extends StatelessWidget {
       required this.cameraOffLabel,
       this.remoteAvatarCode,
       this.localAvatarCode,
-      this.fullBleed = false});
+      this.fullBleed = false,
+      this.showLocalPreview = true,
+      this.showWaitingIndicator = true});
   final CallVideo video;
   final String remoteLabel, localLabel, waitingLabel, cameraOffLabel;
   final String? remoteAvatarCode, localAvatarCode;
-  final bool fullBleed;
+  final bool fullBleed, showLocalPreview, showWaitingIndicator;
 
   @override
   Widget build(BuildContext context) =>
@@ -119,28 +112,49 @@ class VideoCallView extends StatelessWidget {
         VideoCameraPane(
             aspectRatio: 3 / 4,
             expand: fullBleed,
+            showPlaceholder: showWaitingIndicator,
             controller: video.remoteVideo,
             avatarCode: remoteAvatarCode,
             label: fullBleed ? '' : remoteLabel,
             placeholder: waitingLabel),
-        Positioned(
-            right: fullBleed ? 22 : 12,
-            top: fullBleed ? _fullBleedVideoInset(context) : 52,
-            child: Container(
-                width:
-                    MediaQuery.textScalerOf(context).scale(1) > 1.5 ? 120 : 100,
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: Colors.white70, width: 1.5),
-                    boxShadow: const [
-                      BoxShadow(color: Colors.black45, blurRadius: 20)
-                    ]),
-                child: VideoCameraPane(
-                    aspectRatio: 3 / 4,
-                    controller: video.cameraEnabled ? video.localVideo : null,
-                    avatarCode: localAvatarCode,
-                    label: localLabel,
-                    placeholder:
-                        video.cameraEnabled ? waitingLabel : cameraOffLabel))),
+        if (showLocalPreview)
+          Positioned(
+              right: fullBleed ? 22 : 12,
+              top: fullBleed ? 100 : 52,
+              child: VideoLocalPreview(
+                  video: video,
+                  avatarCode: localAvatarCode,
+                  label: localLabel,
+                  waitingLabel: waitingLabel,
+                  cameraOffLabel: cameraOffLabel)),
       ]);
+}
+
+/// Compact visual status; the full state remains available to accessibility.
+class VideoLocalPreview extends StatelessWidget {
+  const VideoLocalPreview(
+      {super.key,
+      required this.video,
+      this.avatarCode,
+      required this.label,
+      required this.waitingLabel,
+      required this.cameraOffLabel});
+  final CallVideo video;
+  final String? avatarCode;
+  final String label, waitingLabel, cameraOffLabel;
+  @override
+  Widget build(BuildContext context) => Container(
+      key: const ValueKey('call-local-preview'),
+      width: 76,
+      decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white54),
+          boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 18)]),
+      child: VideoCameraPane(
+          aspectRatio: 3 / 4,
+          compact: true,
+          controller: video.cameraEnabled ? video.localVideo : null,
+          avatarCode: avatarCode,
+          label: label,
+          placeholder: video.cameraEnabled ? waitingLabel : cameraOffLabel));
 }

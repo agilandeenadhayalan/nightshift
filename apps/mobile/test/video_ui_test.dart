@@ -380,7 +380,7 @@ void main() {
     expect(video.videoJoinCount, 1);
     expect(tester.takeException(), isNull);
     expect(find.text('அழைப்பை முடி').hitTestable(), findsOneWidget);
-    expect(find.text('புகாரளி அல்லது தடு').hitTestable(), findsOneWidget);
+    expect(find.byTooltip('புகாரளி அல்லது தடு').hitTestable(), findsOneWidget);
     final busyGate = Completer<void>();
     final pendingOperation = controller.perform(() => busyGate.future);
     try {

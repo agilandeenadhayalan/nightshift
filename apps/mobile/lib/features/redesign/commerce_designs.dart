@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/controller.dart';
 import '../../core/models.dart';
+import '../state_widgets.dart';
+import '../message_copy.dart';
 import 'design_system.dart';
 
 /// Draft presentation choices only. No card details, payment result, balance,
@@ -15,6 +17,7 @@ class CommerceDesignState {
     this.pack = 4,
     this.method = 'Any UPI app',
     this.supportCategory,
+    this.packPreviewsOpen = false,
   });
 
   final String bankQuery;
@@ -22,6 +25,7 @@ class CommerceDesignState {
   final int pack;
   final String method;
   final String? supportCategory;
+  final bool packPreviewsOpen;
 
   CommerceDesignState copyWith({
     String? bankQuery,
@@ -29,6 +33,7 @@ class CommerceDesignState {
     int? pack,
     String? method,
     String? supportCategory,
+    bool? packPreviewsOpen,
   }) =>
       CommerceDesignState(
         bankQuery: bankQuery ?? this.bankQuery,
@@ -36,11 +41,14 @@ class CommerceDesignState {
         pack: pack ?? this.pack,
         method: method ?? this.method,
         supportCategory: supportCategory ?? this.supportCategory,
+        packPreviewsOpen: packPreviewsOpen ?? this.packPreviewsOpen,
       );
 }
 
 class CommerceDesignController extends StateNotifier<CommerceDesignState> {
   CommerceDesignController() : super(const CommerceDesignState());
+  void showPackPreviews(bool value) =>
+      state = state.copyWith(packPreviewsOpen: value);
   void searchBanks(String value) => state = state.copyWith(bankQuery: value);
   void selectBank(String value) => state = state.copyWith(bank: value);
   void selectPack(int value) {
@@ -260,111 +268,99 @@ class CommerceDesignScreen extends ConsumerWidget {
       title: 'Wallet',
       trailing: _coinBadge(preview || app.snapshotLoaded ? balance : '—'),
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
         children: [
           if (!preview) ...[
             _balanceCard(app),
             const SizedBox(height: 20),
           ],
-          Container(
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xff0e372c), Color(0xff174438)],
-              ),
-              border: Border.all(color: const Color(0xff365f3e)),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Row(children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _CommerceText(
-                        preview ? 'Flat ₹3000 off' : 'More conversations',
-                        style: const TextStyle(
-                            color: NsColors.gold,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 8),
-                    _CommerceText(
-                        preview ? '12,500 coins' : 'Your night, your pace.',
-                        style: const TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 8),
-                    if (preview)
-                      const Wrap(spacing: 10, children: [
-                        _CommerceText('₹6,000',
-                            style: TextStyle(
-                                color: Colors.white54,
-                                decoration: TextDecoration.lineThrough)),
-                        _CommerceText('₹3,000',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800)),
-                      ])
-                    else
-                      const _CommerceText('Recharge will be available here.',
-                          style: TextStyle(
-                              color: Color(0xffa7c9b8), fontSize: 12)),
-                  ],
+          if (preview)
+            Container(
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xff0e372c), Color(0xff174438)],
                 ),
+                border: Border.all(color: const Color(0xff365f3e)),
+                borderRadius: BorderRadius.circular(24),
               ),
-              const SizedBox(width: 8),
-              const _CoinArt(size: 62),
-            ]),
-          ),
-          const SizedBox(height: 22),
-          _CommerceText(
-              preview ? 'Choose your coin pack' : 'Coin pack previews',
-              style:
-                  const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-          if (!preview) ...[
-            const SizedBox(height: 8),
-            const _CommerceText(
-              'Sample pack sizes. Prices and purchases are unavailable.',
-              style: TextStyle(color: NsColors.muted, fontSize: 12),
-            ),
-          ],
-          const SizedBox(height: 14),
-          LayoutBuilder(builder: (context, constraints) {
-            final largeText = MediaQuery.textScalerOf(context).scale(14) > 19;
-            final count = constraints.maxWidth < 340 || largeText ? 2 : 3;
-            // Let the tallest pack determine each row's height. Fixed grid
-            // extents clip discounted prices and accessibility-sized text.
-            return Column(children: [
-              for (var start = 0; start < _packs.length; start += count)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        for (var offset = 0; offset < count; offset++) ...[
-                          if (offset > 0) const SizedBox(width: 10),
-                          Expanded(
-                            child: start + offset < _packs.length
-                                ? _packCard(
-                                    context,
-                                    start + offset,
-                                    selected: draft.pack == start + offset,
-                                    onTap: () =>
-                                        actions.selectPack(start + offset),
-                                  )
-                                : const SizedBox.shrink(),
-                          ),
-                        ],
-                      ],
-                    ),
+              child: Row(children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _CommerceText(
+                          preview ? 'Flat ₹3000 off' : 'More conversations',
+                          style: const TextStyle(
+                              color: NsColors.gold,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 8),
+                      _CommerceText(
+                          preview ? '12,500 coins' : 'Your night, your pace.',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      if (preview)
+                        const Wrap(spacing: 10, children: [
+                          _CommerceText('₹6,000',
+                              style: TextStyle(
+                                  color: Colors.white54,
+                                  decoration: TextDecoration.lineThrough)),
+                          _CommerceText('₹3,000',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800)),
+                        ])
+                      else
+                        const _CommerceText('Recharge will be available here.',
+                            style: TextStyle(
+                                color: Color(0xffa7c9b8), fontSize: 12)),
+                    ],
                   ),
                 ),
-            ]);
-          }),
+                const SizedBox(width: 8),
+                const _CoinArt(size: 62),
+              ]),
+            ),
           const SizedBox(height: 22),
-          _unavailable(preview
-              ? 'Sample offers are for visual review. No money is collected.'
-              : 'Test coins are not money and cannot be redeemed or transferred. Recharge is not configured.'),
+          if (preview) ...[
+            const _CommerceText('Choose your coin pack',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 14),
+            _packGrid(context, draft, actions),
+          ] else ...[
+            _unavailable(
+                'Test coins are not money and cannot be redeemed or transferred. Recharge is not configured.'),
+            const SizedBox(height: 24),
+            NightshiftSurface(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: ExpansionTile(
+                    key: const Key('commerce-pack-previews'),
+                    initiallyExpanded: draft.packPreviewsOpen,
+                    onExpansionChanged: actions.showPackPreviews,
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: const EdgeInsets.only(bottom: 12),
+                    title: const _CommerceText('Coin pack previews',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: const _CommerceText('Not for sale',
+                        style: TextStyle(color: NsColors.muted, fontSize: 12)),
+                    children: [
+                      const _CommerceText(
+                          'Sample pack sizes. Prices and purchases are unavailable.',
+                          style:
+                              TextStyle(color: NsColors.muted, fontSize: 12)),
+                      const SizedBox(height: 16),
+                      _packGrid(context, draft, actions),
+                    ])),
+          ],
+          const SizedBox(height: 22),
+          if (preview)
+            _unavailable(
+                'Sample offers are for visual review. No money is collected.'),
           const SizedBox(height: 14),
           TextButton.icon(
             onPressed: () => _open(context, 25),
@@ -373,38 +369,76 @@ class CommerceDesignScreen extends ConsumerWidget {
           ),
         ],
       ),
-      bottom: LayoutBuilder(builder: (context, constraints) {
-        final summary = Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const _CommerceText('Selected pack',
-                  style: TextStyle(color: NsColors.muted, fontSize: 11)),
-              const SizedBox(height: 4),
-              if (preview)
-                _CommerceText('₹${_group(selected.price)}',
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.w800)),
-              _CommerceText(
-                  '${_group(selected.coins)} ${preview ? 'coins' : 'sample coins'}',
-                  style: const TextStyle(color: NsColors.muted, fontSize: 11)),
-            ]);
-        final action = _disabledPayment(label: 'Recharge unavailable');
-        if (MediaQuery.textScalerOf(context).scale(14) > 18) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [summary, const SizedBox(height: 12), action],
-          );
-        }
-        return Row(children: [
-          Expanded(child: summary),
-          const SizedBox(width: 12),
-          Flexible(child: action),
-        ]);
-      }),
+      bottom: !preview && !draft.packPreviewsOpen
+          ? _disabledPayment(label: 'Recharge unavailable')
+          : LayoutBuilder(builder: (context, constraints) {
+              final summary = Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _CommerceText('Selected pack',
+                        style: TextStyle(color: NsColors.muted, fontSize: 11)),
+                    const SizedBox(height: 4),
+                    if (preview)
+                      _CommerceText('₹${_group(selected.price)}',
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.w800)),
+                    _CommerceText(
+                        '${_group(selected.coins)} ${preview ? 'coins' : 'sample coins'}',
+                        style: const TextStyle(
+                            color: NsColors.muted, fontSize: 11)),
+                  ]);
+              final action = _disabledPayment(label: 'Recharge unavailable');
+              if (MediaQuery.textScalerOf(context).scale(14) > 18) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [summary, const SizedBox(height: 12), action],
+                );
+              }
+              return Row(children: [
+                Expanded(child: summary),
+                const SizedBox(width: 12),
+                Flexible(child: action),
+              ]);
+            }),
     );
   }
+
+  Widget _packGrid(BuildContext context, CommerceDesignState draft,
+          CommerceDesignController actions) =>
+      LayoutBuilder(builder: (context, constraints) {
+        final largeText = MediaQuery.textScalerOf(context).scale(14) > 19;
+        final count = constraints.maxWidth < 340 || largeText ? 2 : 3;
+        // Let the tallest pack determine each row's height. Fixed grid
+        // extents clip discounted prices and accessibility-sized text.
+        return Column(children: [
+          for (var start = 0; start < _packs.length; start += count)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var offset = 0; offset < count; offset++) ...[
+                      if (offset > 0) const SizedBox(width: 10),
+                      Expanded(
+                        child: start + offset < _packs.length
+                            ? _packCard(
+                                context,
+                                start + offset,
+                                selected: draft.pack == start + offset,
+                                onTap: () => actions.selectPack(start + offset),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+        ]);
+      });
 
   Widget _balanceCard(AppController app) => NightshiftSurface(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -426,7 +460,17 @@ class CommerceDesignScreen extends ConsumerWidget {
             const _CommerceText('test coins',
                 style: TextStyle(color: NsColors.muted)),
           ]),
-          const SizedBox(height: 14),
+          const SizedBox(height: 20),
+          if (app.snapshotLoaded) ...[
+            const Divider(height: 1),
+            const SizedBox(height: 16),
+            _CommerceText(
+                '${creditAmount(app.balance - app.held)} test coins available',
+                key: const Key('commerce-wallet-available'),
+                style: const TextStyle(
+                    color: NsColors.cyan, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+          ],
           _CommerceText(
             app.snapshotLoaded
                 ? '${creditAmount(app.held)} held for a call'
@@ -441,7 +485,13 @@ class CommerceDesignScreen extends ConsumerWidget {
                   'Offline · showing the last available balance',
                   style: TextStyle(color: NsColors.gold, fontSize: 12)),
             ),
-          if (!app.snapshotLoaded && app.user != null)
+          if (app.snapshotLoading)
+            Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: LoadingNotice(
+                    label: app.text('Loading your balance…',
+                        'உங்கள் இருப்பு ஏற்றப்படுகிறது…')))
+          else if (!app.snapshotLoaded && app.user != null)
             TextButton(
               onPressed: app.busy || app.snapshotLoading ? null : app.refresh,
               child: const _CommerceText('Refresh balance'),
@@ -637,7 +687,7 @@ class CommerceDesignScreen extends ConsumerWidget {
         context,
         title: 'Payment Methods',
         light: true,
-        child: ListView(padding: const EdgeInsets.all(20), children: [
+        child: ListView(padding: const EdgeInsets.all(24), children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
             decoration: BoxDecoration(
@@ -752,7 +802,7 @@ class CommerceDesignScreen extends ConsumerWidget {
         context,
         title: 'Add Card',
         light: true,
-        child: ListView(padding: const EdgeInsets.all(20), children: [
+        child: ListView(padding: const EdgeInsets.all(24), children: [
           _whiteCard(Padding(
             padding: const EdgeInsets.all(20),
             child:
@@ -889,7 +939,7 @@ class CommerceDesignScreen extends ConsumerWidget {
     return _frame(
       context,
       title: 'Earnings',
-      child: ListView(padding: const EdgeInsets.all(20), children: [
+      child: ListView(padding: const EdgeInsets.all(24), children: [
         Container(
           padding: const EdgeInsets.all(26),
           decoration: BoxDecoration(
@@ -928,7 +978,7 @@ class CommerceDesignScreen extends ConsumerWidget {
           ]),
         ),
         const SizedBox(height: 28),
-        const _SectionLabel('Withdrawal History'),
+        if (preview) const _SectionLabel('Withdrawal History'),
         const SizedBox(height: 14),
         if (preview)
           for (final entry in const [
@@ -967,18 +1017,45 @@ class CommerceDesignScreen extends ConsumerWidget {
           const _SectionLabel('Test call earnings'),
           const SizedBox(height: 12),
           if (app.historyLoading)
-            const LinearProgressIndicator()
-          else if (!app.historyLoaded || app.historyError != null)
-            OutlinedButton.icon(
-              onPressed: app.user == null ? null : app.loadHistory,
-              icon: const Icon(Icons.refresh),
-              label: _CommerceText(app.historyError != null
-                  ? 'Retry call history'
-                  : 'Load call history'),
-            )
+            LoadingNotice(
+                label: app.text('Loading call earnings…',
+                    'அழைப்பு வருமானம் ஏற்றப்படுகிறது…'))
+          else if (app.historyError != null)
+            FailureNotice(
+                title: app.text(
+                    'Could not load earnings', 'வருமானத்தை ஏற்ற முடியவில்லை'),
+                message: errorMessage(app.historyError!.code, app.locale),
+                retryLabel: app.text(
+                    'Retry call history', 'அழைப்பு வரலாற்றை மீண்டும் முயற்சி'),
+                onRetry: app.user == null ? null : app.loadHistory)
+          else if (!app.historyLoaded)
+            NightshiftSurface(
+                child: Column(children: [
+              const NightshiftIllustration(icon: Icons.receipt_long_outlined),
+              const SizedBox(height: 16),
+              const _CommerceText(
+                  'Load your call history to see test earnings.',
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                  onPressed: app.user == null ? null : app.loadHistory,
+                  icon: const Icon(Icons.refresh),
+                  label: const _CommerceText('Load call history')),
+            ]))
           else if (calls.isEmpty)
-            const _CommerceText('No completed Listener calls yet.',
-                style: TextStyle(color: NsColors.muted)),
+            const NightshiftSurface(
+                child: Column(children: [
+              NightshiftIllustration(icon: Icons.receipt_long_outlined),
+              SizedBox(height: 16),
+              _CommerceText('No completed Listener calls yet.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+              SizedBox(height: 8),
+              _CommerceText(
+                  'Your server-settled test earnings will appear here.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: NsColors.muted, fontSize: 12)),
+            ])),
           for (final call in calls)
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -1108,7 +1185,11 @@ class CommerceDesignScreen extends ConsumerWidget {
         title: 'Help & Support',
         child: ListView(padding: const EdgeInsets.all(22), children: [
           const SizedBox(height: 18),
-          const Icon(Icons.nightlight_round, size: 44, color: NsColors.violet),
+          const Center(
+              child: NightshiftIllustration(
+                  icon: Icons.support_agent_rounded,
+                  color: NsColors.violet,
+                  size: 72)),
           const SizedBox(height: 24),
           const _CommerceText('How can we help?',
               style: TextStyle(fontSize: 27, fontWeight: FontWeight.w800)),
@@ -1237,6 +1318,9 @@ String _commerceCopy(BuildContext context, String value) {
   }
   final direct = _commerceTamil[value];
   if (direct != null) return direct;
+  if (value.endsWith(' test coins available')) {
+    return '${value.replaceFirst(' test coins available', '')} சோதனை நாணயங்கள் கிடைக்கின்றன';
+  }
   if (value.endsWith(' held for a call')) {
     return '${value.replaceFirst(' held for a call', '')} அழைப்பிற்காக ஒதுக்கப்பட்டது';
   }
@@ -1314,6 +1398,10 @@ const _commerceTamil = <String, String>{
   'Test call earnings': 'சோதனை அழைப்பு வருமானம்',
   'Retry call history': 'அழைப்பு வரலாற்றை மீண்டும் ஏற்று',
   'Load call history': 'அழைப்பு வரலாற்றை ஏற்று',
+  'Load your call history to see test earnings.':
+      'சோதனை வருமானத்தைப் பார்க்க அழைப்பு வரலாற்றை ஏற்றுங்கள்.',
+  'Your server-settled test earnings will appear here.':
+      'சேவையகம் கணக்கிட்ட சோதனை வருமானம் இங்கே தோன்றும்.',
   'No completed Listener calls yet.':
       'முடிந்த கேட்பவர் அழைப்புகள் இன்னும் இல்லை.',
   'No payment in progress': 'பணம் செலுத்தும் செயல் எதுவும் நடைபெறவில்லை',

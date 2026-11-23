@@ -48,11 +48,11 @@ class LiveCallStage extends StatelessWidget {
         SafeArea(
             child: Column(children: [
           Padding(
-              padding: const EdgeInsets.fromLTRB(22, 14, 22, 8), child: header),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8), child: header),
           Expanded(child: content),
           Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(18, 10, 18, 4),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
               decoration: const BoxDecoration(
                   gradient: LinearGradient(
                       begin: Alignment.topCenter,
@@ -128,48 +128,57 @@ class CallRoundControl extends StatelessWidget {
       required this.label,
       required this.icon,
       required this.onPressed,
+      this.compactLabel,
       this.end = false,
       this.selected = false});
   final String label;
+  final String? compactLabel;
   final IconData icon;
   final VoidCallback? onPressed;
   final bool end, selected;
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
-    final content = Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: end
-                  ? const Color(0xFFEF3E68)
-                  : selected
-                      ? Colors.white
-                      : const Color(0xFF252B40),
-              border: Border.all(
-                  color: end ? const Color(0xFFFF8BA5) : Colors.white24),
-              boxShadow: end
-                  ? const [
-                      BoxShadow(color: Color(0x555B1329), offset: Offset(0, 5))
-                    ]
-                  : null),
-          child: Icon(icon,
-              size: 25,
-              color: enabled
-                  ? selected && !end
-                      ? NsColors.background
-                      : Colors.white
-                  : NsColors.muted)),
-      const SizedBox(height: 9),
-      Text(label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-              color: enabled ? Colors.white : NsColors.muted,
-              fontSize: 11,
-              fontWeight: FontWeight.w500)),
-    ]);
+    final horizontal = MediaQuery.textScalerOf(context).scale(1) > 1.5;
+    final circle = Container(
+        width: horizontal ? 42 : 56,
+        height: horizontal ? 42 : 56,
+        decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: end
+                ? const Color(0xFFEF3E68)
+                : selected
+                    ? Colors.white
+                    : const Color(0xFF252B40),
+            border: Border.all(
+                color: end ? const Color(0xFFFF8BA5) : Colors.white24),
+            boxShadow: end
+                ? const [
+                    BoxShadow(color: Color(0x555B1329), offset: Offset(0, 5))
+                  ]
+                : null),
+        child: Icon(icon,
+            size: 25,
+            color: enabled
+                ? selected && !end
+                    ? NsColors.background
+                    : Colors.white
+                : NsColors.muted));
+    final caption = Text(horizontal ? compactLabel ?? label : label,
+        textAlign: horizontal ? TextAlign.left : TextAlign.center,
+        style: TextStyle(
+            color: enabled ? Colors.white : NsColors.muted,
+            fontSize: horizontal ? 10 : 11,
+            fontWeight: FontWeight.w500));
+    final content = horizontal
+        ? Row(children: [
+            circle,
+            const SizedBox(width: 8),
+            Expanded(child: caption)
+          ])
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [circle, const SizedBox(height: 9), caption]);
     final style = ButtonStyle(
         padding: const WidgetStatePropertyAll(
             EdgeInsets.symmetric(horizontal: 3, vertical: 4)),
@@ -177,9 +186,18 @@ class CallRoundControl extends StatelessWidget {
         minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
         shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))));
-    return end
+    final button = end
         ? FilledButton(onPressed: onPressed, style: style, child: content)
         : TextButton(onPressed: onPressed, style: style, child: content);
+    return horizontal && compactLabel != null
+        ? Semantics(
+            label: label,
+            button: true,
+            enabled: enabled,
+            onTap: onPressed,
+            child:
+                ExcludeSemantics(child: Tooltip(message: label, child: button)))
+        : button;
   }
 }
 
@@ -190,9 +208,17 @@ class CallControlRow extends StatelessWidget {
   Widget build(BuildContext context) => Center(
       child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            for (final child in children) Expanded(child: child)
-          ])));
+          child: LayoutBuilder(builder: (context, constraints) {
+            if (MediaQuery.textScalerOf(context).scale(1) > 1.5) {
+              return Wrap(spacing: 8, runSpacing: 4, children: [
+                for (final child in children)
+                  SizedBox(width: (constraints.maxWidth - 8) / 2, child: child)
+              ]);
+            }
+            return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              for (final child in children) Expanded(child: child)
+            ]);
+          })));
 }
 
 /// A decorative motif, never a measurement or an audibility claim.
@@ -244,23 +270,6 @@ class UnavailableCallGame extends StatelessWidget {
               child: Text(name, style: Theme.of(context).textTheme.titleMedium))
         ]),
         const SizedBox(height: 20),
-        Semantics(
-            label: title,
-            image: true,
-            child: ExcludeSemantics(
-                child: AspectRatio(
-                    aspectRatio: 1,
-                    child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                            color: const Color(0xFF29253D),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: Colors.white24)),
-                        child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: CustomPaint(
-                                painter: const CallBoardPainter(0))))))),
-        const SizedBox(height: 20),
         Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -283,6 +292,24 @@ class UnavailableCallGame extends StatelessWidget {
                   child:
                       FilledButton(onPressed: null, child: Text(disabledLabel)))
             ])),
+        const SizedBox(height: 20),
+        Semantics(
+            label: title,
+            image: true,
+            child: ExcludeSemantics(
+                child: AspectRatio(
+                    aspectRatio: 1,
+                    child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                            color: const Color(0xFF29253D),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: Colors.white24)),
+                        child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: CustomPaint(
+                                painter: const CallBoardPainter(0))))))),
+        const SizedBox(height: 20),
         TextButton(onPressed: onBack, child: Text(backLabel)),
       ]);
 }

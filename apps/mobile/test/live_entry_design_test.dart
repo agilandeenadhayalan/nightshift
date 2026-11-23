@@ -44,6 +44,61 @@ Future<void> reveal(WidgetTester tester, Finder target) async {
 }
 
 void main() {
+  testWidgets(
+      'saved application starts with status and editable bio, not introduction',
+      (tester) async {
+    final api = FakeApi()..token = 'synthetic-session';
+    api.interceptor = (method, path, body) async => path.endsWith('/review')
+        ? {'applicationId': 'application-id', 'state': 'draft', 'review': null}
+        : path == '/me/listener-application'
+            ? {'application': applicationJson()}
+            : null;
+    final app = AppController(
+        api: api,
+        store: MemoryStore(),
+        audio: FakeAudio(),
+        samplePicker: FakePicker(),
+        startTimers: false)
+      ..user = UserProfile.fromJson(userJson());
+    await mountRoute(tester, app, '/listener-application');
+    expect(find.byType(NightshiftEntryPortraitScene), findsNothing);
+    expect(find.byKey(const Key('application-status')), findsOneWidget);
+    expect(
+        find.byKey(const Key('application-bio')).hitTestable(), findsOneWidget);
+    expect(
+        tester.getTopLeft(find.byKey(const Key('application-bio-guidance'))).dy,
+        greaterThanOrEqualTo(tester.getBottomLeft(find.text('30/1000')).dy));
+    await tester.enterText(
+        find.byKey(const Key('application-bio')), 'A private draft');
+    expect(app.listenerApplication.bio, 'A private draft');
+    expect(api.requests.every((request) => request['method'] == 'GET'), true);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets(
+      'new application retains introduction without granting permission or access',
+      (tester) async {
+    final api = FakeApi()..token = 'synthetic-session';
+    api.interceptor =
+        (method, path, body) async => path == '/me/listener-application'
+            ? {'application': null}
+            : path.endsWith('/review')
+                ? {'applicationId': null, 'state': null, 'review': null}
+                : null;
+    final app = AppController(
+        api: api,
+        store: MemoryStore(),
+        audio: FakeAudio(),
+        samplePicker: FakePicker(),
+        startTimers: false)
+      ..user = UserProfile.fromJson(userJson());
+    await mountRoute(tester, app, '/listener-application');
+    expect(find.byType(NightshiftEntryPortraitScene), findsOneWidget);
+    expect(app.user!.listenerApproved, false);
+    expect(api.requests.every((request) => request['method'] == 'GET'), true);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('routed phone sheet uses one real OTP input and explicit consent',
       (tester) async {
     final api = FakeApi(), driver = FakePhoneDriver();
@@ -165,7 +220,7 @@ void main() {
       expect(
           find.byKey(Key(status == 'submitted'
               ? 'live-application-pending'
-              : 'live-listener-introduction')),
+              : 'live-application-status')),
           findsOneWidget);
       await reveal(tester, find.byKey(const Key('live-voice-sample')));
       expect(find.byType(NightshiftVoiceSampleVisual), findsOneWidget);

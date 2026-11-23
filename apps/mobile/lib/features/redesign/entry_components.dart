@@ -39,14 +39,16 @@ class NightshiftAuthLayout extends StatelessWidget {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Row(children: [
-                                          const Expanded(
-                                              child: NightshiftBrand(size: 23)),
                                           if (onBack != null)
                                             IconButton(
                                                 onPressed: onBack,
                                                 tooltip: backLabel,
                                                 icon: const Icon(
                                                     Icons.arrow_back)),
+                                          if (onBack != null)
+                                            const SizedBox(width: 8),
+                                          const Expanded(
+                                              child: NightshiftBrand(size: 23)),
                                         ]),
                                         const SizedBox(height: 30),
                                         Text(title,
@@ -61,7 +63,7 @@ class NightshiftAuthLayout extends StatelessWidget {
                               Container(
                                   key: const Key('live-auth-sheet'),
                                   padding:
-                                      const EdgeInsets.fromLTRB(20, 12, 20, 28),
+                                      const EdgeInsets.fromLTRB(24, 12, 24, 28),
                                   decoration: const BoxDecoration(
                                       color: Color(0xff0e1422),
                                       borderRadius: BorderRadius.vertical(
@@ -196,8 +198,8 @@ class NightshiftPermissionCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
-            Icon(icon, size: 30, color: const Color(0xffc9dbb6)),
-            const SizedBox(height: 22),
+            Center(child: NightshiftIllustration(icon: icon, size: 64)),
+            const SizedBox(height: 20),
             Text(title,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineSmall),
@@ -206,12 +208,7 @@ class NightshiftPermissionCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: NsColors.muted)),
             const SizedBox(height: 24),
-            FilledButtonTheme(
-                data: FilledButtonThemeData(
-                    style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xff34432b),
-                        foregroundColor: const Color(0xffc9dbb6))),
-                child: action),
+            action,
             if (footer != null) ...[const SizedBox(height: 12), footer!],
           ]));
 }

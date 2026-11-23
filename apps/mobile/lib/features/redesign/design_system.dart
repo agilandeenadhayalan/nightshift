@@ -9,7 +9,91 @@ abstract final class NsColors {
   static const cyan = Color(0xFF00F7FF);
   static const violet = Color(0xFF8B5CF6);
   static const gold = Color(0xFFFBBF24);
-  static const muted = Color(0xFF94A3B8);
+  static const muted = Color(0xFFA8B3C9);
+}
+
+/// Decorative state imagery. It never represents an online person or a grant.
+class NightshiftIllustration extends StatelessWidget {
+  const NightshiftIllustration(
+      {super.key, required this.icon, this.color, this.size = 64});
+  final IconData icon;
+  final Color? color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = color ?? NsColors.violet;
+    return ExcludeSemantics(
+      child: Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(size * .31),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [accent.withAlpha(38), accent.withAlpha(10)],
+          ),
+          border: Border.all(color: accent.withAlpha(65)),
+        ),
+        child: Icon(icon, size: size * .45, color: accent),
+      ),
+    );
+  }
+}
+
+/// Consistent status presentation; callers retain every action and state guard.
+class NightshiftMessagePanel extends StatelessWidget {
+  const NightshiftMessagePanel({
+    super.key,
+    required this.title,
+    required this.message,
+    this.icon = Icons.info_outline_rounded,
+    this.accent,
+    this.action,
+    this.details,
+  });
+  final String title, message;
+  final IconData icon;
+  final Color? accent;
+  final Widget? action, details;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final tone = accent ?? NsColors.violet;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 7),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(tone.withAlpha(12), scheme.surface),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: tone.withAlpha(58)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          NightshiftIllustration(icon: icon, color: tone, size: 42),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child:
+                  Text(title, style: Theme.of(context).textTheme.titleMedium),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        Text(message,
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: scheme.onSurface.withAlpha(220))),
+        if (details != null) ...[const SizedBox(height: 12), details!],
+        if (action != null) ...[const SizedBox(height: 16), action!],
+      ]),
+    );
+  }
 }
 
 ThemeData nightshiftTheme({bool light = false}) {
@@ -21,6 +105,10 @@ ThemeData nightshiftTheme({bool light = false}) {
           onPrimary: Colors.white,
           secondary: NsColors.cyan,
           onSecondary: NsColors.background,
+          primaryContainer: Color(0xFF302448),
+          onPrimaryContainer: Color(0xFFE8DCFF),
+          secondaryContainer: Color(0xFF153638),
+          onSecondaryContainer: NsColors.cyan,
           surface: NsColors.surface,
           onSurface: Color(0xFFF1F5F9),
           error: Color(0xFFFF8A9B),
@@ -33,24 +121,39 @@ ThemeData nightshiftTheme({bool light = false}) {
     textTheme: base.textTheme.copyWith(
       headlineLarge: base.textTheme.headlineLarge?.copyWith(
           fontFamily: 'SpaceGrotesk',
+          fontSize: 30,
+          height: 1.2,
           fontWeight: FontWeight.w700,
           letterSpacing: -1),
       headlineMedium: base.textTheme.headlineMedium?.copyWith(
           fontFamily: 'SpaceGrotesk',
+          fontSize: 26,
+          height: 1.25,
           fontWeight: FontWeight.w700,
           letterSpacing: -.7),
       headlineSmall: base.textTheme.headlineSmall?.copyWith(
           fontFamily: 'SpaceGrotesk',
+          fontSize: 22,
+          height: 1.3,
           fontWeight: FontWeight.w700,
           letterSpacing: -.4),
-      titleLarge:
-          base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+      titleLarge: base.textTheme.titleLarge
+          ?.copyWith(fontSize: 20, height: 1.3, fontWeight: FontWeight.w700),
+      titleMedium: base.textTheme.titleMedium
+          ?.copyWith(fontSize: 16, height: 1.35, fontWeight: FontWeight.w700),
+      bodySmall: base.textTheme.bodySmall?.copyWith(fontSize: 12, height: 1.45),
       bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.5),
     ),
     appBarTheme: AppBarTheme(
         backgroundColor: light ? Colors.white : NsColors.background,
         foregroundColor: scheme.onSurface,
         scrolledUnderElevation: 0,
+        titleTextStyle: TextStyle(
+            fontFamily: 'SpaceGrotesk',
+            fontSize: 20,
+            height: 1.3,
+            fontWeight: FontWeight.w700,
+            color: scheme.onSurface),
         centerTitle: false),
     cardTheme: CardTheme(
       color: light ? Colors.white : NsColors.card,
@@ -68,6 +171,10 @@ ThemeData nightshiftTheme({bool light = false}) {
       enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
           borderSide: BorderSide(color: scheme.outline.withAlpha(90))),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(
+              color: light ? scheme.primary : NsColors.cyan, width: 1.5)),
     ),
     filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -314,8 +421,8 @@ class NightshiftBackdrop extends StatelessWidget {
             gradient: RadialGradient(
                 center: Alignment.topRight,
                 radius: 1.6,
-                colors: [Color(0xFF241044), NsColors.background],
-                stops: [0, .7])),
+                colors: [Color(0xFF17152B), NsColors.background],
+                stops: [0, .65])),
         child: child,
       );
 }

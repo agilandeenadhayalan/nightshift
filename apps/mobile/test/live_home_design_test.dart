@@ -6,6 +6,7 @@ import 'package:nightshift/app.dart';
 import 'package:nightshift/core/controller.dart';
 import 'package:nightshift/core/models.dart';
 import 'package:nightshift/features/redesign/home_components.dart';
+import 'package:nightshift/features/redesign/design_system.dart';
 import 'fakes.dart';
 import 'discovery_state_test.dart' show FakeEvents, member;
 import 'discovery_ui_test.dart' show reveal;
@@ -82,11 +83,28 @@ void main() {
     expect(cards.first.avatarCode, 'female_01');
     final first = tester.getRect(find.text('Test Listener 1'));
     final second = tester.getRect(find.text('Test Listener 2'));
+    final portrait = tester.getRect(find.descendant(
+        of: find.byType(NightshiftPortraitCard).first,
+        matching: find.byType(AvatarPortrait)));
+    expect(portrait.bottom,
+        lessThan(tester.getTopLeft(find.byType(NavigationBar)).dy),
+        reason: 'The first portrait should be fully visible on entry.');
+    expect(
+        find
+            .descendant(
+                of: find.byType(NightshiftPortraitCard).first,
+                matching: find.byType(FilledButton))
+            .hitTestable(),
+        findsOneWidget,
+        reason: 'The first call action should be reachable without scrolling.');
+    expect(portrait.height, greaterThanOrEqualTo(200));
+    expect(first.top, greaterThanOrEqualTo(portrait.bottom),
+        reason: 'Names and call controls must not cover faces.');
     expect(second.left, greaterThan(first.right));
     expect((first.top - second.top).abs(), lessThan(3));
     expect(find.text('PREVIEW'), findsNothing);
     expect(find.textContaining('FLAT ₹'), findsNothing);
-    await tester.tap(find.widgetWithText(TextButton, 'Open wallet'));
+    await tester.tap(find.byTooltip('View test coins'));
     await tester.pumpAndSettle();
     expect(find.text('Your next conversation'), findsOneWidget);
     expect(find.text('Available test coins'), findsOneWidget);
@@ -99,6 +117,7 @@ void main() {
       'full portrait and filter sheets use current directory state and real commands',
       (tester) async {
     final app = await mountLiveHome(tester);
+    await reveal(tester, find.text('Test Listener 1'));
     await tester.tap(find.text('Test Listener 1'));
     await tester.pumpAndSettle();
     expect(
@@ -110,7 +129,7 @@ void main() {
     await reveal(tester, find.text('Close'));
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();
-    await reveal(tester, find.text('Filters'));
+    await reveal(tester, find.text('Filters'), delta: -240);
     await tester.tap(find.text('Filters'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ChoiceChip, 'English'));
@@ -136,6 +155,12 @@ void main() {
     expect(hero.roleLabel, 'Listener');
     expect(hero.footer, isNull);
     expect(find.text('Available test coins'), findsNothing);
+    expect(find.byType(NightshiftModeCard), findsOneWidget);
+    await reveal(tester, find.text('Switch to Customer'));
+    await tester.tap(find.text('Switch to Customer'));
+    await tester.pumpAndSettle();
+    expect(state.isListener, isFalse);
+    expect(find.text('Who would you like to talk to?'), findsOneWidget);
   });
 
   testWidgets(
@@ -174,10 +199,16 @@ void main() {
     expect(rows[0].amount, isNull);
     expect(rows[1].avatarCode, 'male_04');
     expect(rows[1].amount, '₹8.33');
+    expect(rows[1].date.length, lessThan(24));
     expect(find.text('Call ID: as-listener'), findsNothing);
+    expect(find.textContaining('Started:'), findsNothing);
+    final details = tester.widget<IconButton>(
+        find.byKey(const ValueKey('history-details-as-listener')));
+    expect((details.icon as Icon).icon, Icons.chevron_right);
     await tester.tap(find.byKey(const ValueKey('history-details-as-listener')));
     await tester.pumpAndSettle();
     expect(find.text('Call ID: as-listener'), findsOneWidget);
+    expect(find.textContaining('Started:'), findsOneWidget);
     expect(find.text('Report or block'), findsOneWidget);
     expect(find.text('Rate conversation'), findsNothing);
   });
@@ -226,6 +257,20 @@ void main() {
         final destination = navigation.destinations[navigation.selectedIndex]
             as NavigationDestination;
         expect((destination.icon as Icon).color, Colors.white);
+        if (!listener && path == '/history') {
+          final tabs = tester.widget<SegmentedButton<bool>>(
+              find.byType(SegmentedButton<bool>));
+          expect(tabs.direction, Axis.vertical);
+          expect(find.text('விருப்பமானவர்கள்').hitTestable(), findsOneWidget);
+          await tester.tap(find.text('விருப்பமானவர்கள்'));
+          await tester.pumpAndSettle();
+          expect(
+              tester
+                  .widget<SegmentedButton<bool>>(
+                      find.byType(SegmentedButton<bool>))
+                  .selected,
+              {true});
+        }
         expect(tester.takeException(), isNull);
         await tester.drag(find.byType(ListView).first, const Offset(0, -450));
         await tester.pumpAndSettle();

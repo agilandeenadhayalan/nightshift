@@ -6,6 +6,7 @@ import '../core/controller.dart';
 import '../core/api.dart' show ApiFailure;
 import '../core/phone_sign_in.dart';
 import 'message_copy.dart';
+import 'state_widgets.dart';
 import 'redesign/design_system.dart';
 import 'redesign/avatar_picker.dart';
 import 'redesign/entry_components.dart';
@@ -91,11 +92,8 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
           const Center(
               child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
-                  child: CircleAvatar(
-                      radius: 38,
-                      backgroundColor: NsColors.card,
-                      child: Icon(Icons.sms_outlined,
-                          size: 36, color: NsColors.cyan)))),
+                  child: NightshiftIllustration(
+                      icon: Icons.sms_outlined, size: 72))),
           const SizedBox(height: 12),
           Text(
               app.text('Use the six-digit code from your SMS.',
@@ -175,14 +173,23 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
               liveRegion: true,
               child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Text(errorMessage(state.errorCode, app.locale)))),
+                  child: NightshiftMessagePanel(
+                      title: app.text(
+                          'Sign-in needs attention', 'உள்நுழைவில் கவனம் தேவை'),
+                      message: errorMessage(state.errorCode, app.locale),
+                      icon: Icons.info_outline_rounded,
+                      accent: Theme.of(context).colorScheme.error))),
         if (app.canRestorePhoneSession && !widget.preview)
           TextButton(
               onPressed: app.busy ? null : app.restorePhoneSession,
               child: Text(app.text(
                   'Restore previous sign-in', 'முந்தைய உள்நுழைவை மீட்டமை'))),
         if (app.errorCode != null && !widget.preview)
-          Text(errorMessage(app.errorCode, app.locale)),
+          NightshiftMessagePanel(
+              title:
+                  app.text('Sign-in needs attention', 'உள்நுழைவில் கவனம் தேவை'),
+              message: errorMessage(app.errorCode, app.locale),
+              accent: Theme.of(context).colorScheme.error),
         const SizedBox(height: 24),
         Text(
             app.text('Your phone number is never shown on your public profile.',
@@ -273,24 +280,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       return Scaffold(
           appBar: AppBar(
               title: Text(app.text('Edit profile', 'சுயவிவரத்தை திருத்து'))),
-          body: Center(
-              child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    if (_editLoading || _editError == null) ...[
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 16),
-                      Text(app.text('Loading your profile…',
-                          'உங்கள் சுயவிவரம் ஏற்றப்படுகிறது…')),
-                    ] else ...[
-                      Text(errorMessage(_editError, app.locale),
-                          textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      FilledButton(
-                          onPressed: _loadEditProfile,
-                          child: Text(app.text('Retry', 'மீண்டும் முயற்சி'))),
-                    ],
-                  ]))));
+          body: NightshiftBackdrop(
+              child: Center(
+                  child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 560),
+                          child: _editLoading || _editError == null
+                              ? LoadingNotice(
+                                  label: app.text('Loading your profile…',
+                                      'உங்கள் சுயவிவரம் ஏற்றப்படுகிறது…'))
+                              : FailureNotice(
+                                  title: app.text('Could not load your profile',
+                                      'உங்கள் சுயவிவரத்தை ஏற்ற முடியவில்லை'),
+                                  message: errorMessage(_editError, app.locale),
+                                  retryLabel:
+                                      app.text('Retry', 'மீண்டும் முயற்சி'),
+                                  onRetry: _loadEditProfile))))));
     }
     final profile = app.onboardingProfile;
     if (!_loaded && profile != null) {

@@ -235,6 +235,7 @@ class HomeDesignScreen extends ConsumerWidget {
       HomeDesignController actions) {
     final offers = [34, 39].contains(designId);
     return NightshiftFeatureBanner(
+        compact: true,
         title: offers
             ? [
                 'Make more time to talk',
@@ -460,46 +461,19 @@ class HomeDesignScreen extends ConsumerWidget {
                   const Text('Your local design choices are ready to review.')),
               child: const Text('Save preview'))
         ] else ...[
-          InkWell(
+          NightshiftModeCard(
+              title: listener ? 'Switch to Customer' : 'Become a Listener',
+              subtitle: listener
+                  ? 'Find a conversation, at your pace'
+                  : 'Good conversations start with listening',
+              icon: Icons.headset_mic_outlined,
               onTap: () => listener
                   ? _open(context, const HomeDesignScreen(designId: 6))
                   : _sheet(
                       context,
                       'Become a Listener',
                       const Text(
-                          'Discover one-to-one conversations in Tamil and English.')),
-              borderRadius: BorderRadius.circular(18),
-              child: Container(
-                  padding: const EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      gradient: const LinearGradient(
-                          colors: [Color(0xFF311451), Color(0xFF17132E)]),
-                      border: Border.all(color: NsColors.violet.withAlpha(50))),
-                  child: Row(children: [
-                    const Icon(Icons.headset_mic_outlined,
-                        color: NsColors.violet, size: 25),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                          Text(
-                              listener
-                                  ? 'Switch to Customer'
-                                  : 'Become a Listener',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w700, fontSize: 13)),
-                          const SizedBox(height: 3),
-                          Text(
-                              listener
-                                  ? 'Find a conversation, at your pace'
-                                  : 'Good conversations start with listening',
-                              style: const TextStyle(
-                                  color: NsColors.muted, fontSize: 10))
-                        ])),
-                    const Icon(Icons.chevron_right, size: 19)
-                  ]))),
+                          'Discover one-to-one conversations in Tamil and English.'))),
           const SizedBox(height: 14),
           Container(
               clipBehavior: Clip.antiAlias,
@@ -672,12 +646,8 @@ class HomeDesignScreen extends ConsumerWidget {
                       tooltip: 'Preview recent conversation',
                       onPressed: () => _open(context,
                           const CallDesignScreen(designId: 50, preview: true)),
-                      icon: Icon(
-                          i.isEven
-                              ? Icons.call_outlined
-                              : Icons.videocam_outlined,
-                          size: 20,
-                          color: NsColors.cyan))))
+                      icon: const Icon(Icons.chevron_right,
+                          size: 20, color: NsColors.muted))))
       ];
 
   List<Widget> _availability(BuildContext context, HomeDesignState state,

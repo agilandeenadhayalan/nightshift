@@ -42,6 +42,35 @@ Future<void> _mount(
 }
 
 void main() {
+  testWidgets(
+      'live wallet keeps sample packs secondary and never starts a purchase',
+      (tester) async {
+    final api = FakeApi();
+    final app = _controller(api);
+    await _mount(tester, app, 15);
+    expect(find.byKey(const Key('commerce-wallet-balance')).hitTestable(),
+        findsOneWidget);
+    expect(find.byKey(const Key('commerce-pack-0')), findsNothing);
+    final toggle = find.byKey(const Key('commerce-pack-previews'));
+    await tester.scrollUntilVisible(toggle, 200,
+        scrollable: find.byType(Scrollable).first);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+        find.byKey(const Key('commerce-pack-0')), 200,
+        scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.byKey(const Key('commerce-pack-0')));
+    await tester.pump();
+    expect(
+        tester
+            .widget<FilledButton>(
+                find.byKey(const Key('commerce-disabled-payment')))
+            .onPressed,
+        isNull);
+    expect(find.text('₹62'), findsNothing);
+    expect(api.requests, isEmpty);
+  });
+
   test('drafts are scoped by account and isolated from previews', () async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
@@ -59,6 +88,10 @@ void main() {
     expect(container.read(second).bank, isNull);
     expect(container.read(second).supportCategory, isNull);
     expect(container.read(preview).pack, 4);
+    container.read(first.notifier).showPackPreviews(true);
+    expect(container.read(first).packPreviewsOpen, true);
+    expect(container.read(second).packPreviewsOpen, false);
+    expect(container.read(preview).packPreviewsOpen, false);
     expect(container.read(preview).method, 'Any UPI app');
     subscription.close();
     await container.pump();
@@ -244,6 +277,11 @@ void main() {
       expect(find.text(title), findsWidgets);
       expect(tester.takeException(), isNull);
       if (id == 15) {
+        await tester.scrollUntilVisible(
+            find.byKey(const Key('commerce-pack-previews')), 250,
+            scrollable: find.byType(Scrollable).first);
+        await tester.tap(find.byKey(const Key('commerce-pack-previews')));
+        await tester.pumpAndSettle();
         await tester.scrollUntilVisible(
             find.byKey(const Key('commerce-pack-2')), 250,
             scrollable: find.byType(Scrollable).first);

@@ -43,6 +43,9 @@ class _CallScreenState extends ConsumerState<CallScreen> {
         !call.ringing &&
         !state.needsVideoConsent &&
         state.video != null;
+    final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.5;
+    final compact = largeText || MediaQuery.sizeOf(context).height < 700;
+    final identityInHeader = liveVideo || compact;
     final disabled =
         state.endingLocally || state.busy || state.needsVideoConsent;
     final customerRate = call.isVideo
@@ -85,6 +88,8 @@ class _CallScreenState extends ConsumerState<CallScreen> {
               background: liveVideo && !_games
                   ? VideoCallView(
                       fullBleed: true,
+                      showLocalPreview: false,
+                      showWaitingIndicator: false,
                       video: state.video!,
                       remoteAvatarCode: avatar,
                       localAvatarCode: localAvatar,
@@ -126,12 +131,45 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                   color: const Color(0xFFEBA9D5))))),
                 ]),
                 const SizedBox(height: 10),
-                Semantics(
-                    liveRegion: true,
-                    child: Text(title,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            color: NsColors.muted, fontSize: 12)))
+                if (!identityInHeader)
+                  Semantics(
+                      liveRegion: true,
+                      child: Text(title,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              color: NsColors.muted, fontSize: 12))),
+                if (identityInHeader)
+                  Row(children: [
+                    Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                          Text(name,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(fontSize: compact ? 18 : 26)),
+                          const SizedBox(height: 6),
+                          Semantics(
+                              liveRegion: true,
+                              child: Text(title,
+                                  style: const TextStyle(
+                                      color: Colors.white70, fontSize: 11))),
+                        ])),
+                    const SizedBox(width: 12),
+                    if (liveVideo && !_games)
+                      VideoLocalPreview(
+                          video: state.video!,
+                          avatarCode: localAvatar,
+                          label: state.text('You', 'நீங்கள்'),
+                          waitingLabel: state.text('Waiting for video',
+                              'வீடியோவிற்காக காத்திருக்கிறது'),
+                          cameraOffLabel: state.text(
+                              'Camera off', 'கேமரா நிறுத்தப்பட்டுள்ளது'))
+                    else
+                      NightshiftAvatar(
+                          name: name, avatarCode: avatar, size: 52),
+                  ]),
               ]),
               content: Center(
                   child: ConstrainedBox(
@@ -156,52 +194,88 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                       'உரையாடலுக்குத் திரும்பு'),
                                   onBack: () => setState(() => _games = false))
                             else ...[
-                              if (liveVideo)
+                              if (liveVideo) ...[
+                                if (state.video!.remoteVideo == null)
+                                  Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: CallStatusPill(
+                                          icon: Icons.videocam_off_outlined,
+                                          label: state.text('Waiting for video',
+                                              'வீடியோவிற்காக காத்திருக்கிறது'),
+                                          color: Colors.white70)),
                                 SizedBox(
-                                    height: (MediaQuery.sizeOf(context).height *
-                                            (MediaQuery.textScalerOf(context)
-                                                        .scale(1) >
-                                                    1.5
-                                                ? .45
-                                                : .32))
-                                        .clamp(80, 420))
-                              else
+                                    height: compact
+                                        ? 12
+                                        : (MediaQuery.sizeOf(context).height *
+                                                .14)
+                                            .clamp(40, 150)),
+                              ] else if (!compact)
                                 _CallPortrait(
                                     name: name,
                                     listener: !incoming,
                                     avatarCode: avatar,
                                     connecting: call.state != 'connected'),
-                              Text(name,
-                                  textAlign: liveVideo
-                                      ? TextAlign.left
-                                      : TextAlign.center,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineLarge
-                                      ?.copyWith(fontSize: 32)),
-                              const SizedBox(height: 8),
-                              Text(
-                                  incoming
-                                      ? state.text('Customer', 'வாடிக்கையாளர்')
-                                      : state.text('Listener', 'கேட்பவர்'),
-                                  textAlign: liveVideo
-                                      ? TextAlign.left
-                                      : TextAlign.center,
-                                  style: const TextStyle(
-                                      color: NsColors.muted, fontSize: 12)),
-                              if (!call.isVideo && !call.ringing) ...[
+                              if (!identityInHeader) ...[
+                                Text(name,
+                                    textAlign: liveVideo
+                                        ? TextAlign.left
+                                        : TextAlign.center,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineLarge
+                                        ?.copyWith(fontSize: 32)),
+                                const SizedBox(height: 8),
+                                Text(
+                                    incoming
+                                        ? state.text(
+                                            'Customer', 'வாடிக்கையாளர்')
+                                        : state.text('Listener', 'கேட்பவர்'),
+                                    textAlign: liveVideo
+                                        ? TextAlign.left
+                                        : TextAlign.center,
+                                    style: const TextStyle(
+                                        color: NsColors.muted, fontSize: 12)),
+                              ],
+                              if (!compact &&
+                                  !call.isVideo &&
+                                  !call.ringing) ...[
                                 const SizedBox(height: 20),
                                 const CallWaveMotif(),
                               ],
                               const SizedBox(height: 20),
-                              Text(
-                                  incoming
-                                      ? state.text(
-                                          'Customer rate: $customerRate',
-                                          'வாடிக்கையாளர் கட்டணம்: $customerRate')
-                                      : customerRate,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: 12)),
+                              Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 14),
+                                  decoration: BoxDecoration(
+                                      color: const Color(0xCC11192A),
+                                      borderRadius: BorderRadius.circular(22),
+                                      border:
+                                          Border.all(color: Colors.white12)),
+                                  child: Column(children: [
+                                    Text(
+                                        incoming
+                                            ? state.text(
+                                                'Customer rate: $customerRate',
+                                                'வாடிக்கையாளர் கட்டணம்: $customerRate')
+                                            : customerRate,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(fontSize: 12)),
+                                    if (!call.ringing) ...[
+                                      const SizedBox(height: 8),
+                                      Text(
+                                          incoming
+                                              ? financial
+                                              : state.text(
+                                                  'Test coins charged: ${creditAmount(call.chargeMicrocredits)}',
+                                                  'சோதனை நாணயக் கட்டணம்: ${creditAmount(call.chargeMicrocredits)}'),
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(fontSize: 12)),
+                                      CallAllowanceDisplay(
+                                          call: call,
+                                          locale: state.locale,
+                                          endingLocally: state.endingLocally),
+                                    ],
+                                  ])),
                               if (call.ringing) ...[
                                 const SizedBox(height: 12),
                                 Text(
@@ -235,20 +309,6 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                           icon: const Icon(
                                               Icons.videocam_outlined),
                                           label: Text(state.text('Review camera', 'கேமராவை சரிபார்')))),
-                                const SizedBox(height: 12),
-                                Text(
-                                    incoming
-                                        ? state.text(
-                                            'Test earnings: ₹${(call.earningPaise / 100).toStringAsFixed(2)}',
-                                            'சோதனை வருமானம்: ₹${(call.earningPaise / 100).toStringAsFixed(2)}')
-                                        : state.text(
-                                            'Test coins charged: ${creditAmount(call.chargeMicrocredits)}',
-                                            'சோதனை நாணயக் கட்டணம்: ${creditAmount(call.chargeMicrocredits)}'),
-                                    textAlign: TextAlign.center),
-                                CallAllowanceDisplay(
-                                    call: call,
-                                    locale: state.locale,
-                                    endingLocally: state.endingLocally),
                                 if (call.isVideo &&
                                     !state.needsVideoConsent &&
                                     state.video != null) ...[
@@ -291,25 +351,38 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                       label: Text(state.text(
                                           'End video and use audio',
                                           'வீடியோவை முடித்து ஆடியோவை பயன்படுத்து'))),
-                                const SizedBox(height: 16),
-                                Text(
-                                    call.isVideo
-                                        ? state.text(
-                                            'Leaving or locking the app ends this test call. No audio or video is recorded.',
-                                            'செயலியிலிருந்து வெளியேறினால் அல்லது பூட்டினால் அழைப்பு முடியும். ஆடியோவும் வீடியோவும் பதிவு செய்யப்படாது.')
-                                        : state.text(
-                                            'Leaving or locking the app ends this test call. No audio is recorded.',
-                                            'செயலியிலிருந்து வெளியேறினால் அல்லது பூட்டினால் அழைப்பு முடியும். ஆடியோ பதிவு செய்யப்படுவதில்லை.'),
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                        color: NsColors.muted, fontSize: 12)),
                               ],
-                              const SizedBox(height: 16),
-                              SelectableText(
-                                  state.text('Call ID: ${call.id}',
-                                      'அழைப்பு எண்: ${call.id}'),
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.bodySmall),
+                              const SizedBox(height: 12),
+                              ExpansionTile(
+                                key: ValueKey('call-details-${call.id}'),
+                                tilePadding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                                title: Text(state.text(
+                                    'Call details', 'அழைப்பு விவரங்கள்')),
+                                children: [
+                                  if (!call.ringing)
+                                    Text(
+                                        call.isVideo
+                                            ? state.text(
+                                                'Leaving or locking the app ends this test call. No audio or video is recorded.',
+                                                'செயலியிலிருந்து வெளியேறினால் அல்லது பூட்டினால் அழைப்பு முடியும். ஆடியோவும் வீடியோவும் பதிவு செய்யப்படாது.')
+                                            : state.text(
+                                                'Leaving or locking the app ends this test call. No audio is recorded.',
+                                                'செயலியிலிருந்து வெளியேறினால் அல்லது பூட்டினால் அழைப்பு முடியும். ஆடியோ பதிவு செய்யப்படுவதில்லை.'),
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                            color: NsColors.muted,
+                                            fontSize: 12)),
+                                  const SizedBox(height: 12),
+                                  SelectableText(
+                                      state.text('Call ID: ${call.id}',
+                                          'அழைப்பு எண்: ${call.id}'),
+                                      textAlign: TextAlign.center,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall),
+                                ],
+                              ),
                               MediaDiagnosticsButton(
                                   state: state, callId: call.id),
                             ],
@@ -349,6 +422,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                           ]
                         : [
                             CallRoundControl(
+                                compactLabel: state.text('Audio', 'ஒலி'),
                                 label: state.audio.speaker
                                     ? state.text(
                                         'Speaker on', 'ஒலிபெருக்கி இயங்குகிறது')
@@ -362,6 +436,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                         .perform(state.audio.toggleSpeaker)),
                             if (call.isVideo)
                               CallRoundControl(
+                                  compactLabel: state.text('Camera', 'கேமரா'),
                                   label: state.video?.cameraEnabled == true
                                       ? state.text(
                                           'Turn camera off', 'கேமராவை நிறுத்து')
@@ -375,6 +450,9 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                       : () => state.setCameraEnabled(
                                           !state.video!.cameraEnabled)),
                             CallRoundControl(
+                                compactLabel: state.audio.muted
+                                    ? state.text('Unmute', 'ஒலி இயக்கு')
+                                    : state.text('Mute', 'ஒலி நிறுத்து'),
                                 label: state.audio.muted
                                     ? state.text('Unmute', 'ஒலியை இயக்கு')
                                     : state.text('Mute', 'ஒலியை நிறுத்து'),
@@ -394,28 +472,50 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                     ? null
                                     : () => state.transition('end')),
                           ]),
-                Wrap(alignment: WrapAlignment.center, spacing: 8, children: [
-                  TextButton.icon(
-                      onPressed: state.busy
-                          ? null
-                          : () => showSafetyDialog(context, state, call),
-                      icon: const Icon(Icons.shield_outlined, size: 16),
-                      label: Text(
-                          state.text('Report or block', 'புகாரளி அல்லது தடு'))),
-                  if (!call.ringing)
-                    TextButton.icon(
-                        onPressed: state.endingLocally
+                if (largeText)
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    IconButton(
+                        tooltip:
+                            state.text('Report or block', 'புகாரளி அல்லது தடு'),
+                        onPressed: state.busy
                             ? null
-                            : () => setState(() => _games = !_games),
-                        icon: Icon(
-                            _games
-                                ? Icons.forum_outlined
-                                : Icons.casino_outlined,
-                            size: 16),
-                        label: Text(_games
-                            ? state.text('Conversation', 'உரையாடல்')
-                            : state.text('Games', 'விளையாட்டுகள்'))),
-                ]),
+                            : () => showSafetyDialog(context, state, call),
+                        icon: const Icon(Icons.shield_outlined)),
+                    if (!call.ringing)
+                      IconButton(
+                          tooltip: _games
+                              ? state.text('Conversation', 'உரையாடல்')
+                              : state.text('Games', 'விளையாட்டுகள்'),
+                          onPressed: state.endingLocally
+                              ? null
+                              : () => setState(() => _games = !_games),
+                          icon: Icon(_games
+                              ? Icons.forum_outlined
+                              : Icons.casino_outlined)),
+                  ])
+                else
+                  Wrap(alignment: WrapAlignment.center, spacing: 8, children: [
+                    TextButton.icon(
+                        onPressed: state.busy
+                            ? null
+                            : () => showSafetyDialog(context, state, call),
+                        icon: const Icon(Icons.shield_outlined, size: 16),
+                        label: Text(state.text(
+                            'Report or block', 'புகாரளி அல்லது தடு'))),
+                    if (!call.ringing)
+                      TextButton.icon(
+                          onPressed: state.endingLocally
+                              ? null
+                              : () => setState(() => _games = !_games),
+                          icon: Icon(
+                              _games
+                                  ? Icons.forum_outlined
+                                  : Icons.casino_outlined,
+                              size: 16),
+                          label: Text(_games
+                              ? state.text('Conversation', 'உரையாடல்')
+                              : state.text('Games', 'விளையாட்டுகள்'))),
+                  ]),
               ]),
             )));
   }
@@ -435,9 +535,9 @@ class _CallPortrait extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
       child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 28),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           child: Container(
-              padding: const EdgeInsets.all(25),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border:
@@ -447,7 +547,7 @@ class _CallPortrait extends StatelessWidget {
                     NsColors.violet.withValues(alpha: .04),
                   ])),
               child: Container(
-                  padding: const EdgeInsets.all(13),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
@@ -462,7 +562,7 @@ class _CallPortrait extends StatelessWidget {
                       ]),
                   child: NightshiftAvatar(
                       name: name,
-                      size: 160,
+                      size: 132,
                       listener: listener,
                       avatarCode: avatarCode)))));
 }

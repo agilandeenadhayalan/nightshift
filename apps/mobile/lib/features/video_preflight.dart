@@ -165,13 +165,28 @@ class _VideoPreflightState extends State<_VideoPreflight> {
                                         Theme.of(context).colorScheme.error))),
                         const SizedBox(height: 12),
                       ],
-                      Text(testRateLabel(state, widget.rate),
-                          style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      Text(testTariffDescription(state, widget.rate)),
+                      Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: .035),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white12)),
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(testRateLabel(state, widget.rate),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium),
+                                const SizedBox(height: 10),
+                                Text(testTariffDescription(state, widget.rate),
+                                    style: const TextStyle(
+                                        fontSize: 13, height: 1.5)),
+                              ])),
                       const SizedBox(height: 16),
                       CheckboxListTile(
                           contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
                           value: _consent,
                           onChanged:
                               previewing && !state.videoPreviewBusy && !_closing

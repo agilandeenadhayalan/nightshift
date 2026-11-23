@@ -71,6 +71,52 @@ class NightshiftProfileHero extends StatelessWidget {
       ]));
 }
 
+class NightshiftModeCard extends StatelessWidget {
+  const NightshiftModeCard(
+      {super.key,
+      required this.title,
+      required this.onTap,
+      this.subtitle,
+      this.icon = Icons.swap_horiz});
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onTap;
+  final IconData icon;
+  @override
+  Widget build(BuildContext context) => Material(
+      color: const Color(0xFF211A34),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: NsColors.violet.withAlpha(55))),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+          onTap: onTap,
+          child: Padding(
+              padding: const EdgeInsets.all(15),
+              child: Row(children: [
+                NightshiftIllustration(
+                    icon: icon, color: NsColors.violet, size: 40),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(title,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 14)),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 4),
+                        Text(subtitle!,
+                            style: const TextStyle(
+                                color: NsColors.muted, fontSize: 11))
+                      ],
+                    ])),
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right,
+                    color: NsColors.muted, size: 20),
+              ]))));
+}
+
 class NightshiftPortraitCard extends StatelessWidget {
   const NightshiftPortraitCard(
       {super.key,
@@ -90,148 +136,175 @@ class NightshiftPortraitCard extends StatelessWidget {
       this.onPortraitTap,
       this.portraitLabel});
   final String name, languages, status, rateLabel;
-  final String? avatarCode, assetPath, favoriteLabel, secondaryRateLabel;
+  final String? avatarCode,
+      assetPath,
+      favoriteLabel,
+      secondaryRateLabel,
+      portraitLabel;
   final bool available, favorite, hero;
-  final VoidCallback? onFavorite;
-  final VoidCallback? onPortraitTap;
-  final String? portraitLabel;
+  final VoidCallback? onFavorite, onPortraitTap;
   final List<Widget> actions;
   @override
   Widget build(BuildContext context) {
     final portrait = assetPath ?? avatarAssetPath(avatarCode);
-    final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
-    return Semantics(
-        label: onPortraitTap == null ? null : portraitLabel,
-        button: onPortraitTap != null,
-        child: GestureDetector(
-            onTap: onPortraitTap,
-            child: Container(
-                height: (hero ? 490 : 310) + (scale - 1) * 130,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(hero ? 28 : 20),
-                    border: Border.all(color: Colors.white12)),
-                child: Stack(fit: StackFit.expand, children: [
-                  if (portrait != null)
-                    AvatarPortrait(
-                        assetPath: portrait, borderRadius: BorderRadius.zero)
-                  else
-                    Container(
-                        decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                              Color(0xFF282344),
-                              Color(0xFF172234)
-                            ])),
-                        child: Center(
-                            child: NightshiftAvatar(
-                                name: name, avatarCode: avatarCode, size: 80))),
-                  const DecoratedBox(
-                      decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              stops: [
-                        .22,
-                        .57,
-                        1
-                      ],
-                              colors: [
-                        Colors.transparent,
-                        Color(0x65070913),
-                        Color(0xFF090D18)
-                      ]))),
-                  Positioned(
-                      top: 10,
-                      left: 10,
-                      right: 48,
-                      child: Align(
-                          alignment: Alignment.topLeft,
-                          child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 5),
-                              decoration: BoxDecoration(
-                                  color: const Color(0xB3191C29),
-                                  borderRadius: BorderRadius.circular(18),
-                                  border: Border.all(
-                                      color: available
-                                          ? const Color(0x8034D399)
-                                          : Colors.white24)),
-                              child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.circle,
-                                        size: 8,
-                                        color: available
-                                            ? const Color(0xFF34D399)
-                                            : NsColors.muted),
-                                    const SizedBox(width: 5),
-                                    Flexible(
-                                        child: Text(status,
-                                            style: TextStyle(
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.w700,
-                                                color: available
-                                                    ? const Color(0xFF72E7BE)
-                                                    : Colors.white70)))
+    return LayoutBuilder(builder: (context, constraints) {
+      final wide = constraints.maxWidth >= 280;
+      final imageHeight = hero
+          ? 390.0
+          : wide
+              ? 300.0
+              : 220.0;
+      return Semantics(
+          label: onPortraitTap == null ? null : portraitLabel,
+          button: onPortraitTap != null,
+          child: GestureDetector(
+              onTap: onPortraitTap,
+              child: Container(
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                      color: NsColors.card,
+                      borderRadius: BorderRadius.circular(hero ? 26 : 20),
+                      border: Border.all(color: Colors.white.withAlpha(18))),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(
+                            height: imageHeight,
+                            child: Stack(fit: StackFit.expand, children: [
+                              if (portrait != null)
+                                AvatarPortrait(
+                                    assetPath: portrait,
+                                    borderRadius: BorderRadius.zero)
+                              else
+                                Container(
+                                    decoration: const BoxDecoration(
+                                        gradient: LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                          Color(0xFF282344),
+                                          Color(0xFF172234)
+                                        ])),
+                                    child: Center(
+                                        child: NightshiftAvatar(
+                                            name: name,
+                                            avatarCode: avatarCode,
+                                            size: wide ? 104 : 76))),
+                              const IgnorePointer(
+                                  child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                              begin: Alignment.center,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                    Colors.transparent,
+                                    Color(0x66090D18)
                                   ])))),
-                  if (favoriteLabel != null)
-                    Positioned(
-                        top: 3,
-                        right: 2,
-                        child: IconButton(
-                            tooltip: favoriteLabel,
-                            onPressed: onFavorite,
-                            icon: Icon(
-                                favorite
-                                    ? Icons.favorite
-                                    : Icons.favorite_border,
-                                color: favorite
-                                    ? const Color(0xFFFB7185)
-                                    : Colors.white,
-                                size: 22))),
-                  Positioned(
-                      left: hero ? 18 : 12,
-                      right: hero ? 18 : 12,
-                      bottom: 12,
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(name,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    fontSize: hero ? 24 : 17,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white)),
-                            const SizedBox(height: 5),
-                            Text(languages,
-                                style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: hero ? 12 : 10)),
-                            const SizedBox(height: 10),
-                            Text(rateLabel,
-                                style: const TextStyle(
-                                    color: NsColors.gold,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 10)),
-                            if (secondaryRateLabel != null) ...[
-                              const SizedBox(height: 3),
-                              Text(secondaryRateLabel!,
-                                  style: const TextStyle(
-                                      color: Colors.white70, fontSize: 9))
-                            ],
-                            const SizedBox(height: 8),
-                            Row(children: [
-                              for (var i = 0; i < actions.length; i++) ...[
-                                if (i != 0) const SizedBox(width: 6),
-                                Expanded(child: actions[i])
-                              ]
-                            ]),
-                          ])),
-                ]))));
+                              Positioned(
+                                  bottom: 10,
+                                  left: 10,
+                                  right: 10,
+                                  child: Align(
+                                      alignment: Alignment.bottomLeft,
+                                      child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 5),
+                                          decoration: BoxDecoration(
+                                              color: const Color(0xD90B1020),
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                              border: Border.all(
+                                                  color: available
+                                                      ? const Color(0x8034D399)
+                                                      : Colors.white24)),
+                                          child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.circle,
+                                                    size: 7,
+                                                    color: available
+                                                        ? const Color(
+                                                            0xFF34D399)
+                                                        : NsColors.muted),
+                                                const SizedBox(width: 5),
+                                                Flexible(
+                                                    child: Text(status,
+                                                        style: TextStyle(
+                                                            fontSize:
+                                                                wide ? 12 : 11,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            color: available
+                                                                ? const Color(
+                                                                    0xFF72E7BE)
+                                                                : Colors
+                                                                    .white70))),
+                                              ])))),
+                              if (favoriteLabel != null)
+                                Positioned(
+                                    top: 2,
+                                    right: 2,
+                                    child: IconButton(
+                                        tooltip: favoriteLabel,
+                                        onPressed: onFavorite,
+                                        icon: Icon(
+                                            favorite
+                                                ? Icons.favorite
+                                                : Icons.favorite_border,
+                                            color: favorite
+                                                ? const Color(0xFFFB7185)
+                                                : Colors.white,
+                                            size: 22))),
+                            ])),
+                        Padding(
+                            padding: EdgeInsets.all(wide ? 16 : 12),
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  SizedBox(
+                                      height: wide
+                                          ? null
+                                          : MediaQuery.textScalerOf(context)
+                                                  .scale(16) *
+                                              2.5,
+                                      child: Text(name,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                              height: 1.25,
+                                              fontSize: wide ? 21 : 16,
+                                              fontWeight: FontWeight.w800,
+                                              color: Colors.white))),
+                                  const SizedBox(height: 5),
+                                  Text(languages,
+                                      style: TextStyle(
+                                          color: NsColors.muted,
+                                          fontSize: wide ? 13 : 11)),
+                                  const SizedBox(height: 12),
+                                  Text(rateLabel,
+                                      style: TextStyle(
+                                          color: NsColors.gold,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: wide ? 13 : 11)),
+                                  if (secondaryRateLabel != null) ...[
+                                    const SizedBox(height: 5),
+                                    Text(secondaryRateLabel!,
+                                        style: TextStyle(
+                                            color: NsColors.muted,
+                                            fontSize: wide ? 12 : 10))
+                                  ],
+                                  const SizedBox(height: 12),
+                                  Row(children: [
+                                    for (var i = 0;
+                                        i < actions.length;
+                                        i++) ...[
+                                      if (i != 0) const SizedBox(width: 6),
+                                      Expanded(child: actions[i])
+                                    ]
+                                  ]),
+                                ])),
+                      ]))));
+    });
   }
 }
 
@@ -245,65 +318,112 @@ class NightshiftFeatureBanner extends StatelessWidget {
       this.icon = Icons.auto_awesome,
       this.page = 0,
       this.pageCount = 1,
-      this.trailing});
+      this.trailing,
+      this.compact = false});
   final String title, actionLabel;
   final String? subtitle;
   final VoidCallback? onPressed;
   final IconData icon;
   final int page, pageCount;
   final Widget? trailing;
+  final bool compact;
   @override
-  Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: NsColors.violet.withAlpha(70)),
-          gradient: const LinearGradient(colors: [
-            Color(0xFF2A175B),
-            Color(0xFF151838),
-            Color(0xFF0D1630)
-          ])),
-      child: Row(children: [
-        Expanded(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title,
-              style:
-                  const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-          if (subtitle != null) ...[
-            const SizedBox(height: 6),
-            Text(subtitle!,
-                style: const TextStyle(fontSize: 11, color: NsColors.muted))
-          ],
-          const SizedBox(height: 8),
-          TextButton(
-              style: TextButton.styleFrom(
-                  backgroundColor: NsColors.gold,
-                  foregroundColor: const Color(0xFF241600),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                  minimumSize: const Size(44, 36)),
-              onPressed: onPressed,
-              child: Text(actionLabel,
-                  style: const TextStyle(
-                      fontSize: 10, fontWeight: FontWeight.w800))),
-          if (pageCount > 1) ...[
-            const SizedBox(height: 8),
-            Row(children: [
-              for (var i = 0; i < pageCount; i++)
-                Container(
-                    width: i == page ? 16 : 5,
-                    height: 5,
-                    margin: const EdgeInsets.only(right: 4),
-                    decoration: BoxDecoration(
-                        color: i == page ? Colors.white : Colors.white24,
-                        borderRadius: BorderRadius.circular(8)))
-            ])
-          ],
-        ])),
-        const SizedBox(width: 12),
-        trailing ?? Icon(icon, color: NsColors.cyan, size: 34),
-      ]));
+  Widget build(BuildContext context) => compact
+      ? _compact(context)
+      : Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: NsColors.violet.withAlpha(70)),
+              gradient: const LinearGradient(colors: [
+                Color(0xFF2A175B),
+                Color(0xFF151838),
+                Color(0xFF0D1630)
+              ])),
+          child: Row(children: [
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(title,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800, fontSize: 16)),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 6),
+                    Text(subtitle!,
+                        style: const TextStyle(
+                            fontSize: 11, color: NsColors.muted))
+                  ],
+                  const SizedBox(height: 8),
+                  TextButton(
+                      style: TextButton.styleFrom(
+                          backgroundColor: NsColors.gold,
+                          foregroundColor: const Color(0xFF241600),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 7),
+                          minimumSize: const Size(44, 36)),
+                      onPressed: onPressed,
+                      child: Text(actionLabel,
+                          style: const TextStyle(
+                              fontSize: 10, fontWeight: FontWeight.w800))),
+                  if (pageCount > 1) ...[
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      for (var i = 0; i < pageCount; i++)
+                        Container(
+                            width: i == page ? 16 : 5,
+                            height: 5,
+                            margin: const EdgeInsets.only(right: 4),
+                            decoration: BoxDecoration(
+                                color:
+                                    i == page ? Colors.white : Colors.white24,
+                                borderRadius: BorderRadius.circular(8)))
+                    ])
+                  ],
+                ])),
+            const SizedBox(width: 12),
+            trailing ?? Icon(icon, color: NsColors.cyan, size: 34),
+          ]));
+
+  Widget _compact(BuildContext context) => Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: Ink(
+          decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: NsColors.violet.withAlpha(55)),
+              gradient: const LinearGradient(
+                  colors: [Color(0xFF201A37), Color(0xFF151A2A)])),
+          child: Tooltip(
+              message: actionLabel,
+              child: InkWell(
+                  onTap: onPressed,
+                  child: Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+                      child: Row(children: [
+                        Icon(icon, color: NsColors.gold, size: 25),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                              Text(title,
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700)),
+                              if (subtitle != null) ...[
+                                const SizedBox(height: 3),
+                                Text(subtitle!,
+                                    style: const TextStyle(
+                                        fontSize: 11, color: NsColors.muted))
+                              ],
+                            ])),
+                        const SizedBox(width: 6),
+                        trailing ??
+                            const Icon(Icons.chevron_right,
+                                color: NsColors.violet),
+                      ]))))));
 }
 
 class NightshiftFeedSkeleton extends StatelessWidget {
@@ -370,55 +490,65 @@ class NightshiftSessionSummary extends StatelessWidget {
   final Widget? action;
   final VoidCallback? onTap;
   @override
-  Widget build(BuildContext context) => Material(
-      color: const Color(0xFF151827),
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: Colors.white.withAlpha(9))),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-          onTap: onTap,
-          child: Padding(
-              padding: const EdgeInsets.all(13),
-              child: Row(children: [
-                NightshiftAvatar(
-                    name: name,
-                    avatarCode: avatarCode,
-                    assetPath: assetPath,
-                    size: 48),
-                const SizedBox(width: 12),
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      Text(name,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 13)),
-                      const SizedBox(height: 4),
-                      Text(description,
-                          style: TextStyle(
-                              fontSize: 10,
-                              color: missed
-                                  ? const Color(0xFFFB7185)
-                                  : NsColors.muted)),
-                      const SizedBox(height: 4),
-                      Text(date,
-                          style: const TextStyle(
-                              color: NsColors.muted, fontSize: 9)),
-                      if (amount != null) ...[
-                        const SizedBox(height: 6),
-                        Text(amount!,
+  Widget build(BuildContext context) {
+    final largeText = MediaQuery.textScalerOf(context).scale(12) > 18;
+    final amountText = amount == null
+        ? null
+        : Text(amount!,
+            style: const TextStyle(
+                color: NsColors.cyan,
+                fontSize: 13,
+                fontWeight: FontWeight.w700));
+    return Material(
+        color: const Color(0xFF151827),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: Colors.white.withAlpha(9))),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+            onTap: onTap,
+            child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(children: [
+                  NightshiftAvatar(
+                      name: name,
+                      avatarCode: avatarCode,
+                      assetPath: assetPath,
+                      size: 48),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        Text(name,
                             style: const TextStyle(
-                                color: NsColors.cyan,
+                                fontWeight: FontWeight.w700, fontSize: 14)),
+                        const SizedBox(height: 5),
+                        Text(description,
+                            style: TextStyle(
                                 fontSize: 12,
-                                fontWeight: FontWeight.w700))
-                      ],
-                    ])),
-                const SizedBox(width: 8),
-                action ??
-                    Icon(video ? Icons.videocam_outlined : Icons.call_outlined,
-                        size: 20, color: NsColors.cyan),
-              ]))));
+                                color: missed
+                                    ? const Color(0xFFFB7185)
+                                    : NsColors.muted)),
+                        const SizedBox(height: 5),
+                        Text(date,
+                            style: const TextStyle(
+                                color: NsColors.muted, fontSize: 11)),
+                        if (largeText && amountText != null) ...[
+                          const SizedBox(height: 7),
+                          amountText
+                        ],
+                      ])),
+                  if (!largeText && amountText != null)
+                    Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: amountText),
+                  const SizedBox(width: 4),
+                  action ??
+                      const Icon(Icons.chevron_right,
+                          size: 20, color: NsColors.muted),
+                ]))));
+  }
 }
 
 class NightshiftEarningsSummary extends StatelessWidget {

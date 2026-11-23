@@ -23,17 +23,16 @@ class ProfileScreen extends ConsumerWidget {
           footer: isListener ? null : _ProfileWallet(state: state)),
       const SizedBox(height: 14),
       if (state.user?.listenerApproved == true)
-        FilledButton.tonalIcon(
-            onPressed: state.canSwitch
+        NightshiftModeCard(
+            onTap: state.canSwitch
                 ? () async {
                     await state.switchMode();
                     if (context.mounted) context.go('/home');
                   }
                 : null,
-            icon: const Icon(Icons.swap_horiz),
-            label: Text(isListener
+            title: isListener
                 ? state.text('Switch to Customer', 'வாடிக்கையாளராக மாறு')
-                : state.text('Switch to Listener', 'கேட்பவராக மாறு')))
+                : state.text('Switch to Listener', 'கேட்பவராக மாறு'))
       else
         InkWell(
             onTap: () => context.go('/listener-application'),

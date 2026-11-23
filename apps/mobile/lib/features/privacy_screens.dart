@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../core/controller.dart';
 import 'message_copy.dart';
+import 'redesign/design_system.dart';
+import 'state_widgets.dart';
 
 class PrivacyScreen extends ConsumerStatefulWidget {
   const PrivacyScreen({super.key});
@@ -40,11 +42,17 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                       style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 12),
                   if (state.busy && !state.loaded)
-                    const Center(child: CircularProgressIndicator()),
+                    LoadingNotice(
+                        label: app.text('Loading privacy information…',
+                            'தனியுரிமை தகவல் ஏற்றப்படுகிறது…')),
                   if (state.loaded && state.consents.isEmpty)
-                    Text(app.text(
-                        'No consent events are recorded for this account.',
-                        'இந்தக் கணக்கிற்கு ஒப்புதல் நிகழ்வுகள் பதிவாகவில்லை.')),
+                    NightshiftMessagePanel(
+                        icon: Icons.privacy_tip_outlined,
+                        title: app.text('No consent history yet',
+                            'ஒப்புதல் வரலாறு இன்னும் இல்லை'),
+                        message: app.text(
+                            'No consent events are recorded for this account.',
+                            'இந்தக் கணக்கிற்கு ஒப்புதல் நிகழ்வுகள் பதிவாகவில்லை.')),
                   for (final item in state.consents)
                     Card(
                         child: Padding(
@@ -52,17 +60,32 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                             child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(_purpose(
-                                      item['purpose'] as String, app.locale)),
+                                  Text(
+                                      _purpose(item['purpose'] as String,
+                                          app.locale),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium),
+                                  const SizedBox(height: 8),
                                   Text(
                                       '${app.text('Notice', 'அறிவிப்பு')}: ${item['noticeVersion']}'),
                                   Text(item['granted'] == true
                                       ? app.text('Accepted', 'ஏற்கப்பட்டது')
                                       : app.text('Withdrawn',
                                           'திரும்பப் பெறப்பட்டது')),
-                                  Text(_date(item['createdAt'] as String)),
+                                  const SizedBox(height: 8),
+                                  Text(_date(item['createdAt'] as String),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurfaceVariant)),
                                 ]))),
                   const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 20),
                   Text(
                       app.text('Request account deletion',
                           'கணக்கு நீக்கத்தைக் கோரு'),
@@ -81,6 +104,11 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                         'கடந்த ஐந்து நிமிடங்களுக்குள் புதிய SMS உள்நுழைவு தேவை. பழைய அமர்வை புதுப்பிப்பது கணக்கில் வராது. செயலில் உள்ள அழைப்பை முதலில் முடிக்கவும்.')),
                     const SizedBox(height: 16),
                     FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.errorContainer,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.onErrorContainer),
                         icon: const Icon(Icons.delete_outline),
                         onPressed: state.canDelete
                             ? () async {
@@ -104,8 +132,14 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         child: Semantics(
                             liveRegion: true,
-                            child: Text(
-                                errorMessage(state.errorCode, app.locale)))),
+                            child: NightshiftMessagePanel(
+                                title: app.text(
+                                    'Privacy request needs attention',
+                                    'தனியுரிமைக் கோரிக்கையைக் கவனிக்கவும்'),
+                                icon: Icons.error_outline_rounded,
+                                accent: Theme.of(context).colorScheme.error,
+                                message: errorMessage(
+                                    state.errorCode, app.locale)))),
                   if (state.errorCode == 'FRESH_SIGN_IN_REQUIRED')
                     OutlinedButton(
                         onPressed: state.busy ? null : app.logout,
@@ -157,6 +191,10 @@ class _DeletionConfirmationState extends State<_DeletionConfirmation> {
               onPressed: () => Navigator.pop(context, false),
               child: Text(app.text('Cancel', 'ரத்து'))),
           FilledButton(
+              style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.errorContainer,
+                  foregroundColor:
+                      Theme.of(context).colorScheme.onErrorContainer),
               onPressed: confirmed ? () => Navigator.pop(context, true) : null,
               child: Text(app.text('Submit request', 'கோரிக்கையை சமர்ப்பி')))
         ]);
@@ -202,6 +240,11 @@ class _DeletionStatusScreenState extends ConsumerState<DeletionStatusScreen> {
             child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 640),
                 child: ListView(padding: const EdgeInsets.all(20), children: [
+                  const Align(
+                      alignment: Alignment.centerLeft,
+                      child: NightshiftIllustration(
+                          icon: Icons.receipt_long_outlined, size: 56)),
+                  const SizedBox(height: 16),
                   Text(app.text(
                       'This receipt is saved securely on this device. It can check your request after sign-out. Do not clear app data while you need it.',
                       'இந்த ரசீது சாதனத்தில் பாதுகாப்பாக சேமிக்கப்பட்டுள்ளது. வெளியேறிய பிறகும் கோரிக்கையை சரிபார்க்கலாம். இது தேவைப்படும்போது செயலித் தரவை அழிக்க வேண்டாம்.')),
@@ -262,11 +305,18 @@ class _DeletionStatusScreenState extends ConsumerState<DeletionStatusScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         child: Semantics(
                             liveRegion: true,
-                            child: Text(
-                                errorMessage(state.errorCode, app.locale)))),
+                            child: NightshiftMessagePanel(
+                                title: app.text('Could not check this request',
+                                    'இந்தக் கோரிக்கையைச் சரிபார்க்க முடியவில்லை'),
+                                icon: Icons.error_outline_rounded,
+                                accent: Theme.of(context).colorScheme.error,
+                                message: errorMessage(
+                                    state.errorCode, app.locale)))),
                   const SizedBox(height: 20),
                   if (state.busy)
-                    const Center(child: CircularProgressIndicator()),
+                    LoadingNotice(
+                        label: app.text('Checking request status…',
+                            'கோரிக்கை நிலை சரிபார்க்கப்படுகிறது…')),
                   OutlinedButton(
                       onPressed: state.busy || !state.hasSavedReceipt
                           ? null
@@ -274,8 +324,13 @@ class _DeletionStatusScreenState extends ConsumerState<DeletionStatusScreen> {
                       child: Text(app.text(
                           'Check request status', 'கோரிக்கை நிலையை சரிபார்'))),
                   if (!state.hasSavedReceipt)
-                    Text(app.text('There is no saved receipt on this device.',
-                        'இந்தச் சாதனத்தில் சேமிக்கப்பட்ட ரசீது இல்லை.')),
+                    NightshiftMessagePanel(
+                        icon: Icons.receipt_long_outlined,
+                        title: app.text(
+                            'No saved request', 'சேமிக்கப்பட்ட கோரிக்கை இல்லை'),
+                        message: app.text(
+                            'There is no saved receipt on this device.',
+                            'இந்தச் சாதனத்தில் சேமிக்கப்பட்ட ரசீது இல்லை.')),
                 ]))));
   }
 }
