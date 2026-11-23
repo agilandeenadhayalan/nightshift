@@ -269,10 +269,10 @@ void main() {
     await reveal(tester, find.text('Switch camera'));
     expect(
         tester
-            .widget<OutlinedButton>(find.ancestor(
+            .widget<ButtonStyleButton>(find.ancestor(
                 of: find.text('Switch camera'),
-                matching: find
-                    .byWidgetPredicate((widget) => widget is OutlinedButton)))
+                matching: find.byWidgetPredicate(
+                    (widget) => widget is ButtonStyleButton)))
             .onPressed,
         isNull);
     await tapVisible(tester, find.text('Turn camera on'));
@@ -353,14 +353,14 @@ void main() {
       {...callJson(state: 'ended'), 'id': 'audio-history-call'}
     ];
     await tapVisible(tester, find.text('Recents'));
-    expect(find.text('Video call'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Audio call'), 220,
+    expect(find.textContaining('Video call ·'), findsOneWidget);
+    await tester.scrollUntilVisible(find.textContaining('Audio call ·'), 220,
         scrollable: find
             .descendant(
                 of: find.byType(ListView), matching: find.byType(Scrollable))
             .first);
     await tester.pumpAndSettle();
-    expect(find.text('Audio call'), findsOneWidget);
+    expect(find.textContaining('Audio call ·'), findsOneWidget);
   });
 
   testWidgets('Tamil video at 2x text keeps end and report reachable',

@@ -41,6 +41,8 @@ void main() {
         }
         return null;
       };
+      await tester.tap(find.byTooltip('Call details'));
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Report or block'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Report or block'));

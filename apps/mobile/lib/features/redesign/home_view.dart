@@ -8,47 +8,47 @@ class HomeShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(appControllerProvider);
     final index = switch (path) { '/history' => 1, '/profile' => 2, _ => 0 };
+    final earned = state.history
+        .where((call) => call.listenerId == state.user?.id)
+        .fold<int>(0, (total, call) => total + call.earningPaise);
     return Scaffold(
         appBar: AppBar(title: const NightshiftBrand(size: 23), actions: [
           Padding(
               padding: const EdgeInsets.only(right: 14),
               child: ActionChip(
-                avatar: const Icon(Icons.toll_rounded,
-                    color: NsColors.gold, size: 18),
-                label: Text(creditAmount(state.balance - state.held)),
-                tooltip: state.text('Open test wallet', 'சோதனை பணப்பையைத் திற'),
-                onPressed: () => context.push('/wallet'),
+                avatar: Icon(
+                    state.isListener
+                        ? Icons.diamond_outlined
+                        : Icons.toll_rounded,
+                    color: NsColors.gold,
+                    size: 18),
+                label: Text(state.isListener
+                    ? state.historyLoaded
+                        ? '₹${(earned / 100).toStringAsFixed(2)}'
+                        : '—'
+                    : creditAmount(state.balance - state.held)),
+                tooltip: state.isListener
+                    ? state.text('Open test earnings in loaded history',
+                        'ஏற்றப்பட்ட வரலாற்றின் சோதனை வருமானத்தைத் திற')
+                    : state.text('Open test wallet', 'சோதனை பணப்பையைத் திற'),
+                onPressed: () =>
+                    context.push(state.isListener ? '/earnings' : '/wallet'),
               )),
         ]),
         body: NightshiftBackdrop(
             child: Column(children: [
-          Material(
-              color: Colors.transparent,
-              child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Wrap(
-                      spacing: 12,
-                      runSpacing: 4,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                            state.isListener
-                                ? state.text('Listener', 'கேட்பவர்')
-                                : state.text('Customer', 'வாடிக்கையாளர்'),
-                            style: Theme.of(context).textTheme.labelLarge),
-                        Row(mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(Icons.science_outlined, size: 18),
-                          const SizedBox(width: 8),
-                          Flexible(
-                              child: Text(
-                                  state.text(
-                                      'TEST CREDITS · Keep the app open for calls',
-                                      'சோதனை நாணயங்கள் · அழைப்புக்கு செயலியை திறந்து வைத்திருங்கள்'),
-                                  style:
-                                      Theme.of(context).textTheme.labelMedium))
-                        ]),
-                      ]))),
+          Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+              child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                      state.isListener
+                          ? state.text('Listener · Test earnings',
+                              'கேட்பவர் · சோதனை வருமானம்')
+                          : state.text('Customer · Test credits',
+                              'வாடிக்கையாளர் · சோதனை நாணயங்கள்'),
+                      style: const TextStyle(
+                          fontSize: 10, color: NsColors.muted)))),
           if (state.busy)
             LinearProgressIndicator(
                 minHeight: 2,
@@ -66,21 +66,26 @@ class HomeShell extends ConsumerWidget {
           },
           destinations: [
             NavigationDestination(
-                icon: Icon(state.isListener
-                    ? Icons.headset_mic_outlined
-                    : Icons.explore_outlined),
+                icon: Icon(
+                    state.isListener
+                        ? Icons.headset_mic_outlined
+                        : Icons.explore_outlined,
+                    color: index == 0 ? Colors.white : NsColors.muted),
                 label: state.isListener
                     ? state.text('Availability', 'கிடைப்பது')
                     : state.text('Discover', 'கண்டறி')),
             NavigationDestination(
-                icon: Icon(state.isListener
-                    ? Icons.receipt_long_outlined
-                    : Icons.history),
+                icon: Icon(
+                    state.isListener
+                        ? Icons.receipt_long_outlined
+                        : Icons.history,
+                    color: index == 1 ? Colors.white : NsColors.muted),
                 label: state.isListener
                     ? state.text('Earnings', 'வருமானம்')
                     : state.text('Recents', 'சமீபத்தில்')),
             NavigationDestination(
-                icon: const Icon(Icons.person_outline),
+                icon: Icon(Icons.person_outline,
+                    color: index == 2 ? Colors.white : NsColors.muted),
                 label: state.text('Profile', 'சுயவிவரம்')),
           ],
         ));
@@ -275,44 +280,44 @@ class _ListenerDashboard extends StatelessWidget {
                             color: NsColors.muted, fontSize: 11)),
                   ])),
           const SizedBox(height: 14),
-          Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: NsColors.violet.withAlpha(40)),
-                  gradient: const LinearGradient(
-                      colors: [Color(0xFF15192D), Color(0xFF292147)])),
+          NightshiftEarningsSummary(
+              title:
+                  state.text('Earnings & calls', 'வருமானம் மற்றும் அழைப்புகள்'),
+              amount: state.historyLoaded
+                  ? '₹${(earned / 100).toStringAsFixed(2)}'
+                  : '—',
+              subtitle: state.text(
+                  'Test earnings in loaded history · No cash payouts',
+                  'ஏற்றப்பட்ட வரலாற்றின் சோதனை வருமானம் · பணம் வழங்கப்படாது'),
+              onTap: () => context.push('/earnings')),
+          const SizedBox(height: 14),
+          NightshiftSurface(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                        state.text(
-                            'Earnings & calls', 'வருமானம் மற்றும் அழைப்புகள்'),
-                        style: const TextStyle(
-                            color: NsColors.muted, fontSize: 12)),
-                    const SizedBox(height: 8),
-                    Row(children: [
-                      Expanded(
-                          child: Text(
-                              state.historyLoaded
-                                  ? '₹${(earned / 100).toStringAsFixed(2)}'
-                                  : '—',
-                              style: const TextStyle(
-                                  fontSize: 30, fontWeight: FontWeight.w800))),
-                      IconButton(
-                          tooltip:
-                              state.text('View earnings', 'வருமானத்தைப் பார்'),
-                          onPressed: () => context.push('/earnings'),
-                          icon: const Icon(Icons.arrow_forward,
-                              color: NsColors.violet)),
-                    ]),
-                    const SizedBox(height: 4),
-                    Text(
-                        state.text(
-                            'Test earnings in loaded history · No cash payouts',
-                            'ஏற்றப்பட்ட வரலாற்றின் சோதனை வருமானம் · பணம் வழங்கப்படாது'),
-                        style: const TextStyle(
-                            color: NsColors.muted, fontSize: 10)),
+                    Padding(
+                        padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+                        child: Text(
+                            state.text(
+                                'Call preferences', 'அழைப்பு விருப்பங்கள்'),
+                            style: const TextStyle(
+                                color: NsColors.muted, fontSize: 10))),
+                    _ProfileMenuRow(
+                        icon: Icons.translate,
+                        title:
+                            state.text('Speaking languages', 'பேசும் மொழிகள்'),
+                        onTap: state.busy || state.hasCall
+                            ? null
+                            : () => context.push('/edit-profile')),
+                    const Divider(height: 1),
+                    _ProfileMenuRow(
+                        icon: Icons.perm_camera_mic_outlined,
+                        title:
+                            state.text('Call permissions', 'அழைப்பு அனுமதிகள்'),
+                        onTap: state.busy || state.hasCall
+                            ? null
+                            : () => showCallPermissions(context, state)),
                   ])),
           const SizedBox(height: 14),
           InvitationSettings(controller: state),

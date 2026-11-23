@@ -86,6 +86,8 @@ void main() {
     await tester.tap(find.text('Cancel call'));
     await tester.pumpAndSettle();
     expect(find.text('Your conversations'), findsOneWidget);
+    await tester.tap(find.byTooltip('Call details'));
+    await tester.pumpAndSettle();
     expect(find.text('Call ID: call-id'), findsOneWidget);
   });
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nightshift/features/redesign/design_system.dart';
 import 'package:nightshift/features/redesign/home_designs.dart';
+import 'package:nightshift/features/redesign/home_components.dart';
 
 Future<void> openHome(WidgetTester tester, int id) async {
   tester.view.physicalSize = const Size(390, 844);
@@ -97,7 +98,8 @@ void main() {
     await openHome(tester, 24);
     final row = find
         .ancestor(
-            of: find.text('Missed call'), matching: find.byType(Container))
+            of: find.text('Missed call'),
+            matching: find.byType(NightshiftSessionSummary))
         .first;
     expect(find.descendant(of: row, matching: find.textContaining('+₹')),
         findsNothing);

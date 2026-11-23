@@ -178,6 +178,8 @@ void main() {
     final (state, _, events) = await mountDirectory(tester, api: api);
     await tester.tap(find.text('Recents'));
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Call details'));
+    await tester.pumpAndSettle();
     expect(find.text('Current availability: Available now'), findsOneWidget);
     expect(state.history.single.state, 'ended');
     await tester.tap(find.text('Favorites'));
@@ -338,7 +340,8 @@ void main() {
       ..token = 'a'
       ..interceptor = (method, path, body) async {
         if (method == 'PUT' && path.startsWith('/blocks/')) {
-          throw const ApiFailure('BLOCK_DENIED', 'Could not block this account.',
+          throw const ApiFailure(
+              'BLOCK_DENIED', 'Could not block this account.',
               status: 403);
         }
         return null;

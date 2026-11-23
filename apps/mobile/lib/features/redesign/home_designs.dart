@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'design_system.dart';
+import 'home_components.dart';
 import 'call_designs.dart';
 import 'commerce_designs.dart';
 
@@ -233,77 +234,38 @@ class HomeDesignScreen extends ConsumerWidget {
   Widget _banner(BuildContext context, HomeDesignState state,
       HomeDesignController actions) {
     final offers = [34, 39].contains(designId);
-    return Container(
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: NsColors.violet.withAlpha(70)),
-            gradient: const LinearGradient(colors: [
-              Color(0xFF2A175B),
-              Color(0xFF151838),
-              Color(0xFF0D1630)
-            ])),
-        child: Row(children: [
-          Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Text(
-                    offers
-                        ? [
-                            'Make more time to talk',
-                            'A little extra connection',
-                            'Your next conversation'
-                          ][state.offer % 3]
-                        : 'Play games on call',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w800, fontSize: 16)),
-                const SizedBox(height: 7),
-                Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                    decoration: BoxDecoration(
-                        color: NsColors.gold,
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Text(
-                        offers ? 'SAMPLE COIN OFFERS' : 'EXPLORE TOGETHER',
-                        style: const TextStyle(
-                            color: Color(0xFF241600),
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800))),
-                const SizedBox(height: 9),
-                Row(children: [
-                  for (var i = 0; i < 3; i++)
-                    Container(
-                        width: i == state.offer % 3 ? 16 : 5,
-                        height: 5,
-                        margin: const EdgeInsets.only(right: 4),
-                        decoration: BoxDecoration(
-                            color: i == state.offer % 3
-                                ? Colors.white
-                                : Colors.white24,
-                            borderRadius: BorderRadius.circular(8)))
-                ])
-              ])),
-          const SizedBox(width: 12),
-          Column(children: [
-            Row(mainAxisSize: MainAxisSize.min, children: [
-              NightshiftAvatar(
-                  name: 'Sample friend', assetPath: _asset(1), size: 30),
-              NightshiftAvatar(
-                  name: 'Sample friend',
-                  assetPath: _asset(1, male: true),
-                  size: 30)
-            ]),
-            IconButton(
-                tooltip: offers ? 'Next offer design' : 'Explore game preview',
-                onPressed: offers
-                    ? () => actions.offer((state.offer + 1) % 3)
-                    : () => _open(context,
-                        const CallDesignScreen(designId: 33, preview: true)),
-                icon: Icon(offers ? Icons.chevron_right : Icons.casino_outlined,
-                    color: NsColors.cyan, size: 23))
-          ])
+    return NightshiftFeatureBanner(
+        title: offers
+            ? [
+                'Make more time to talk',
+                'A little extra connection',
+                'Your next conversation'
+              ][state.offer % 3]
+            : 'Play games on call',
+        actionLabel: offers ? 'SAMPLE COIN OFFERS' : 'EXPLORE TOGETHER',
+        onPressed: offers
+            ? () => actions.offer((state.offer + 1) % 3)
+            : () => _open(
+                context, const CallDesignScreen(designId: 33, preview: true)),
+        page: state.offer % 3,
+        pageCount: 3,
+        trailing: Column(children: [
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            NightshiftAvatar(
+                name: 'Sample friend', assetPath: _asset(1), size: 30),
+            NightshiftAvatar(
+                name: 'Sample friend',
+                assetPath: _asset(1, male: true),
+                size: 30)
+          ]),
+          IconButton(
+              tooltip: offers ? 'Next offer design' : 'Explore game preview',
+              onPressed: offers
+                  ? () => actions.offer((state.offer + 1) % 3)
+                  : () => _open(context,
+                      const CallDesignScreen(designId: 33, preview: true)),
+              icon: Icon(offers ? Icons.chevron_right : Icons.casino_outlined,
+                  color: NsColors.cyan))
         ]));
   }
 
@@ -313,34 +275,8 @@ class HomeDesignScreen extends ConsumerWidget {
         _banner(context, state, actions),
         const SizedBox(height: 16),
         if ([11, 32].contains(designId)) ...[
-          Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [_skeleton(120), _skeleton(64)]),
-          const SizedBox(height: 14),
-          LayoutBuilder(
-              builder: (context, c) =>
-                  Wrap(spacing: 12, runSpacing: 12, children: [
-                    for (var i = 0; i < 4; i++)
-                      SizedBox(
-                          width: (c.maxWidth - 12) / 2,
-                          child: Container(
-                              height: designId == 11 ? 245 : 180,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                  color: NsColors.surface,
-                                  borderRadius: BorderRadius.circular(20)),
-                              child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _skeleton(75),
-                                    const SizedBox(height: 8),
-                                    _skeleton(110)
-                                  ])))
-                  ])),
-          const SizedBox(height: 14),
-          const Text('Finding available Listeners…',
-              style: TextStyle(color: NsColors.muted, fontSize: 12)),
+          NightshiftFeedSkeleton(
+              label: 'Finding available Listeners…', compact: designId == 32),
         ] else ...[
           if (designId == 6)
             _portraitCard(context, state, actions, 0, hero: true)
@@ -376,105 +312,31 @@ class HomeDesignScreen extends ConsumerWidget {
   Widget _portraitCard(BuildContext context, HomeDesignState state,
       HomeDesignController actions, int index,
       {bool hero = false}) {
-    final names = ['Maya', 'Nila', 'Ananya', 'Meera'];
-    final name = names[index];
-    final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
-    return Container(
-        height: (hero ? 490 : 280) + (scale - 1) * 65,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(hero ? 28 : 20),
-            border: Border.all(color: Colors.white12)),
-        child: Stack(fit: StackFit.expand, children: [
-          AvatarPortrait(
-              assetPath: _asset(index + 1), borderRadius: BorderRadius.zero),
-          const DecoratedBox(
-              decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      stops: [
-                .25,
-                .6,
-                1
-              ],
-                      colors: [
-                Colors.transparent,
-                Color(0x42070913),
-                Color(0xFF090D18)
-              ]))),
-          Positioned(
-              top: 10,
-              left: 10,
-              child: _pill('ONLINE', Icons.circle, const Color(0xFF34D399))),
-          Positioned(
-              top: 5,
-              right: 3,
-              child: IconButton(
-                  tooltip: state.favorites.contains(index)
-                      ? 'Remove $name'
-                      : 'Save $name',
-                  onPressed: () => actions.favorite(index),
-                  icon: Icon(
-                      state.favorites.contains(index)
-                          ? Icons.favorite
-                          : Icons.favorite_outline,
-                      color: Colors.white,
-                      size: 21))),
-          Positioned(
-              left: hero ? 18 : 12,
-              right: hero ? 18 : 12,
-              bottom: 12,
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      Flexible(
-                          child: Text(name,
-                              style: TextStyle(
-                                  fontSize: hero ? 24 : 17,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white))),
-                      const SizedBox(width: 5),
-                      const Icon(Icons.verified, size: 14, color: NsColors.cyan)
-                    ]),
-                    const SizedBox(height: 5),
-                    Text(index.isEven ? 'Tamil · English' : 'English · Tamil',
-                        style: TextStyle(
-                            color: Colors.white70, fontSize: hero ? 12 : 10)),
-                    const SizedBox(height: 8),
-                    if (hero) ...[
-                      const Wrap(spacing: 6, runSpacing: 6, children: [
-                        Chip(
-                            label: Text('Music & everyday life',
-                                style: TextStyle(fontSize: 10))),
-                        Chip(
-                            label: Text('Just talk',
-                                style: TextStyle(fontSize: 10)))
-                      ]),
-                      const SizedBox(height: 7)
-                    ],
-                    Row(children: [
-                      Expanded(
-                          child: Text('60 coins / min',
-                              style: TextStyle(
-                                  color: NsColors.gold,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: hero ? 13 : 10))),
-                      IconButton.filled(
-                          tooltip: 'Preview call with $name',
-                          style: IconButton.styleFrom(
-                              backgroundColor: NsColors.cyan,
-                              foregroundColor: NsColors.background,
-                              minimumSize: const Size(40, 40)),
-                          onPressed: () => _open(
-                              context,
-                              const CallDesignScreen(
-                                  designId: 50, preview: true)),
-                          icon: const Icon(Icons.call, size: 18))
-                    ])
-                  ]))
-        ]));
+    final name = ['Maya', 'Nila', 'Ananya', 'Meera'][index];
+    return NightshiftPortraitCard(
+        name: name,
+        assetPath: _asset(index + 1),
+        languages: index.isEven ? 'Tamil · English' : 'English · Tamil',
+        status: 'ONLINE',
+        available: true,
+        rateLabel: '60 coins / min',
+        hero: hero,
+        favorite: state.favorites.contains(index),
+        favoriteLabel:
+            state.favorites.contains(index) ? 'Remove $name' : 'Save $name',
+        onFavorite: () => actions.favorite(index),
+        actions: [
+          Align(
+              alignment: Alignment.centerRight,
+              child: IconButton.filled(
+                  tooltip: 'Preview call with $name',
+                  style: IconButton.styleFrom(
+                      backgroundColor: NsColors.cyan,
+                      foregroundColor: NsColors.background),
+                  onPressed: () => _open(context,
+                      const CallDesignScreen(designId: 50, preview: true)),
+                  icon: const Icon(Icons.call, size: 18)))
+        ]);
   }
 
   Widget _matchDock(BuildContext context) => Container(
@@ -507,89 +369,62 @@ class HomeDesignScreen extends ConsumerWidget {
             icon: const Icon(Icons.videocam, size: 21))
       ]));
 
-  Widget _skeleton(double width) => Container(
-      width: width,
-      height: 12,
-      decoration: BoxDecoration(
-          color: const Color(0xFF292D42),
-          borderRadius: BorderRadius.circular(6)));
-
   List<Widget> _profile(BuildContext context, HomeDesignState state,
           HomeDesignController actions, bool listener) =>
       [
-        Container(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-            decoration: BoxDecoration(
-                color: const Color(0xFF171722),
-                borderRadius: BorderRadius.circular(26),
-                border: Border.all(color: Colors.white10)),
-            child: Column(children: [
-              Align(
-                  alignment: Alignment.centerRight,
-                  child: IconButton(
-                      tooltip: 'Edit preview profile',
-                      onPressed: () =>
-                          _open(context, const HomeDesignScreen(designId: 22)),
-                      icon: const Icon(Icons.edit_outlined,
-                          size: 18, color: NsColors.muted))),
-              NightshiftAvatar(
-                  name: listener ? 'Priya' : 'Arjun',
-                  assetPath: _asset(state.avatar + 1, male: !listener),
-                  size: 94),
-              const SizedBox(height: 12),
-              Text(
-                  state.nickname.isNotEmpty
-                      ? state.nickname
-                      : listener
-                          ? 'Priya Sharma'
-                          : 'Arjun',
-                  style: const TextStyle(
-                      fontSize: 21, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 6),
-              Text(listener ? '@priya_270' : '@arjun_090',
-                  style: const TextStyle(color: NsColors.muted, fontSize: 11)),
-              const SizedBox(height: 10),
-              _pill(
-                  listener ? 'Listener · ★ 4.9' : 'Customer · Joined Nov 2026',
-                  listener ? Icons.headset_mic : Icons.person_outline,
-                  NsColors.violet),
-              if (!listener) ...[
-                const SizedBox(height: 15),
-                Container(
+        NightshiftProfileHero(
+            name: state.nickname.isNotEmpty
+                ? state.nickname
+                : listener
+                    ? 'Priya Sharma'
+                    : 'Arjun',
+            assetPath: _asset(state.avatar + 1, male: !listener),
+            subtitle: listener ? '@priya_270' : '@arjun_090',
+            roleLabel:
+                listener ? 'Listener · ★ 4.9' : 'Customer · Joined Nov 2026',
+            roleIcon: listener ? Icons.headset_mic : Icons.person_outline,
+            editLabel: 'Edit preview profile',
+            onEdit: () => _open(context, const HomeDesignScreen(designId: 22)),
+            footer: listener
+                ? null
+                : Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                         color: const Color(0xFF22212A),
                         borderRadius: BorderRadius.circular(17)),
-                    child: Row(children: [
-                      const Icon(Icons.toll_rounded,
-                          color: NsColors.gold, size: 30),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                            Text('COINS BALANCE',
-                                style: TextStyle(
-                                    color: NsColors.muted,
-                                    fontSize: 9,
-                                    letterSpacing: 1)),
-                            Text('133 Coins',
+                    child: LayoutBuilder(builder: (context, constraints) {
+                      const balance = Row(children: [
+                        Icon(Icons.toll_rounded,
+                            color: NsColors.gold, size: 30),
+                        SizedBox(width: 10),
+                        Expanded(
+                            child: Text('133 Coins',
                                 style: TextStyle(
                                     color: NsColors.gold,
                                     fontSize: 17,
-                                    fontWeight: FontWeight.w800))
-                          ])),
-                      TextButton(
+                                    fontWeight: FontWeight.w800))),
+                      ]);
+                      final action = TextButton(
                           onPressed: () => _open(
                               context,
                               const CommerceDesignScreen(
                                   designId: 15, preview: true)),
-                          child: const Text('+ Recharge',
-                              style: TextStyle(
-                                  color: NsColors.gold, fontSize: 11)))
-                    ]))
-              ]
-            ])),
+                          child: const Text('+ Recharge'));
+                      if (constraints.maxWidth < 280 ||
+                          MediaQuery.textScalerOf(context).scale(14) > 21) {
+                        return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              balance,
+                              const SizedBox(height: 6),
+                              Align(
+                                  alignment: Alignment.centerRight,
+                                  child: action)
+                            ]);
+                      }
+                      return Row(
+                          children: [const Expanded(child: balance), action]);
+                    }))),
         const SizedBox(height: 14),
         if (designId == 22) ...[
           TextField(
@@ -815,64 +650,34 @@ class HomeDesignScreen extends ConsumerWidget {
                 fontSize: 10, letterSpacing: 1.5, color: NsColors.muted)),
         const SizedBox(height: 10),
         for (var i = 0; i < 5; i++)
-          Container(
-              margin: const EdgeInsets.only(bottom: 9),
-              padding: const EdgeInsets.all(13),
-              decoration: BoxDecoration(
-                  color: const Color(0xFF151827),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withAlpha(9))),
-              child: Row(children: [
-                NightshiftAvatar(
-                    name: listener
-                        ? ['Arjun', 'Rohan', 'Dev', 'Vikram', 'Kiran'][i]
-                        : ['Maya', 'Nila', 'Ananya', 'Meera', 'Kavya'][i],
-                    assetPath: _asset(i + 1, male: listener),
-                    size: 48),
-                const SizedBox(width: 12),
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      Text(
-                          listener
-                              ? ['Arjun', 'Rohan', 'Dev', 'Vikram', 'Kiran'][i]
-                              : ['Maya', 'Nila', 'Ananya', 'Meera', 'Kavya'][i],
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 13)),
-                      const SizedBox(height: 4),
-                      Text(
-                          i == 2
-                              ? 'Missed call'
-                              : '${i.isEven ? 'Audio' : 'Video'} · 0${i + 2}:24',
-                          style: TextStyle(
-                              fontSize: 10,
-                              color:
-                                  i == 2 ? Colors.redAccent : NsColors.muted)),
-                      const SizedBox(height: 4),
-                      Text('Today, ${10 + i}:24 AM',
-                          style: const TextStyle(
-                              color: NsColors.muted, fontSize: 9))
-                    ])),
-                if (listener)
-                  Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Text(i == 2 ? '—' : '+₹${i + 3}.50',
-                          style: const TextStyle(
-                              color: NsColors.cyan,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700))),
-                IconButton(
-                    tooltip: 'Preview recent conversation',
-                    onPressed: () => _open(context,
-                        const CallDesignScreen(designId: 50, preview: true)),
-                    icon: Icon(
-                        i.isEven
-                            ? Icons.call_outlined
-                            : Icons.videocam_outlined,
-                        size: 20,
-                        color: NsColors.cyan))
-              ]))
+          Padding(
+              padding: const EdgeInsets.only(bottom: 9),
+              child: NightshiftSessionSummary(
+                  name: listener
+                      ? ['Arjun', 'Rohan', 'Dev', 'Vikram', 'Kiran'][i]
+                      : ['Maya', 'Nila', 'Ananya', 'Meera', 'Kavya'][i],
+                  assetPath: _asset(i + 1, male: listener),
+                  description: i == 2
+                      ? 'Missed call'
+                      : '${i.isEven ? 'Audio' : 'Video'} · 0${i + 2}:24',
+                  date: 'Today, ${10 + i}:24 AM',
+                  amount: listener
+                      ? i == 2
+                          ? '—'
+                          : '+₹${i + 3}.50'
+                      : null,
+                  video: i.isOdd,
+                  missed: i == 2,
+                  action: IconButton(
+                      tooltip: 'Preview recent conversation',
+                      onPressed: () => _open(context,
+                          const CallDesignScreen(designId: 50, preview: true)),
+                      icon: Icon(
+                          i.isEven
+                              ? Icons.call_outlined
+                              : Icons.videocam_outlined,
+                          size: 20,
+                          color: NsColors.cyan))))
       ];
 
   List<Widget> _availability(BuildContext context, HomeDesignState state,

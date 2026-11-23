@@ -15,6 +15,8 @@ import 'call_allowance.dart';
 import 'media_diagnostics.dart';
 
 import 'redesign/design_system.dart';
+import 'redesign/home_components.dart';
+import 'redesign/call_components.dart';
 import 'redesign/entry_designs.dart';
 
 part 'redesign/base_widgets.dart';

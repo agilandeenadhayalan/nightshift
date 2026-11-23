@@ -7,6 +7,7 @@ import 'package:nightshift/core/api.dart';
 import 'package:nightshift/core/models.dart';
 import 'package:nightshift/features/account_screens.dart';
 import 'package:nightshift/features/redesign/design_system.dart';
+import 'package:nightshift/features/redesign/home_components.dart';
 import 'fakes.dart';
 
 Json profile(String avatar) => {
@@ -54,6 +55,14 @@ Future<void> openPicker(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Future<String?> selectedDraftAvatar(WidgetTester tester) async {
+  final hero = find.byType(NightshiftProfileHero);
+  await tester.scrollUntilVisible(hero, -280,
+      scrollable: find.byType(Scrollable).first);
+  await tester.pumpAndSettle();
+  return tester.widget<NightshiftProfileHero>(hero).avatarCode;
+}
+
 void main() {
   testWidgets(
       'editing waits for fresh server profile rather than overwriting it from cache',
@@ -68,13 +77,7 @@ void main() {
     expect(find.text('Loading your profile…'), findsOneWidget);
     pending.complete({'required': false, 'profile': profile('female_30')});
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.byType(NightshiftAvatar), 220,
-        scrollable: find.byType(Scrollable).first);
-    expect(
-        tester
-            .widget<NightshiftAvatar>(find.byType(NightshiftAvatar))
-            .avatarCode,
-        'female_30');
+    expect(await selectedDraftAvatar(tester), 'female_30');
     await tester.pumpWidget(const SizedBox.shrink());
   });
   testWidgets('failed profile load offers retry and cannot submit cached data',
@@ -93,13 +96,7 @@ void main() {
     expect(api.requests.where((r) => r['method'] == 'PUT'), isEmpty);
     await tester.tap(find.text('Retry'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.byType(NightshiftAvatar), 220,
-        scrollable: find.byType(Scrollable).first);
-    expect(
-        tester
-            .widget<NightshiftAvatar>(find.byType(NightshiftAvatar))
-            .avatarCode,
-        'male_30');
+    expect(await selectedDraftAvatar(tester), 'male_30');
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
@@ -118,11 +115,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('avatar-choice-female_02')));
     await tester.pumpAndSettle();
-    expect(
-        tester
-            .widget<NightshiftAvatar>(find.byType(NightshiftAvatar))
-            .avatarCode,
-        'female_02');
+    expect(await selectedDraftAvatar(tester), 'female_02');
     expect(app.onboardingProfile!['avatarCode'], 'moon');
     expect(api.requests, isEmpty);
     final save = find.widgetWithText(FilledButton, 'Save and continue');
@@ -152,11 +145,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('avatar-choice-male_01')));
     await tester.pumpAndSettle();
-    expect(
-        tester
-            .widget<NightshiftAvatar>(find.byType(NightshiftAvatar))
-            .avatarCode,
-        'wave');
+    expect(await selectedDraftAvatar(tester), 'wave');
     expect(api.requests, isEmpty);
     await tester.pumpWidget(const SizedBox.shrink());
   });

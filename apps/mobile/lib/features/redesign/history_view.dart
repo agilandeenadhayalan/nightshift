@@ -7,6 +7,8 @@ class HistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _HistoryScreenState extends ConsumerState<HistoryScreen> {
+  final Set<String> _expanded = {};
+
   bool _favorites = false, _measurePending = false;
   late final Discovery _discovery;
   final Map<String, GlobalKey> _recentKeys = {};
@@ -107,11 +109,22 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   : state.text('Your conversations', 'உங்கள் உரையாடல்கள்'),
               style: Theme.of(context).textTheme.headlineSmall),
           if (state.isListener && state.historyLoaded)
-            StatusCard(
-                title: '₹${(earned / 100).toStringAsFixed(2)}',
-                message: state.text(
-                    'Test earnings in this history · No cash payouts.',
-                    'காட்டப்பட்ட வரலாற்றின் சோதனை வருமானம். உண்மையான பணம் வழங்கப்படாது. விகிதமும் தீர்வும் சேவையகத்தால் கணக்கிடப்படும்.')),
+            NightshiftEarningsSummary(
+                title: state.text('Test earnings in loaded history',
+                    'ஏற்றப்பட்ட வரலாற்றின் சோதனை வருமானம்'),
+                amount: '₹${(earned / 100).toStringAsFixed(2)}',
+                subtitle: state.text(
+                    'No cash payouts. Amounts are settled by the server.',
+                    'பணம் வழங்கப்படாது. தொகைகள் சேவையகத்தால் கணக்கிடப்படுகின்றன.'),
+                audioLabel: state.text('Audio ₹', 'ஆடியோ ₹') +
+                    (state.history.where((c) => !c.isVideo && c.listenerId == state.user?.id).fold<int>(0, (v, c) => v + c.earningPaise) / 100)
+                        .toStringAsFixed(2),
+                videoLabel: state.text('Video ₹', 'வீடியோ ₹') +
+                    (state.history
+                                .where((c) => c.isVideo && c.listenerId == state.user?.id)
+                                .fold<int>(0, (v, c) => v + c.earningPaise) /
+                            100)
+                        .toStringAsFixed(2)),
           const SizedBox(height: 16),
           if (state.historyError != null)
             FailureNotice(
@@ -153,68 +166,91 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         _ => state.text('Earlier', 'முன்பு'),
                       },
                       style: Theme.of(context).textTheme.titleMedium)),
-            Card(
+            Padding(
                 key: _recentKeys.putIfAbsent(call.id, GlobalKey.new),
-                child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(children: [
-                            NightshiftAvatar(
-                                name: call.otherName(state.user!.id),
-                                size: 46,
-                                avatarCode: state.isListener
-                                    ? call.customerAvatarCode
-                                    : call.listenerAvatarCode),
-                            const SizedBox(width: 14),
-                            Expanded(
-                                child: Text(call.otherName(state.user!.id),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium)),
-                            Icon(
-                                call.isVideo
-                                    ? Icons.videocam_outlined
-                                    : Icons.call_outlined,
-                                color: NsColors.cyan),
-                          ]),
-                          const SizedBox(height: 8),
-                          Text(call.isVideo
-                              ? state.text('Video call', 'வீடியோ அழைப்பு')
-                              : state.text('Audio call', 'ஆடியோ அழைப்பு')),
-                          const SizedBox(height: 8),
-                          Text(
-                              '${_localDate(call.createdAt)} · ${durationLabel(call.connectedMs)}'),
-                          Text(state.text(
-                              'End reason: ${endReasonLabel(call.reason, state.locale)}',
-                              'முடிவு காரணம்: ${endReasonLabel(call.reason, state.locale)}')),
-                          Text(state.text(
-                              '${creditAmount(call.chargeMicrocredits)} test coins',
-                              '${creditAmount(call.chargeMicrocredits)} சோதனை நாணயங்கள்')),
-                          if (call.listenerId == state.user!.id)
-                            Text(state.text(
-                                'Test earnings ₹${(call.earningPaise / 100).toStringAsFixed(2)}',
-                                'சோதனை வருமானம் ₹${(call.earningPaise / 100).toStringAsFixed(2)}')),
-                          if (!state.isListener)
-                            RecentAvailability(
-                                state: state, listenerId: call.listenerId),
-                          const SizedBox(height: 8),
-                          SelectableText(
-                              state.text('Call ID: ${call.id}',
-                                  'அழைப்பு எண்: ${call.id}'),
-                              style: const TextStyle(
-                                  color: NsColors.muted, fontSize: 10)),
-                          MediaDiagnosticsButton(state: state, callId: call.id),
-                          TextButton.icon(
-                              onPressed: state.busy
-                                  ? null
-                                  : () =>
-                                      showSafetyDialog(context, state, call),
-                              icon: const Icon(Icons.shield_outlined),
-                              label: Text(state.text(
-                                  'Report or block', 'புகாரளி அல்லது தடு'))),
-                        ]))),
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Column(children: [
+                  NightshiftSessionSummary(
+                      name: call.otherName(state.user!.id),
+                      avatarCode: call.listenerId == state.user?.id
+                          ? call.customerAvatarCode
+                          : call.listenerAvatarCode,
+                      description:
+                          '${call.isVideo ? state.text('Video call', 'வீடியோ அழைப்பு') : state.text('Audio call', 'ஆடியோ அழைப்பு')} · ${durationLabel(call.connectedMs)}',
+                      date: _localDate(call.createdAt),
+                      video: call.isVideo,
+                      missed: call.connectedMs == 0,
+                      amount: call.listenerId == state.user?.id
+                          ? '₹${(call.earningPaise / 100).toStringAsFixed(2)}'
+                          : null,
+                      onTap: () => setState(() => _expanded.contains(call.id)
+                          ? _expanded.remove(call.id)
+                          : _expanded.add(call.id)),
+                      action: IconButton(
+                          key: ValueKey('history-details-${call.id}'),
+                          tooltip:
+                              state.text('Call details', 'அழைப்பு விவரங்கள்'),
+                          onPressed: () => setState(() =>
+                              _expanded.contains(call.id)
+                                  ? _expanded.remove(call.id)
+                                  : _expanded.add(call.id)),
+                          icon: Icon(
+                              _expanded.contains(call.id)
+                                  ? Icons.expand_less
+                                  : call.isVideo
+                                      ? Icons.videocam_outlined
+                                      : Icons.call_outlined,
+                              color: NsColors.cyan))),
+                  if (_expanded.contains(call.id))
+                    Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(state.text(
+                                      'End reason: ', 'முடிவு காரணம்: ') +
+                                  endReasonLabel(call.reason, state.locale)),
+                              Text(creditAmount(call.chargeMicrocredits) +
+                                  state.text(
+                                      ' test coins', ' சோதனை நாணயங்கள்')),
+                              if (call.listenerId == state.user!.id)
+                                Text(state.text(
+                                        'Test earnings ₹', 'சோதனை வருமானம் ₹') +
+                                    (call.earningPaise / 100)
+                                        .toStringAsFixed(2)),
+                              if (!state.isListener &&
+                                  call.customerId == state.user?.id)
+                                RecentAvailability(
+                                    state: state, listenerId: call.listenerId),
+                              const SizedBox(height: 8),
+                              SelectableText(
+                                  state.text('Call ID: ', 'அழைப்பு எண்: ') +
+                                      call.id,
+                                  style: const TextStyle(
+                                      color: NsColors.muted, fontSize: 10)),
+                              MediaDiagnosticsButton(
+                                  state: state, callId: call.id),
+                              if (!state.isListener &&
+                                  call.customerId == state.user?.id &&
+                                  call.ended &&
+                                  call.connectedMs > 0 &&
+                                  !state.hasCall)
+                                TextButton.icon(
+                                    onPressed: () =>
+                                        showCallRating(context, state, call),
+                                    icon: const Icon(Icons.star_outline),
+                                    label: Text(state.text('Rate conversation',
+                                        'உரையாடலை மதிப்பிடு'))),
+                              TextButton.icon(
+                                  onPressed: state.busy
+                                      ? null
+                                      : () => showSafetyDialog(
+                                          context, state, call),
+                                  icon: const Icon(Icons.shield_outlined),
+                                  label: Text(state.text('Report or block',
+                                      'புகாரளி அல்லது தடு'))),
+                            ])),
+                ])),
           ],
           if (state.historyLoading ||
               (!state.historyLoaded && state.historyError == null))

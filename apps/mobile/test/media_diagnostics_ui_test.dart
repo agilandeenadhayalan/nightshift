@@ -153,6 +153,9 @@ void main() {
     });
     await tester.tap(find.text('Recents'));
     await tester.pumpAndSettle();
+    await tester
+        .tap(find.byKey(const ValueKey('history-details-$diagnosticCallId')));
+    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(details, 160,
         scrollable: find.byType(Scrollable).first, maxScrolls: 30);
     await tester.pumpAndSettle();

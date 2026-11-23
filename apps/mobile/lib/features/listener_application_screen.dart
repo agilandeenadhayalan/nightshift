@@ -5,6 +5,7 @@ import '../core/controller.dart';
 import 'message_copy.dart';
 import 'redesign/design_system.dart';
 import 'redesign/entry_designs.dart';
+import 'redesign/entry_components.dart';
 
 class ListenerApplicationScreen extends ConsumerStatefulWidget {
   const ListenerApplicationScreen({super.key});
@@ -59,62 +60,127 @@ class _ApplicationScreenState extends ConsumerState<ListenerApplicationScreen> {
                         children: [
                           const Center(child: NightshiftBrand()),
                           const SizedBox(height: 28),
-                          const Center(
-                              child: NightshiftAvatar(
-                                  name: 'Listener', listener: true, size: 104)),
-                          const SizedBox(height: 24),
-                          Text(
-                              app.text('Your voice is your superpower.',
-                                  'உங்கள் குரலே உங்கள் பலம்.'),
-                              textAlign: TextAlign.center,
-                              style:
-                                  Theme.of(context).textTheme.headlineMedium),
+                          if (status == 'submitted') ...[
+                            Text(
+                                app.text('Almost done…',
+                                    'கிட்டத்தட்ட முடிந்துவிட்டது…'),
+                                key: const Key('live-application-pending'),
+                                textAlign: TextAlign.center,
+                                style:
+                                    Theme.of(context).textTheme.headlineMedium),
+                            const SizedBox(height: 28),
+                            Center(
+                                child: Container(
+                                    width: 112,
+                                    height: 112,
+                                    decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: const LinearGradient(colors: [
+                                          Color(0xff412074),
+                                          Color(0xff122b43)
+                                        ]),
+                                        border: Border.all(
+                                            color:
+                                                NsColors.cyan.withAlpha(95))),
+                                    child: const Icon(
+                                        Icons.hourglass_top_rounded,
+                                        size: 46,
+                                        color: NsColors.cyan))),
+                            const SizedBox(height: 28),
+                            Text(
+                                app.text('Application received',
+                                    'விண்ணப்பம் பெறப்பட்டது'),
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.titleLarge),
+                          ] else ...[
+                            Text(
+                                app.text('Your voice is your superpower.',
+                                    'உங்கள் குரலே உங்கள் பலம்.'),
+                                textAlign: TextAlign.center,
+                                style:
+                                    Theme.of(context).textTheme.headlineMedium),
+                            const NightshiftEntryPortraitScene(
+                                key: Key('live-listener-introduction')),
+                            Text(
+                                app.text('Make room for a conversation.',
+                                    'உரையாடலுக்கு நேரம் ஒதுக்குங்கள்.'),
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(color: NsColors.cyan)),
+                            const SizedBox(height: 24),
+                            NightshiftSurface(
+                                child: Column(children: [
+                              Text(
+                                  app.text('Customer + Listener',
+                                      'வாடிக்கையாளர் + கேட்பவர்'),
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium),
+                              const SizedBox(height: 8),
+                              Text(
+                                  app.text('One account. Two ways to connect.',
+                                      'ஒரு கணக்கு. இணைய இரு வழிகள்.'),
+                                  textAlign: TextAlign.center),
+                              const SizedBox(height: 14),
+                              Chip(
+                                  label: Text(app.text('Test earnings only',
+                                      'சோதனை வருமானம் மட்டுமே'))),
+                            ])),
+                          ],
                           const SizedBox(height: 12),
-                          Text(
-                              app.text('Apply to be a Listener',
-                                  'கேட்பவராக விண்ணப்பிக்கவும்'),
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.copyWith(color: NsColors.cyan)),
-                          const SizedBox(height: 12),
-                          Text(app.text(
-                              'Applying is free for adults aged 18+. A person reviews your private application. Approval, earnings and a review date are not guaranteed. This build uses test credits only.',
-                              '18 வயது நிரம்பிய பெரியவர்கள் இலவசமாக விண்ணப்பிக்கலாம். உங்கள் தனிப்பட்ட விண்ணப்பத்தை ஒருவர் ஆய்வு செய்வார். அங்கீகாரம், வருமானம் அல்லது ஆய்வுத் தேதி உறுதியில்லை. இந்தப் பதிப்பில் சோதனை நாணயங்கள் மட்டுமே பயன்படுத்தப்படும்.')),
-                          const SizedBox(height: 20),
-                          Wrap(spacing: 8, runSpacing: 8, children: [
-                            for (final entry in [
-                              (
-                                19,
-                                app.text('Listener orientation',
-                                    'கேட்பவர் அறிமுகம்'),
-                                Icons.school_outlined
-                              ),
-                              (
-                                26,
-                                app.text('Community guidelines',
-                                    'சமூக வழிகாட்டுதல்கள்'),
-                                Icons.favorite_outline
-                              ),
-                              (
-                                28,
-                                app.text('Voice sample guide',
-                                    'குரல் மாதிரி வழிகாட்டி'),
-                                Icons.graphic_eq
-                              ),
-                            ])
-                              OutlinedButton.icon(
-                                  key: Key('entry-guide-${entry.$1}'),
-                                  onPressed: () => Navigator.of(context).push(
-                                      MaterialPageRoute<void>(
-                                          builder: (_) => EntryDesignScreen(
-                                              designId: entry.$1,
-                                              preview: false))),
-                                  icon: Icon(entry.$3),
-                                  label: Text(entry.$2)),
-                          ]),
-                          const SizedBox(height: 20),
+                          if (status == 'submitted') ...[
+                            Text(
+                                app.text(
+                                    'A person reviews each private application. A review time or approval is not guaranteed.',
+                                    'ஒவ்வொரு தனிப்பட்ட விண்ணப்பத்தையும் ஒருவர் ஆய்வு செய்வார். ஆய்வு நேரம் அல்லது அங்கீகாரம் உறுதியில்லை.'),
+                                textAlign: TextAlign.center),
+                            const SizedBox(height: 24),
+                            FilledButton.icon(
+                                onPressed: state.busy ? null : state.load,
+                                icon: const Icon(Icons.refresh),
+                                label: Text(app.text(
+                                    'Check saved application status',
+                                    'சேமித்த விண்ணப்ப நிலையை சரிபார்'))),
+                            const SizedBox(height: 20),
+                          ] else ...[
+                            Text(app.text(
+                                'Applying is free for adults aged 18+. A person reviews your private application. Approval, earnings and a review date are not guaranteed. This build uses test credits only.',
+                                '18 வயது நிரம்பிய பெரியவர்கள் இலவசமாக விண்ணப்பிக்கலாம். உங்கள் தனிப்பட்ட விண்ணப்பத்தை ஒருவர் ஆய்வு செய்வார். அங்கீகாரம், வருமானம் அல்லது ஆய்வுத் தேதி உறுதியில்லை. இந்தப் பதிப்பில் சோதனை நாணயங்கள் மட்டுமே பயன்படுத்தப்படும்.')),
+                            const SizedBox(height: 20),
+                            Wrap(spacing: 8, runSpacing: 8, children: [
+                              for (final entry in [
+                                (
+                                  19,
+                                  app.text('Listener orientation',
+                                      'கேட்பவர் அறிமுகம்'),
+                                  Icons.school_outlined
+                                ),
+                                (
+                                  26,
+                                  app.text('Community guidelines',
+                                      'சமூக வழிகாட்டுதல்கள்'),
+                                  Icons.favorite_outline
+                                ),
+                                (
+                                  28,
+                                  app.text('Voice sample guide',
+                                      'குரல் மாதிரி வழிகாட்டி'),
+                                  Icons.graphic_eq
+                                ),
+                              ])
+                                OutlinedButton.icon(
+                                    key: Key('entry-guide-${entry.$1}'),
+                                    onPressed: () => Navigator.of(context).push(
+                                        MaterialPageRoute<void>(
+                                            builder: (_) => EntryDesignScreen(
+                                                designId: entry.$1,
+                                                preview: false))),
+                                    icon: Icon(entry.$3),
+                                    label: Text(entry.$2)),
+                            ]),
+                            const SizedBox(height: 20),
+                          ],
                           NightshiftSurface(
                               child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,16 +281,17 @@ class _ApplicationScreenState extends ConsumerState<ListenerApplicationScreen> {
                                         color: Theme.of(context)
                                             .colorScheme
                                             .error))),
-                          OutlinedButton.icon(
-                              onPressed: state.busy ? null : state.load,
-                              icon: const Icon(Icons.refresh),
-                              label: Text(app.text(
-                                  state.dirty
-                                      ? 'Reload saved draft (discards edits)'
-                                      : 'Check saved application status',
-                                  state.dirty
-                                      ? 'சேமித்த வரைவை ஏற்று (மாற்றங்கள் நீங்கும்)'
-                                      : 'சேமித்த விண்ணப்ப நிலையை சரிபார்'))),
+                          if (status != 'submitted')
+                            OutlinedButton.icon(
+                                onPressed: state.busy ? null : state.load,
+                                icon: const Icon(Icons.refresh),
+                                label: Text(app.text(
+                                    state.dirty
+                                        ? 'Reload saved draft (discards edits)'
+                                        : 'Check saved application status',
+                                    state.dirty
+                                        ? 'சேமித்த வரைவை ஏற்று (மாற்றங்கள் நீங்கும்)'
+                                        : 'சேமித்த விண்ணப்ப நிலையை சரிபார்'))),
                           if (state.loaded) ...[
                             const SizedBox(height: 20),
                             Text(
@@ -305,24 +372,14 @@ class _ApplicationScreenState extends ConsumerState<ListenerApplicationScreen> {
                                     'தனிப்பட்ட குரல் ஆய்வு மாதிரி'),
                                 style: Theme.of(context).textTheme.titleMedium),
                             const SizedBox(height: 12),
-                            NightshiftSurface(
-                                child: Column(children: [
-                              const Icon(Icons.graphic_eq_rounded,
-                                  color: NsColors.cyan, size: 54),
-                              const SizedBox(height: 12),
-                              Text(
-                                  app.text(
-                                      'Your introduction, in your own words.',
-                                      'உங்கள் அறிமுகம், உங்கள் சொற்களில்.'),
-                                  textAlign: TextAlign.center,
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium),
-                              const SizedBox(height: 8),
-                              Text(
-                                  app.text('2–60 seconds · private WAV sample',
-                                      '2–60 விநாடிகள் · தனிப்பட்ட WAV மாதிரி'),
-                                  textAlign: TextAlign.center),
-                            ])),
+                            NightshiftVoiceSampleVisual(
+                                key: const Key('live-voice-sample'),
+                                title: app.text(
+                                    'Your introduction, in your own words.',
+                                    'உங்கள் அறிமுகம், உங்கள் சொற்களில்.'),
+                                caption: app.text(
+                                    '2–60 seconds · private WAV sample',
+                                    '2–60 விநாடிகள் · தனிப்பட்ட WAV மாதிரி')),
                             const SizedBox(height: 16),
                             Text(app.text(
                                 'Choose an existing WAV file. Nothing is recorded automatically. The sample is for human review; it is not proof of age, gender or identity. Age is self-declared and any further verification is a separate process.',

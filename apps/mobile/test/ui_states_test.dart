@@ -78,6 +78,8 @@ void main() {
     fail = false;
     await tester.tap(find.text('Retry'));
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Call details'));
+    await tester.pumpAndSettle();
     expect(find.text('Call ID: call-id'), findsOneWidget);
     expect(find.text('Connection unavailable'), findsNothing);
     expect(
@@ -368,6 +370,8 @@ void main() {
         {...callJson(state: 'ended'), 'reason': 'connection_timeout'}
       ];
     await mountApp(tester, api: api, path: '/history', locale: 'ta');
+    await tester.tap(find.byTooltip('அழைப்பு விவரங்கள்'));
+    await tester.pumpAndSettle();
     expect(find.text('முடிவு காரணம்: இணைப்பு நேரம் முடிந்தது'), findsOneWidget);
     expect(find.textContaining('connection_timeout'), findsNothing);
     api.interceptor = (method, path, body) async {

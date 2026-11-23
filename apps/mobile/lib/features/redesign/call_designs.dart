@@ -1,8 +1,8 @@
-import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'design_system.dart';
+import 'call_components.dart';
 
 /// Presentation state for the supplied call designs. It deliberately has no
 /// RTC, wallet or API dependency; live calls remain owned by AppController.
@@ -242,8 +242,8 @@ class CallDesignScreen extends ConsumerWidget {
 
 const _sampleWoman = 'assets/avatars/female/avatar_01.png';
 const _sampleMan = 'assets/avatars/male/avatar_01.png';
-const _green = Color(0xFF36BD85), _yellow = Color(0xFFF5C84C);
-const _red = Color(0xFFF16B79), _blue = Color(0xFF579BED);
+const _yellow = Color(0xFFF5C84C);
+const _red = Color(0xFFF16B79);
 
 class _CallHeader extends StatelessWidget {
   const _CallHeader(
@@ -955,7 +955,7 @@ class _LudoDesign extends StatelessWidget {
                         borderRadius: BorderRadius.circular(13),
                         child: CustomPaint(
                             key: const ValueKey('detailed-ludo-board'),
-                            painter: _LudoBoardPainter(state.moves)))))),
+                            painter: CallBoardPainter(state.moves)))))),
         const SizedBox(height: 20),
         _PlayerStrip(
             name: 'You',
@@ -1006,122 +1006,6 @@ class _LudoDesign extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(color: NsColors.muted, fontSize: 10)),
       ]);
-}
-
-class _LudoBoardPainter extends CustomPainter {
-  const _LudoBoardPainter(this.moves);
-  final int moves;
-  @override
-  void paint(Canvas canvas, Size size) {
-    final u = size.width / 15;
-    final fill = Paint();
-    final stroke = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = .6
-      ..color = const Color(0x33FFFFFF);
-    canvas.drawRect(Offset.zero & size, fill..color = const Color(0xFF090614));
-    for (var y = 0; y < 15; y++) {
-      for (var x = 0; x < 15; x++) {
-        if ((x >= 6 && x <= 8) || (y >= 6 && y <= 8)) {
-          var color = const Color(0xFF191625);
-          if (y == 7 && x > 0 && x < 6) color = _green;
-          if (x == 7 && y > 0 && y < 6) color = _yellow;
-          if (y == 7 && x > 8 && x < 14) color = _blue;
-          if (x == 7 && y > 8 && y < 14) color = _red;
-          if (x == 1 && y == 6) color = _green;
-          if (x == 8 && y == 1) color = _yellow;
-          if (x == 13 && y == 8) color = _blue;
-          if (x == 6 && y == 13) color = _red;
-          final rect = Rect.fromLTWH(x * u, y * u, u, u);
-          canvas.drawRect(rect, fill..color = color.withValues(alpha: .7));
-          canvas.drawRect(rect, stroke);
-        }
-      }
-    }
-    void token(double x, double y, Color color) {
-      final c = Offset(x * u, y * u);
-      canvas.drawCircle(c + Offset(0, u * .1), u * .43,
-          fill..color = Colors.black.withValues(alpha: .2));
-      canvas.drawCircle(c, u * .4, fill..color = color);
-      canvas.drawCircle(
-          c,
-          u * .4,
-          Paint()
-            ..color = Colors.white
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.6);
-      canvas.drawCircle(c - Offset(u * .08, u * .08), u * .22,
-          fill..color = Colors.white.withValues(alpha: .45));
-    }
-
-    for (final (x, y, color) in [
-      (0.0, 0.0, _green),
-      (9.0, 0.0, _yellow),
-      (0.0, 9.0, _red),
-      (9.0, 9.0, _blue)
-    ]) {
-      final yard = Rect.fromLTWH(x * u, y * u, 6 * u, 6 * u);
-      canvas.drawRect(
-          yard,
-          Paint()
-            ..shader = LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color.lerp(color, Colors.black, .18)!,
-                  Color.lerp(color, Colors.black, .75)!
-                ]).createShader(yard));
-      canvas.drawRRect(
-          RRect.fromRectAndRadius(
-              Rect.fromLTWH((x + .8) * u, (y + .8) * u, 4.4 * u, 4.4 * u),
-              Radius.circular(u * .3)),
-          fill..color = const Color(0xB3090614));
-      for (final dx in [2.0, 4.0]) {
-        for (final dy in [2.0, 4.0]) {
-          canvas.drawCircle(Offset((x + dx) * u, (y + dy) * u), u * .67,
-              fill..color = color.withValues(alpha: .17));
-          if (!(x == 0 && y == 9 && dx == 2 && dy == 2)) {
-            token(x + dx, y + dy, color);
-          }
-        }
-      }
-    }
-    final center = Offset(7.5 * u, 7.5 * u);
-    for (final (points, color) in [
-      ([Offset(6 * u, 6 * u), Offset(6 * u, 9 * u)], _green),
-      ([Offset(6 * u, 6 * u), Offset(9 * u, 6 * u)], _yellow),
-      ([Offset(9 * u, 6 * u), Offset(9 * u, 9 * u)], _blue),
-      ([Offset(6 * u, 9 * u), Offset(9 * u, 9 * u)], _red)
-    ]) {
-      canvas.drawPath(
-          Path()
-            ..moveTo(center.dx, center.dy)
-            ..lineTo(points[0].dx, points[0].dy)
-            ..lineTo(points[1].dx, points[1].dy)
-            ..close(),
-          fill..color = color);
-    }
-    for (final (x, y) in [(2.5, 8.5), (6.5, 2.5), (12.5, 6.5), (8.5, 12.5)]) {
-      final star = Path();
-      for (var i = 0; i < 10; i++) {
-        final a = -math.pi / 2 + i * math.pi / 5,
-            r = u * (i.isEven ? .32 : .14);
-        final p = Offset(x * u + math.cos(a) * r, y * u + math.sin(a) * r);
-        if (i == 0) {
-          star.moveTo(p.dx, p.dy);
-        } else {
-          star.lineTo(p.dx, p.dy);
-        }
-      }
-      canvas.drawPath(star..close(), fill..color = const Color(0xFFBCB3D9));
-    }
-    token(6.5, 13.5 - (moves % 5), _red);
-    token(8.5, 3.5, _yellow);
-  }
-
-  @override
-  bool shouldRepaint(covariant _LudoBoardPainter oldDelegate) =>
-      oldDelegate.moves != moves;
 }
 
 class _DicePainter extends CustomPainter {

@@ -8,86 +8,19 @@ class ProfileScreen extends ConsumerWidget {
     final isListener = state.isListener;
     return PageBody(children: [
       const ErrorNotice(),
-      Container(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-          decoration: BoxDecoration(
-              color: const Color(0xFF171722),
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: Colors.white10)),
-          child: Column(children: [
-            Align(
-                alignment: Alignment.centerRight,
-                child: IconButton(
-                    tooltip: state.text('Edit profile', 'சுயவிவரத்தை திருத்து'),
-                    onPressed: state.busy || state.hasCall
-                        ? null
-                        : () => context.push('/edit-profile'),
-                    icon: const Icon(Icons.edit_outlined,
-                        color: NsColors.muted, size: 19))),
-            NightshiftAvatar(
-                name: state.user?.name ?? '',
-                size: 88,
-                avatarCode: state.user?.avatarCode),
-            const SizedBox(height: 12),
-            Text(state.user?.name ?? '',
-                textAlign: TextAlign.center,
-                style:
-                    const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 8),
-            Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                    color: NsColors.violet.withAlpha(18),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: NsColors.violet.withAlpha(65))),
-                child: Text(
-                    isListener
-                        ? state.text('Listener', 'கேட்பவர்')
-                        : state.text('Customer', 'வாடிக்கையாளர்'),
-                    style: const TextStyle(
-                        color: Color(0xFFC4B5FD),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600))),
-            const SizedBox(height: 16),
-            Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                    color: const Color(0xFF22212A),
-                    borderRadius: BorderRadius.circular(17)),
-                child: Row(children: [
-                  const Icon(Icons.toll_rounded,
-                      color: NsColors.gold, size: 30),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                        Text(state.text('TEST WALLET', 'சோதனை பணப்பை'),
-                            style: const TextStyle(
-                                color: NsColors.muted,
-                                fontSize: 10,
-                                letterSpacing: .7)),
-                        Text(
-                            '${creditAmount(state.balance)} ${state.text('test coins', 'சோதனை நாணயங்கள்')}',
-                            style: const TextStyle(
-                                color: NsColors.gold,
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800)),
-                      ])),
-                  IconButton(
-                      tooltip: state.text('Open wallet', 'பணப்பையைத் திற'),
-                      onPressed: () => context.push('/wallet'),
-                      icon: const Icon(Icons.chevron_right,
-                          color: NsColors.gold)),
-                ])),
-            const SizedBox(height: 7),
-            Text(
-                state.text(
-                    '${creditAmount(state.held)} held for a call · Not cash',
-                    'அழைப்பிற்கு ${creditAmount(state.held)} ஒதுக்கப்பட்டது · பணம் அல்ல'),
-                style: const TextStyle(color: NsColors.muted, fontSize: 10)),
-          ])),
+      NightshiftProfileHero(
+          name: state.user?.name ?? '',
+          avatarCode: state.user?.avatarCode,
+          roleLabel: isListener
+              ? state.text('Listener', 'கேட்பவர்')
+              : state.text('Customer', 'வாடிக்கையாளர்'),
+          roleIcon:
+              isListener ? Icons.headset_mic_outlined : Icons.person_outline,
+          editLabel: state.text('Edit profile', 'சுயவிவரத்தை திருத்து'),
+          onEdit: state.busy || state.hasCall
+              ? null
+              : () => context.push('/edit-profile'),
+          footer: isListener ? null : _ProfileWallet(state: state)),
       const SizedBox(height: 14),
       if (state.user?.listenerApproved == true)
         FilledButton.tonalIcon(
@@ -136,10 +69,23 @@ class ProfileScreen extends ConsumerWidget {
       NightshiftSurface(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           child: Column(children: [
+            if (!isListener)
+              _ProfileMenuRow(
+                  icon: Icons.account_balance_wallet_outlined,
+                  title: state.text('Open wallet', 'பணப்பையைத் திற'),
+                  onTap: () => context.push('/wallet')),
+            const Divider(height: 1),
             _ProfileMenuRow(
-                icon: Icons.account_balance_wallet_outlined,
-                title: state.text('Open wallet', 'பணப்பையைத் திற'),
-                onTap: () => context.push('/wallet')),
+                icon: Icons.receipt_long_outlined,
+                title: state.text('Transactions & calls',
+                    'பரிவர்த்தனைகள் மற்றும் அழைப்புகள்'),
+                onTap: () => context.go('/history')),
+            const Divider(height: 1),
+            _ProfileMenuRow(
+                icon: Icons.translate,
+                title: state.text('Language settings', 'மொழி அமைப்புகள்'),
+                value: state.locale == 'ta' ? 'தமிழ்' : 'English',
+                onTap: () => showAppLanguageSettings(context, state)),
             const Divider(height: 1),
             _ProfileMenuRow(
                 icon: Icons.edit_outlined,
@@ -150,8 +96,10 @@ class ProfileScreen extends ConsumerWidget {
             const Divider(height: 1),
             _ProfileMenuRow(
                 icon: Icons.assignment_outlined,
-                title: state.text(
-                    'Apply to be a Listener', 'கேட்பவராக விண்ணப்பிக்கவும்'),
+                title: state.user?.listenerApproved == true
+                    ? state.text('Listener application', 'கேட்பவர் விண்ணப்பம்')
+                    : state.text(
+                        'Apply to be a Listener', 'கேட்பவராக விண்ணப்பிக்கவும்'),
                 onTap: () => context.go('/listener-application')),
             if (isListener) ...[
               const Divider(height: 1),
@@ -161,6 +109,13 @@ class ProfileScreen extends ConsumerWidget {
                       'வருமானம் மற்றும் பணம் பெறும் வரலாறு'),
                   onTap: () => context.push('/earnings')),
             ],
+            const Divider(height: 1),
+            _ProfileMenuRow(
+                icon: Icons.perm_camera_mic_outlined,
+                title: state.text('Call permissions', 'அழைப்பு அனுமதிகள்'),
+                onTap: state.busy || state.hasCall
+                    ? null
+                    : () => showCallPermissions(context, state)),
             const Divider(height: 1),
             _ProfileMenuRow(
                 icon: Icons.help_outline,
@@ -181,19 +136,6 @@ class ProfileScreen extends ConsumerWidget {
                     : () => context.go('/staff')),
           ])),
       const SizedBox(height: 14),
-      DropdownButtonFormField<String>(
-          value: state.locale,
-          isExpanded: true,
-          decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.translate),
-              labelText: state.text('App language', 'செயலி மொழி')),
-          items: const [
-            DropdownMenuItem(value: 'en', child: Text('English')),
-            DropdownMenuItem(value: 'ta', child: Text('தமிழ்'))
-          ],
-          onChanged: (value) {
-            if (value != null) state.setLocale(value);
-          }),
       if (isListener && state.user?.listenerApproved == true) ...[
         const SizedBox(height: 16),
         InvitationSettings(controller: state),
@@ -223,9 +165,13 @@ class ProfileScreen extends ConsumerWidget {
 
 class _ProfileMenuRow extends StatelessWidget {
   const _ProfileMenuRow(
-      {required this.icon, required this.title, required this.onTap});
+      {required this.icon,
+      required this.title,
+      required this.onTap,
+      this.value});
   final IconData icon;
   final String title;
+  final String? value;
   final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => ListTile(
@@ -239,8 +185,145 @@ class _ProfileMenuRow extends StatelessWidget {
             child: Icon(icon, color: NsColors.muted, size: 19)),
         title: Text(title,
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-        trailing: const Icon(Icons.chevron_right, size: 20),
+        trailing: value == null
+            ? const Icon(Icons.chevron_right, size: 20)
+            : Text(value!,
+                style: const TextStyle(color: NsColors.gold, fontSize: 10)),
         enabled: onTap != null,
         onTap: onTap,
       );
+}
+
+class _ProfileWallet extends StatelessWidget {
+  const _ProfileWallet({required this.state});
+  final AppController state;
+  @override
+  Widget build(BuildContext context) => Column(children: [
+        Material(
+            color: const Color(0xFF22212A),
+            borderRadius: BorderRadius.circular(17),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+                onTap: () => context.push('/wallet'),
+                child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(children: [
+                      const Icon(Icons.toll_rounded,
+                          color: NsColors.gold, size: 30),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                            Text(
+                                state.text('Available test coins',
+                                    'கிடைக்கும் சோதனை நாணயங்கள்'),
+                                style: const TextStyle(
+                                    color: NsColors.muted, fontSize: 10)),
+                            const SizedBox(height: 4),
+                            Text(creditAmount(state.balance - state.held),
+                                style: const TextStyle(
+                                    color: NsColors.gold,
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.w800)),
+                          ])),
+                      const Icon(Icons.chevron_right, color: NsColors.gold),
+                    ])))),
+        const SizedBox(height: 8),
+        Text(
+            state.text('${creditAmount(state.held)} held for a call · Not cash',
+                'அழைப்பிற்கு ${creditAmount(state.held)} ஒதுக்கப்பட்டது · பணம் அல்ல'),
+            style: const TextStyle(color: NsColors.muted, fontSize: 10)),
+      ]);
+}
+
+Future<void> showAppLanguageSettings(
+    BuildContext context, AppController state) async {
+  final owner = state.accountIdentity;
+  await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => AnimatedBuilder(
+          animation: state,
+          builder: (context, _) => SafeArea(
+              child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(state.text('App language', 'செயலி மொழி'),
+                            style: Theme.of(context).textTheme.headlineSmall),
+                        const SizedBox(height: 16),
+                        for (final locale in ['en', 'ta'])
+                          RadioListTile<String>(
+                              value: locale,
+                              groupValue: state.locale,
+                              title: Text(locale == 'ta' ? 'தமிழ்' : 'English'),
+                              onChanged: owner != state.accountIdentity
+                                  ? null
+                                  : (value) {
+                                      if (value != null &&
+                                          owner == state.accountIdentity) {
+                                        state.setLocale(value);
+                                      }
+                                    }),
+                      ])))));
+}
+
+Future<void> showCallPermissions(
+    BuildContext context, AppController state) async {
+  final owner = state.accountIdentity;
+  final listener = state.isListener;
+  await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+          child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(state.text('Call permissions', 'அழைப்பு அனுமதிகள்'),
+                        style: Theme.of(context).textTheme.headlineSmall),
+                    const SizedBox(height: 16),
+                    for (final item in <(int, IconData, String)>[
+                      (
+                        13,
+                        Icons.mic_none,
+                        state.text('Microphone', 'மைக்ரோஃபோன்')
+                      ),
+                      (
+                        listener ? 53 : 47,
+                        Icons.videocam_outlined,
+                        state.text('Camera & video', 'கேமரா மற்றும் வீடியோ')
+                      ),
+                      (
+                        listener ? 7 : 9,
+                        Icons.notifications_outlined,
+                        state.text('Notifications', 'அறிவிப்புகள்')
+                      ),
+                      (
+                        listener ? 8 : 42,
+                        Icons.bluetooth,
+                        state.text('Nearby devices', 'அருகிலுள்ள சாதனங்கள்')
+                      ),
+                    ])
+                      _ProfileMenuRow(
+                          icon: item.$2,
+                          title: item.$3,
+                          onTap: () {
+                            if (owner != state.accountIdentity ||
+                                state.hasCall) {
+                              return;
+                            }
+                            Navigator.pop(sheetContext);
+                            Navigator.of(context).push(MaterialPageRoute<void>(
+                                builder: (_) => EntryDesignScreen(
+                                    designId: item.$1, preview: false)));
+                          }),
+                  ]))));
 }

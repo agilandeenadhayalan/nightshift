@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../core/controller.dart';
 import '../core/discovery.dart';
 import '../core/models.dart';
@@ -7,6 +8,7 @@ import 'screens.dart' show showAudioCallConfirmation, StatusCard, ErrorNotice;
 import 'state_widgets.dart';
 import 'video_preflight.dart';
 import 'redesign/design_system.dart';
+import 'redesign/home_components.dart';
 
 String availabilityLabel(AppController state, String id) {
   final card = state.discovery.lookup(id);
@@ -46,6 +48,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
   final _scroll = ScrollController();
   final Map<String, GlobalKey> _keys = {};
   bool _scrolling = false, _measurePending = false;
+  int _featurePage = 0;
   Object? _owner;
   @override
   void initState() {
@@ -92,6 +95,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     await showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
+        showDragHandle: true,
+        backgroundColor: const Color(0xFF151827),
         builder: (sheetContext) => AnimatedBuilder(
             animation: state,
             builder: (context, _) {
@@ -109,31 +114,33 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                                 style:
                                     Theme.of(context).textTheme.headlineSmall),
                             const SizedBox(height: 24),
-                            DropdownButtonFormField<String>(
-                                value: state.language,
-                                isExpanded: true,
-                                decoration: InputDecoration(
-                                    labelText: state.text(
-                                        'Conversation language',
-                                        'உரையாடல் மொழி')),
-                                items: const [
-                                  DropdownMenuItem(
-                                      value: 'ta',
-                                      child: Text('தமிழ் · Tamil')),
-                                  DropdownMenuItem(
-                                      value: 'en', child: Text('English'))
-                                ],
-                                onChanged: !current
-                                    ? null
-                                    : (value) {
-                                        if (value != null &&
-                                            owner == state.accountIdentity) {
-                                          if (_scroll.hasClients) {
-                                            _scroll.jumpTo(0);
-                                          }
-                                          unawaited(state.setLanguage(value));
-                                        }
-                                      }),
+                            Text(
+                                state.text(
+                                    'Conversation language', 'உரையாடல் மொழி'),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 12),
+                            Wrap(spacing: 8, runSpacing: 8, children: [
+                              for (final language in ['ta', 'en'])
+                                ChoiceChip(
+                                    label: Text(language == 'ta'
+                                        ? 'தமிழ் · Tamil'
+                                        : 'English'),
+                                    selected: state.language == language,
+                                    onSelected: !current
+                                        ? null
+                                        : (_) {
+                                            if (owner !=
+                                                state.accountIdentity) {
+                                              return;
+                                            }
+                                            if (_scroll.hasClients) {
+                                              _scroll.jumpTo(0);
+                                            }
+                                            unawaited(
+                                                state.setLanguage(language));
+                                          }),
+                            ]),
                             const SizedBox(height: 12),
                             SwitchListTile(
                                 contentPadding: EdgeInsets.zero,
@@ -157,6 +164,68 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                                 onPressed: () => Navigator.pop(sheetContext),
                                 child: Text(state.text(
                                     'Show Listeners', 'கேட்பவர்களைக் காட்டு'))),
+                          ])));
+            }));
+  }
+
+  Future<void> _showWalletInfo(
+      BuildContext context, AppController state) async {
+    final owner = state.accountIdentity;
+    await showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        backgroundColor: const Color(0xFF171329),
+        builder: (sheetContext) => AnimatedBuilder(
+            animation: state,
+            builder: (context, _) {
+              if (owner != state.accountIdentity) {
+                return const SizedBox.shrink();
+              }
+              return SafeArea(
+                  child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
+                      child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Icon(Icons.toll_rounded,
+                                size: 54, color: NsColors.gold),
+                            const SizedBox(height: 18),
+                            Text(
+                                state.text('Your next conversation',
+                                    'உங்கள் அடுத்த உரையாடல்'),
+                                textAlign: TextAlign.center,
+                                style:
+                                    Theme.of(context).textTheme.headlineSmall),
+                            const SizedBox(height: 20),
+                            Text(creditAmount(state.balance - state.held),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                    fontSize: 42,
+                                    fontWeight: FontWeight.w800,
+                                    color: NsColors.gold)),
+                            Text(
+                                state.text('Available test coins',
+                                    'கிடைக்கும் சோதனை நாணயங்கள்'),
+                                textAlign: TextAlign.center),
+                            const SizedBox(height: 14),
+                            Text(
+                                state.text(
+                                    'Test credits are not cash. Your call quote shows the server rate before you connect.',
+                                    'சோதனை நாணயங்கள் பணம் அல்ல. இணைவதற்கு முன் அழைப்பு விவரங்களில் சேவையக விகிதம் காட்டப்படும்.'),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                    color: NsColors.muted, fontSize: 12)),
+                            const SizedBox(height: 24),
+                            FilledButton(
+                                onPressed: () {
+                                  if (owner != state.accountIdentity) return;
+                                  Navigator.pop(sheetContext);
+                                  this.context.push('/wallet');
+                                },
+                                child: Text(state.text(
+                                    'Open wallet', 'பணப்பையைத் திற'))),
                           ])));
             }));
   }
@@ -203,90 +272,76 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                                       CrossAxisAlignment.stretch,
                                   children: [
                                     const ErrorNotice(),
-                                    Text(
-                                        widget.kind == DirectoryKind.favorites
-                                            ? state.text(
-                                                'Favorites', 'விருப்பமானவர்கள்')
-                                            : state.text(
-                                                'Who would you like to talk to?',
-                                                'யாருடன் பேச விரும்புகிறீர்கள்?'),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .headlineSmall),
-                                    if (widget.kind == DirectoryKind.discover)
-                                      Container(
-                                          margin:
-                                              const EdgeInsets.only(top: 16),
-                                          padding: const EdgeInsets.all(16),
-                                          decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                              gradient: const LinearGradient(
-                                                  colors: [
-                                                    Color(0xFF382064),
-                                                    Color(0xFF1B2242)
-                                                  ])),
-                                          child: Row(children: [
-                                            const Icon(Icons.toll_rounded,
-                                                color: NsColors.gold, size: 32),
-                                            const SizedBox(width: 14),
-                                            Expanded(
-                                                child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                  Text(
-                                                      state.text(
-                                                          'Your test credits',
-                                                          'உங்கள் சோதனை நாணயங்கள்'),
-                                                      style: const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.w700)),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                      state.text(
-                                                          'Available coins • no purchase required',
-                                                          'கிடைக்கும் நாணயங்கள் • வாங்க வேண்டியதில்லை'),
-                                                      style: const TextStyle(
-                                                          fontSize: 12,
-                                                          color:
-                                                              NsColors.muted)),
-                                                ])),
-                                            const SizedBox(width: 10),
-                                            Flexible(
-                                                child: Text(
-                                                    creditAmount(state.balance -
-                                                        state.held),
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .titleLarge)),
-                                          ])),
+                                    if (widget.kind ==
+                                        DirectoryKind.discover) ...[
+                                      NightshiftFeatureBanner(
+                                          title: _featurePage == 0
+                                              ? state.text('Your test credits',
+                                                  'உங்கள் சோதனை நாணயங்கள்')
+                                              : _featurePage == 1
+                                                  ? state.text(
+                                                      'A little time to connect',
+                                                      'உரையாட சிறிது நேரம்')
+                                                  : state.text(
+                                                      'Your kind of conversation',
+                                                      'உங்களுக்கு ஏற்ற உரையாடல்'),
+                                          subtitle: _featurePage == 0
+                                              ? creditAmount(state.balance - state.held) +
+                                                  state.text(
+                                                      ' test coins available · No purchase required',
+                                                      ' சோதனை நாணயங்கள் · வாங்க வேண்டியதில்லை')
+                                              : _featurePage == 1
+                                                  ? state.text(
+                                                      'Find an available audio Listener.',
+                                                      'கிடைக்கும் ஆடியோ கேட்பவரைத் தேடுங்கள்.')
+                                                  : state.text(
+                                                      'Choose a language and see who is available.',
+                                                      'மொழியைத் தேர்ந்து கிடைப்பவர்களைப் பாருங்கள்.'),
+                                          actionLabel: _featurePage == 0
+                                              ? state.text('Open wallet', 'பணப்பையைத் திற')
+                                              : _featurePage == 1
+                                                  ? state.text('Find a Listener', 'கேட்பவரைத் தேடு')
+                                                  : state.text('Choose filters', 'வடிகட்டிகளைத் தேர்ந்தெடு'),
+                                          onPressed: _featurePage == 0
+                                              ? () => _showWalletInfo(context, state)
+                                              : _featurePage == 1
+                                                  ? (state.busy || state.hasCall || state.offline ? null : () => state.matching.open())
+                                                  : () => _showFilters(context, state),
+                                          page: _featurePage,
+                                          pageCount: 3,
+                                          trailing: IconButton(tooltip: state.text('Next feature', 'அடுத்த அம்சம்'), onPressed: () => setState(() => _featurePage = (_featurePage + 1) % 3), icon: const Icon(Icons.chevron_right, color: NsColors.cyan))),
+                                      const SizedBox(height: 16),
+                                    ],
+                                    Row(children: [
+                                      Expanded(
+                                          child: Text(
+                                              widget.kind ==
+                                                      DirectoryKind.favorites
+                                                  ? state.text('Favorites',
+                                                      'விருப்பமானவர்கள்')
+                                                  : state.text(
+                                                      'Who would you like to talk to?',
+                                                      'யாருடன் பேச விரும்புகிறீர்கள்?'),
+                                              style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight:
+                                                      FontWeight.w700))),
+                                      TextButton.icon(
+                                          onPressed: () =>
+                                              _showFilters(context, state),
+                                          icon: const Icon(Icons.tune_rounded,
+                                              size: 16),
+                                          label: Text(
+                                              state.text(
+                                                  'Filters', 'வடிகட்டிகள்'),
+                                              style: const TextStyle(
+                                                  fontSize: 11))),
+                                    ]),
                                     if (widget.kind == DirectoryKind.favorites)
                                       Text(state.text(
                                           'Saved listeners are not guaranteed to be available.',
                                           'சேமித்த கேட்பவர்கள் எப்போதும் கிடைப்பார்கள் என்பது உறுதியல்ல.')),
-                                    const SizedBox(height: 16),
-                                    if (widget.kind == DirectoryKind.discover)
-                                      OutlinedButton.icon(
-                                          onPressed: state.busy ||
-                                                  state.hasCall ||
-                                                  state.offline
-                                              ? null
-                                              : () => state.matching.open(),
-                                          icon: const Icon(
-                                              Icons.headset_mic_outlined),
-                                          label: Text(state.text(
-                                              'Find an audio Listener',
-                                              'ஆடியோ கேட்பவரைத் தேடு'))),
-                                    const SizedBox(height: 10),
-                                    OutlinedButton.icon(
-                                        onPressed: () =>
-                                            _showFilters(context, state),
-                                        icon: const Icon(Icons.tune_rounded),
-                                        label: Text(state.text(
-                                            'Filters · ${state.language == 'ta' ? 'Tamil' : 'English'}${directory.availableOnly ? ' · Available only' : ''}',
-                                            'வடிகட்டிகள் · ${state.language == 'ta' ? 'தமிழ்' : 'English'}${directory.availableOnly ? ' · கிடைப்பவர்கள் மட்டும்' : ''}'))),
+                                    const SizedBox(height: 12),
                                     if (page.error != null)
                                       FailureNotice(
                                           offline:
@@ -336,7 +391,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                                               'பட்டியல் வரிசையை புதுப்பி'))),
                                     if (!page.loaded && page.error == null ||
                                         page.loading && cards.isEmpty)
-                                      LoadingNotice(
+                                      NightshiftFeedSkeleton(
+                                          compact: page.loaded,
                                           label: state.text(
                                               'Loading listeners…',
                                               'கேட்பவர்கள் ஏற்றப்படுகின்றனர்…')),
@@ -366,6 +422,27 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
+                                    if (widget.kind ==
+                                        DirectoryKind.discover) ...[
+                                      FilledButton.icon(
+                                          style: FilledButton.styleFrom(
+                                              backgroundColor: NsColors.violet,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 18,
+                                                      vertical: 17)),
+                                          onPressed: state.busy ||
+                                                  state.hasCall ||
+                                                  state.offline
+                                              ? null
+                                              : () => state.matching.open(),
+                                          icon: const Icon(Icons.auto_awesome,
+                                              color: NsColors.gold),
+                                          label: Text(state.text(
+                                              'Find an audio Listener',
+                                              'ஆடியோ கேட்பவரைத் தேடு'))),
+                                      const SizedBox(height: 12),
+                                    ],
                                     if (page.loading && cards.isNotEmpty)
                                       LoadingNotice(
                                           label: state.text(
@@ -419,164 +496,123 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
 }
 
 class ListenerCard extends StatelessWidget {
-  const ListenerCard({super.key, required this.state, required this.listener});
+  const ListenerCard(
+      {super.key,
+      required this.state,
+      required this.listener,
+      this.hero = false});
   final AppController state;
   final ListenerProfile listener;
+  final bool hero;
   @override
   Widget build(BuildContext context) {
-    final directory = state.discovery,
-        canCall = state.canCallListener(listener) && !state.busy,
-        canVideo = state.canCallListener(listener, video: true) && !state.busy;
+    final directory = state.discovery;
+    final canCall = state.canCallListener(listener) && !state.busy;
+    final canVideo =
+        state.canCallListener(listener, video: true) && !state.busy;
     final retry = directory.favoriteRetry[listener.id];
-    final portrait = avatarAssetPath(listener.avatarCode);
-    return Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-            color: const Color(0xFF111424),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withAlpha(14))),
-        child:
-            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          SizedBox(
-              height: 190,
-              child: Stack(fit: StackFit.expand, children: [
-                if (portrait != null)
-                  AvatarPortrait(
-                      assetPath: portrait, borderRadius: BorderRadius.zero)
-                else
-                  Container(
-                      decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Color(0xFF282344), Color(0xFF172234)])),
-                      child: Center(
-                          child: NightshiftAvatar(
-                              name: listener.name,
-                              size: 78,
-                              avatarCode: listener.avatarCode))),
-                const DecoratedBox(
-                    decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                            begin: Alignment.center,
-                            end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, Color(0xF2090D18)]))),
-                Positioned(
-                    bottom: 12,
-                    left: 12,
-                    right: 12,
-                    child: Text(listener.name,
-                        style: const TextStyle(
-                            fontSize: 17,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800))),
-              ])),
-          Padding(
-              padding: const EdgeInsets.fromLTRB(11, 10, 11, 12),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(availabilityLabel(state, listener.id),
-                        style: TextStyle(
-                            fontSize: 10,
-                            color: canCall || canVideo
-                                ? NsColors.cyan
-                                : NsColors.muted)),
-                    const SizedBox(height: 5),
-                    Text(
-                        listener.languages
-                            .map((l) => l == 'ta' ? 'தமிழ்' : 'English')
-                            .join(' · '),
-                        style: const TextStyle(
-                            color: NsColors.muted, fontSize: 10)),
-                    const SizedBox(height: 7),
-                    Text(testRateLabel(state, listener.rate),
-                        style: const TextStyle(
-                            color: NsColors.gold,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 11)),
-                    const SizedBox(height: 7),
-                    TextButton.icon(
-                        style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 2, vertical: 6),
-                            minimumSize: const Size(44, 40)),
-                        onPressed: directory.favoriteBusy.contains(listener.id)
-                            ? null
-                            : () => directory.favorite(
-                                listener.id, retry ?? !listener.favorite),
-                        icon: Icon(
-                            listener.favorite
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            size: 17),
-                        label: Text(
-                            retry != null &&
-                                    !directory.favoriteBusy
-                                        .contains(listener.id)
-                                ? state.text('Retry favorite change',
-                                    'விருப்ப மாற்றத்தை மீண்டும் முயற்சி')
-                                : listener.favorite
-                                    ? state.text('Remove favorite',
-                                        'விருப்பத்திலிருந்து நீக்கு')
-                                    : state.text(
-                                        'Save favorite', 'விருப்பத்தில் சேமி'),
-                            style: const TextStyle(fontSize: 10))),
-                    FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                            backgroundColor: NsColors.cyan,
-                            foregroundColor: NsColors.background,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 10),
-                            minimumSize: const Size(44, 44)),
-                        onPressed: canCall
-                            ? () => showAudioCallConfirmation(
-                                context, state, listener)
-                            : null,
-                        icon: const Icon(Icons.call_outlined, size: 18),
-                        label: Text(state.text('Call', 'அழை'),
-                            semanticsLabel: state.text('Call ${listener.name}',
-                                '${listener.name} அழைக்கவும்'))),
-                    if (listener.videoRate != null && state.video != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                          state.text(
-                              'Video · ${testRateLabel(state, listener.videoRate!)}',
-                              'வீடியோ · ${testRateLabel(state, listener.videoRate!)}'),
-                          style: const TextStyle(
-                              color: NsColors.muted, fontSize: 10)),
-                      OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 5, vertical: 8),
-                              minimumSize: const Size(44, 42)),
-                          onPressed: canVideo
-                              ? () async {
-                                  final owner = state.accountIdentity;
-                                  final agreed = await showVideoPreflight(
-                                      context, state,
-                                      rate: listener.videoRate!,
-                                      listener: listener,
-                                      confirmLabel: state.text(
-                                          'Start video call',
-                                          'வீடியோ அழைப்பைத் தொடங்கு'));
-                                  if (agreed &&
-                                      context.mounted &&
-                                      owner == state.accountIdentity &&
-                                      state.canCallListener(listener,
-                                          video: true)) {
-                                    await state.startCall(listener,
-                                        video: true, cameraConsent: true);
-                                  }
-                                }
-                              : null,
-                          icon: const Icon(Icons.videocam_outlined, size: 16),
-                          label: Text(
-                              state.text('Video call', 'வீடியோ அழைப்பு'),
-                              style: const TextStyle(fontSize: 10))),
-                    ],
-                  ])),
-        ]));
+    final showVideo = listener.videoRate != null && state.video != null;
+    return NightshiftPortraitCard(
+        name: listener.name,
+        avatarCode: listener.avatarCode,
+        hero: hero,
+        portraitLabel: state.text(
+            'View ${listener.name}', '${listener.name} விவரத்தைப் பார்'),
+        onPortraitTap: hero ? null : () => _showListenerCard(context),
+        languages: listener.languages
+            .map((l) => l == 'ta' ? 'தமிழ்' : 'English')
+            .join(' · '),
+        status: availabilityLabel(state, listener.id),
+        available: canCall || canVideo,
+        rateLabel: testRateLabel(state, listener.rate),
+        secondaryRateLabel: showVideo
+            ? state.text('Video · ', 'வீடியோ · ') +
+                testRateLabel(state, listener.videoRate!)
+            : null,
+        favorite: listener.favorite,
+        favoriteLabel: retry != null
+            ? state.text(
+                'Retry favorite change', 'விருப்ப மாற்றத்தை மீண்டும் முயற்சி')
+            : listener.favorite
+                ? state.text('Remove favorite', 'விருப்பத்திலிருந்து நீக்கு')
+                : state.text('Save favorite', 'விருப்பத்தில் சேமி'),
+        onFavorite: directory.favoriteBusy.contains(listener.id)
+            ? null
+            : () =>
+                directory.favorite(listener.id, retry ?? !listener.favorite),
+        actions: [
+          FilledButton(
+              style: FilledButton.styleFrom(
+                  backgroundColor: NsColors.cyan,
+                  foregroundColor: NsColors.background,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  minimumSize: const Size(44, 44)),
+              onPressed: canCall
+                  ? () => showAudioCallConfirmation(context, state, listener)
+                  : null,
+              child: Text(state.text('Call', 'அழை'),
+                  semanticsLabel: state.text(
+                      'Call ${listener.name}', '${listener.name} அழைக்கவும்'),
+                  style: const TextStyle(fontSize: 11))),
+          if (showVideo)
+            OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    minimumSize: const Size(44, 44)),
+                onPressed: canVideo
+                    ? () async {
+                        final owner = state.accountIdentity;
+                        final agreed = await showVideoPreflight(context, state,
+                            rate: listener.videoRate!,
+                            listener: listener,
+                            confirmLabel: state.text('Start video call',
+                                'வீடியோ அழைப்பைத் தொடங்கு'));
+                        if (agreed &&
+                            context.mounted &&
+                            owner == state.accountIdentity &&
+                            state.canCallListener(listener, video: true)) {
+                          await state.startCall(listener,
+                              video: true, cameraConsent: true);
+                        }
+                      }
+                    : null,
+                child: Text(state.text('Video call', 'வீடியோ அழைப்பு'),
+                    style: const TextStyle(fontSize: 10))),
+        ]);
+  }
+
+  Future<void> _showListenerCard(BuildContext context) async {
+    final owner = state.accountIdentity;
+    await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (context) => AnimatedBuilder(
+            animation: state,
+            builder: (context, _) {
+              if (owner != state.accountIdentity) {
+                return const SizedBox.shrink();
+              }
+              final current = state.discovery.lookup(listener.id);
+              if (current == null) {
+                return Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(state.text(
+                        'Listener is unavailable', 'கேட்பவர் கிடைக்கவில்லை')));
+              }
+              return SafeArea(
+                  child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        ListenerCard(
+                            state: state, listener: current, hero: true),
+                        const SizedBox(height: 12),
+                        TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(state.text('Close', 'மூடு'))),
+                      ])));
+            }));
   }
 }
 

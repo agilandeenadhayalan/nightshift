@@ -36,12 +36,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         body: NightshiftBackdrop(
             child: PageBody(children: [
           const SizedBox(height: 16),
-          Center(
-              child: SizedBox(
-                  width: 160,
-                  height: 160,
-                  child:
-                      const CustomPaint(painter: NightshiftMascotPainter()))),
+          const NightshiftEntryPortraitScene(),
           const SizedBox(height: 20),
           Text(state.text('A little time to talk.', 'பேசுவதற்கு சிறிது நேரம்.'),
               textAlign: TextAlign.center,
@@ -170,7 +165,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ? null
                   : () async {
                       await state.login(_address.text, _account, _key.text);
-                      if (state.user != null) _key.clear();
+                      if (mounted && state.user != null) _key.clear();
                     },
               child: state.busy
                   ? Text(state.text('Signing in…', 'உள்நுழைகிறது…'))

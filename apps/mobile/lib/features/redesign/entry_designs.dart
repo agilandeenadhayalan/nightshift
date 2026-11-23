@@ -7,6 +7,8 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../core/controller.dart';
 import '../account_screens.dart';
 import 'design_system.dart';
+import 'entry_components.dart';
+export 'entry_components.dart' show NightshiftEntryPortraitScene;
 import 'home_designs.dart';
 
 /// Only an explicit tap reaches the OS. Previews never invoke this provider.
@@ -113,7 +115,9 @@ class NightshiftSplashScreen extends ConsumerWidget {
                                   fontFamily: 'Outfit',
                                   fontSize: 52,
                                   fontWeight: FontWeight.w800,
-                                  fontVariations: [ui.FontVariation('wght', 800)],
+                                  fontVariations: [
+                                    ui.FontVariation('wght', 800)
+                                  ],
                                   letterSpacing: -2)),
                           const SizedBox(height: 16),
                           Text(
@@ -259,7 +263,7 @@ class EntryDesignScreen extends ConsumerWidget {
       ] else if (voice) ...[
         _VoiceDesign(preview: preview),
       ] else ...[
-        const _PortraitScene(),
+        const NightshiftEntryPortraitScene(),
         Text(
             app.text('Make room for a conversation.',
                 'உரையாடலுக்கு நேரம் ஒதுக்குங்கள்.'),
@@ -366,82 +370,6 @@ class _EntryEmblem extends StatelessWidget {
                         color: NsColors.violet.withAlpha(45), blurRadius: 35)
                   ]),
               child: Icon(icon, size: size * .45, color: NsColors.cyan))));
-}
-
-class _PortraitScene extends StatelessWidget {
-  const _PortraitScene();
-  @override
-  Widget build(BuildContext context) => SizedBox(
-      height: 276,
-      child: LayoutBuilder(
-          builder: (_, box) => Stack(alignment: Alignment.center, children: [
-                Container(
-                    width: 240,
-                    height: 240,
-                    decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(colors: [
-                          NsColors.violet.withAlpha(80),
-                          Colors.transparent
-                        ]))),
-                Positioned(
-                    left: 4,
-                    top: 54,
-                    child: Transform.rotate(
-                        angle: -.13,
-                        child: const AvatarPortrait(
-                            assetPath: 'assets/avatars/male/avatar_07.png',
-                            width: 108,
-                            height: 152))),
-                Positioned(
-                    right: 4,
-                    top: 34,
-                    child: Transform.rotate(
-                        angle: .12,
-                        child: const AvatarPortrait(
-                            assetPath: 'assets/avatars/female/avatar_15.png',
-                            width: 108,
-                            height: 158))),
-                Positioned(
-                    top: 72,
-                    child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                            color: NsColors.background,
-                            borderRadius: BorderRadius.circular(30),
-                            border:
-                                Border.all(color: NsColors.cyan.withAlpha(140)),
-                            boxShadow: [
-                              BoxShadow(
-                                  color: NsColors.violet.withAlpha(75),
-                                  blurRadius: 28)
-                            ]),
-                        child: const AvatarPortrait(
-                            assetPath: 'assets/avatars/female/avatar_03.png',
-                            width: 134,
-                            height: 170))),
-                Positioned(
-                    top: 12,
-                    left: box.maxWidth * .4,
-                    child:
-                        _sceneIcon(Icons.nights_stay_rounded, NsColors.gold)),
-                Positioned(
-                    bottom: 11,
-                    left: 20,
-                    child: _sceneIcon(Icons.headphones_rounded, NsColors.cyan)),
-                Positioned(
-                    bottom: 24,
-                    right: 22,
-                    child: _sceneIcon(
-                        Icons.favorite_rounded, const Color(0xfff472b6))),
-              ])));
-  Widget _sceneIcon(IconData icon, Color color) => Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-          color: const Color(0xff1d1735),
-          shape: BoxShape.circle,
-          border: Border.all(color: color.withAlpha(70))),
-      child: Icon(icon, size: 23, color: color));
 }
 
 final _phonePreviewChoice = StateProvider.autoDispose<int>((ref) => 0);
@@ -781,7 +709,7 @@ class _Introduction extends ConsumerWidget {
                 (index + delta).clamp(0, 2);
           },
           child: Column(children: [
-            const _PortraitScene(),
+            const NightshiftEntryPortraitScene(),
             const SizedBox(height: 10),
             Text(details[index],
                 textAlign: TextAlign.center,
@@ -999,105 +927,91 @@ class _PermissionDesign extends ConsumerWidget {
                     'Choose permission in the Android dialog. Video only starts after the separate call preview and consent.',
                     'Android உரையாடலில் அனுமதியை தேர்ந்தெடுக்கவும். தனியான அழைப்பு முன்னோட்டம் மற்றும் ஒப்புதலுக்குப் பிறகே வீடியோ தொடங்கும்.');
     return _PermissionStage(
-        title: title,
-        listener: listener,
-        notification: notification,
-        child: NightshiftSurface(
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-              Padding(
-                  padding: const EdgeInsets.only(top: 4, bottom: 20),
-                  child: Icon(icon, size: 34, color: const Color(0xffd1e4bd))),
-              Text(
-                  notification
-                      ? app.text('Allow Nightshift notifications?',
-                          'Nightshift அறிவிப்புகளை அனுமதிக்கவா?')
-                      : bluetooth
-                          ? app.text('Allow nearby audio devices?',
-                              'அருகிலுள்ள ஒலி சாதனங்களை அனுமதிக்கவா?')
-                          : audio
-                              ? app.text('Allow microphone access?',
-                                  'ஒலிவாங்கி அணுகலை அனுமதிக்கவா?')
-                              : both
-                                  ? app.text(
-                                      'Allow camera and microphone access?',
-                                      'கேமரா மற்றும் ஒலிவாங்கி அணுகலை அனுமதிக்கவா?')
-                                  : app.text('Allow camera access?',
-                                      'கேமரா அணுகலை அனுமதிக்கவா?'),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
-              Text(explanation,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      color: NsColors.muted, fontSize: 12, height: 1.6)),
-              const SizedBox(height: 24),
-              FilledButton(
-                  key: ValueKey('entry-permission-$id'),
-                  style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xffc5e7ae),
-                      foregroundColor: const Color(0xff1c2c15),
-                      disabledBackgroundColor: const Color(0xff34402c),
-                      disabledForegroundColor: const Color(0xffc5e7ae)),
-                  onPressed: preview || !supported || state.busy
-                      ? null
-                      : () => ref
-                          .read(entryPermissionProvider(id).notifier)
-                          .request(permissions),
-                  child: Text(
-                      state.busy
-                          ? app.text('Waiting for Android…',
-                              'Android பதிலுக்காக காத்திருக்கிறது…')
-                          : app.text('Continue to Android permission',
-                              'Android அனுமதிக்கு தொடரவும்'),
-                      textAlign: TextAlign.center)),
-              if (preview)
-                Text(
-                    app.text('Design preview · no permission requested',
-                        'வடிவமைப்பு முன்னோட்டம் · அனுமதி கோரப்படவில்லை'),
-                    textAlign: TextAlign.center)
-              else if (!supported)
-                Text(
-                    app.text('This permission flow is available on Android.',
-                        'இந்த அனுமதி Android இல் கிடைக்கும்.'),
-                    textAlign: TextAlign.center),
-              if (state.result != null)
-                Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: Text(
-                        switch (state.result) {
-                          'granted' => app.text(
-                              'Android permission granted. No call has started.',
-                              'Android அனுமதி வழங்கப்பட்டது. எந்த அழைப்பும் தொடங்கவில்லை.'),
-                          'restricted' => app.text(
-                              'Permission is restricted. You can review it in Android settings.',
-                              'அனுமதி கட்டுப்படுத்தப்பட்டுள்ளது. Android அமைப்பில் சரிபார்க்கலாம்.'),
-                          'denied' => app.text('Permission was not granted.',
-                              'அனுமதி வழங்கப்படவில்லை.'),
-                          _ => app.text(
-                              'Permission could not be requested on this device.',
-                              'இந்த சாதனத்தில் அனுமதியை கோர முடியவில்லை.'),
-                        },
-                        key: ValueKey('entry-permission-result-$id'),
-                        textAlign: TextAlign.center)),
-            ])));
+      preview: preview,
+      title: title,
+      listener: listener,
+      notification: notification,
+      child: NightshiftPermissionCard(
+        icon: icon,
+        title: notification
+            ? app.text('Allow Nightshift notifications?',
+                'Nightshift அறிவிப்புகளை அனுமதிக்கவா?')
+            : bluetooth
+                ? app.text('Allow nearby audio devices?',
+                    'அருகிலுள்ள ஒலி சாதனங்களை அனுமதிக்கவா?')
+                : audio
+                    ? app.text('Allow microphone access?',
+                        'ஒலிவாங்கி அணுகலை அனுமதிக்கவா?')
+                    : both
+                        ? app.text('Allow camera and microphone access?',
+                            'கேமரா மற்றும் ஒலிவாங்கி அணுகலை அனுமதிக்கவா?')
+                        : app.text('Allow camera access?',
+                            'கேமரா அணுகலை அனுமதிக்கவா?'),
+        explanation: explanation,
+        action: FilledButton(
+            key: ValueKey('entry-permission-$id'),
+            onPressed: preview || !supported || state.busy
+                ? null
+                : () => ref
+                    .read(entryPermissionProvider(id).notifier)
+                    .request(permissions),
+            child: Text(
+                state.busy
+                    ? app.text('Waiting for Android…',
+                        'Android பதிலுக்காக காத்திருக்கிறது…')
+                    : app.text('Continue to Android permission',
+                        'Android அனுமதிக்கு தொடரவும்'),
+                textAlign: TextAlign.center)),
+        footer: Column(children: [
+          if (preview)
+            Text(
+                app.text('Design preview · no permission requested',
+                    'வடிவமைப்பு முன்னோட்டம் · அனுமதி கோரப்படவில்லை'),
+                textAlign: TextAlign.center)
+          else if (!supported)
+            Text(
+                app.text('This permission flow is available on Android.',
+                    'இந்த அனுமதி Android இல் கிடைக்கும்.'),
+                textAlign: TextAlign.center),
+          if (state.result != null)
+            Semantics(
+                liveRegion: true,
+                child: Text(
+                    switch (state.result) {
+                      'granted' => app.text(
+                          'Android permission granted. No call has started.',
+                          'Android அனுமதி வழங்கப்பட்டது. எந்த அழைப்பும் தொடங்கவில்லை.'),
+                      'restricted' => app.text(
+                          'Permission is restricted. You can review it in Android settings.',
+                          'அனுமதி கட்டுப்படுத்தப்பட்டுள்ளது. Android அமைப்பில் சரிபார்க்கலாம்.'),
+                      'denied' => app.text('Permission was not granted.',
+                          'அனுமதி வழங்கப்படவில்லை.'),
+                      _ => app.text(
+                          'Permission could not be requested on this device.',
+                          'இந்த சாதனத்தில் அனுமதியை கோர முடியவில்லை.'),
+                    },
+                    key: ValueKey('entry-permission-result-$id'),
+                    textAlign: TextAlign.center)),
+        ]),
+      ),
+    );
   }
 }
 
 class _PermissionStage extends StatelessWidget {
   const _PermissionStage(
-      {required this.title,
+      {required this.preview,
+      required this.title,
       required this.listener,
       required this.notification,
       required this.child});
   final String title;
-  final bool listener, notification;
+  final bool listener, notification, preview;
   final Widget child;
   @override
   Widget build(BuildContext context) => Scaffold(
           body: Stack(fit: StackFit.expand, children: [
-        if (!notification)
+        if (!notification && preview)
           ExcludeSemantics(
               child: IgnorePointer(
                   child: ImageFiltered(
@@ -1106,6 +1020,9 @@ class _PermissionStage extends StatelessWidget {
         else
           const ColoredBox(color: Color(0xff11101b)),
         ColoredBox(color: Colors.black.withAlpha(notification ? 45 : 155)),
+        if (!preview)
+          const SafeArea(
+              child: Align(alignment: Alignment.topLeft, child: BackButton())),
         SafeArea(
             child: LayoutBuilder(
                 builder: (_, box) => SingleChildScrollView(
