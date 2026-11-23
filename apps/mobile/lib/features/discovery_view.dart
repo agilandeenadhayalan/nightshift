@@ -6,6 +6,7 @@ import '../core/models.dart';
 import 'screens.dart' show showAudioCallConfirmation, StatusCard, ErrorNotice;
 import 'state_widgets.dart';
 import 'video_preflight.dart';
+import 'redesign/design_system.dart';
 
 String availabilityLabel(AppController state, String id) {
   final card = state.discovery.lookup(id);
@@ -80,6 +81,80 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     });
   }
 
+  Future<void> _showFilters(BuildContext context, AppController state) async {
+    final owner = state.accountIdentity;
+    await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (sheetContext) => AnimatedBuilder(
+            animation: state,
+            builder: (context, _) {
+              final current = owner == state.accountIdentity;
+              return SafeArea(
+                  child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                      child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                                state.text('Find your kind of conversation',
+                                    'உங்களுக்கு ஏற்ற உரையாடலைக் கண்டறியுங்கள்'),
+                                style:
+                                    Theme.of(context).textTheme.headlineSmall),
+                            const SizedBox(height: 24),
+                            DropdownButtonFormField<String>(
+                                value: state.language,
+                                isExpanded: true,
+                                decoration: InputDecoration(
+                                    labelText: state.text(
+                                        'Conversation language',
+                                        'உரையாடல் மொழி')),
+                                items: const [
+                                  DropdownMenuItem(
+                                      value: 'ta',
+                                      child: Text('தமிழ் · Tamil')),
+                                  DropdownMenuItem(
+                                      value: 'en', child: Text('English'))
+                                ],
+                                onChanged: !current
+                                    ? null
+                                    : (value) {
+                                        if (value != null &&
+                                            owner == state.accountIdentity) {
+                                          if (_scroll.hasClients) {
+                                            _scroll.jumpTo(0);
+                                          }
+                                          unawaited(state.setLanguage(value));
+                                        }
+                                      }),
+                            const SizedBox(height: 12),
+                            SwitchListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(state.text(
+                                    'Available only', 'கிடைப்பவர்கள் மட்டும்')),
+                                value: state.discovery.availableOnly,
+                                onChanged: !current
+                                    ? null
+                                    : (value) {
+                                        if (owner != state.accountIdentity) {
+                                          return;
+                                        }
+                                        if (_scroll.hasClients) {
+                                          _scroll.jumpTo(0);
+                                        }
+                                        unawaited(state.discovery
+                                            .filter(availableOnly: value));
+                                      }),
+                            const SizedBox(height: 18),
+                            FilledButton(
+                                onPressed: () => Navigator.pop(sheetContext),
+                                child: Text(state.text(
+                                    'Show Listeners', 'கேட்பவர்களைக் காட்டு'))),
+                          ])));
+            }));
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = widget.state, directory = state.discovery;
@@ -126,27 +201,51 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                                           .textTheme
                                           .headlineSmall),
                                   if (widget.kind == DirectoryKind.discover)
-                                    Card(
-                                        child: Padding(
-                                            padding: const EdgeInsets.all(20),
-                                            child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(state.text(
-                                                      'Your test credits',
-                                                      'உங்கள் சோதனை நாணயங்கள்')),
-                                                  Text(
-                                                      creditAmount(
-                                                          state.balance -
-                                                              state.held),
-                                                      style: Theme.of(context)
-                                                          .textTheme
-                                                          .headlineMedium),
-                                                  Text(state.text(
-                                                      'Available coins • no purchase required',
-                                                      'கிடைக்கும் நாணயங்கள் • வாங்க வேண்டியதில்லை')),
-                                                ]))),
+                                    Container(
+                                        margin: const EdgeInsets.only(top: 16),
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                            gradient: const LinearGradient(
+                                                colors: [
+                                                  Color(0xFF382064),
+                                                  Color(0xFF1B2242)
+                                                ])),
+                                        child: Row(children: [
+                                          const Icon(Icons.toll_rounded,
+                                              color: NsColors.gold, size: 32),
+                                          const SizedBox(width: 14),
+                                          Expanded(
+                                              child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                Text(
+                                                    state.text(
+                                                        'Your test credits',
+                                                        'உங்கள் சோதனை நாணயங்கள்'),
+                                                    style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w700)),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                    state.text(
+                                                        'Available coins • no purchase required',
+                                                        'கிடைக்கும் நாணயங்கள் • வாங்க வேண்டியதில்லை'),
+                                                    style: const TextStyle(
+                                                        fontSize: 12,
+                                                        color: NsColors.muted)),
+                                              ])),
+                                          const SizedBox(width: 10),
+                                          Flexible(
+                                              child: Text(
+                                                  creditAmount(state.balance -
+                                                      state.held),
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .titleLarge)),
+                                        ])),
                                   if (widget.kind == DirectoryKind.favorites)
                                     Text(state.text(
                                         'Saved listeners are not guaranteed to be available.',
@@ -164,36 +263,14 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                                         label: Text(state.text(
                                             'Find an audio Listener',
                                             'ஆடியோ கேட்பவரைத் தேடு'))),
-                                  DropdownButtonFormField<String>(
-                                      value: state.language,
-                                      isExpanded: true,
-                                      decoration: InputDecoration(
-                                          labelText: state.text(
-                                              'Conversation language',
-                                              'உரையாடல் மொழி')),
-                                      items: const [
-                                        DropdownMenuItem(
-                                            value: 'ta',
-                                            child: Text('தமிழ் · Tamil')),
-                                        DropdownMenuItem(
-                                            value: 'en', child: Text('English'))
-                                      ],
-                                      onChanged: (value) {
-                                        if (value != null) {
-                                          _scroll.jumpTo(0);
-                                          unawaited(state.setLanguage(value));
-                                        }
-                                      }),
-                                  SwitchListTile(
-                                      contentPadding: EdgeInsets.zero,
-                                      title: Text(state.text('Available only',
-                                          'கிடைப்பவர்கள் மட்டும்')),
-                                      value: directory.availableOnly,
-                                      onChanged: (value) {
-                                        _scroll.jumpTo(0);
-                                        unawaited(directory.filter(
-                                            availableOnly: value));
-                                      }),
+                                  const SizedBox(height: 10),
+                                  OutlinedButton.icon(
+                                      onPressed: () =>
+                                          _showFilters(context, state),
+                                      icon: const Icon(Icons.tune_rounded),
+                                      label: Text(state.text(
+                                          'Filters · ${state.language == 'ta' ? 'Tamil' : 'English'}${directory.availableOnly ? ' · Available only' : ''}',
+                                          'வடிகட்டிகள் · ${state.language == 'ta' ? 'தமிழ்' : 'English'}${directory.availableOnly ? ' · கிடைப்பவர்கள் மட்டும்' : ''}'))),
                                   if (page.error != null)
                                     FailureNotice(
                                         offline: page.error!.code == 'OFFLINE',
@@ -315,13 +392,30 @@ class ListenerCard extends StatelessWidget {
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(children: [
-                    const CircleAvatar(child: Icon(Icons.person_outline)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: Text(listener.name,
-                            style: Theme.of(context).textTheme.titleLarge))
-                  ]),
+                  Container(
+                      padding: const EdgeInsets.all(22),
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(22),
+                          gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFF35215C), Color(0xFF131B38)])),
+                      child: Column(children: [
+                        Align(
+                            alignment: Alignment.topLeft,
+                            child: Icon(
+                                canCall
+                                    ? Icons.radio_button_checked
+                                    : Icons.radio_button_unchecked,
+                                color: canCall ? NsColors.cyan : NsColors.muted,
+                                size: 18)),
+                        NightshiftAvatar(
+                            name: listener.name, size: 106, listener: true),
+                        const SizedBox(height: 18),
+                        Text(listener.name,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.headlineSmall),
+                      ])),
                   const SizedBox(height: 12),
                   Text(availabilityLabel(state, listener.id)),
                   Text(listener.languages

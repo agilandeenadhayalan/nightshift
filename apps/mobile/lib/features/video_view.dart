@@ -1,6 +1,7 @@
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/material.dart';
 import '../core/audio.dart';
+import 'redesign/design_system.dart';
 
 /// Only an explicitly prepared/joined adapter supplies native view controllers.
 class VideoCameraPane extends StatelessWidget {
@@ -19,11 +20,11 @@ class VideoCameraPane extends StatelessWidget {
       label: label,
       image: controller != null,
       child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(26),
           child: AspectRatio(
               aspectRatio: aspectRatio,
               child: ColoredBox(
-                  color: const Color(0xFF163B35),
+                  color: NsColors.card,
                   child: Stack(fit: StackFit.expand, children: [
                     if (controller != null)
                       AgoraVideoView(
@@ -36,7 +37,7 @@ class VideoCameraPane extends StatelessWidget {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     const Icon(Icons.videocam_off_outlined,
-                                        color: Colors.white, size: 32),
+                                        color: NsColors.cyan, size: 38),
                                     const SizedBox(height: 8),
                                     Flexible(
                                         child: Text(placeholder,
@@ -51,8 +52,10 @@ class VideoCameraPane extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                                color: Colors.black54,
-                                borderRadius: BorderRadius.circular(6)),
+                                color:
+                                    NsColors.background.withValues(alpha: .8),
+                                border: Border.all(color: Colors.white24),
+                                borderRadius: BorderRadius.circular(24)),
                             child: Text(label,
                                 style: const TextStyle(color: Colors.white)))),
                   ])))));
@@ -70,17 +73,25 @@ class VideoCallView extends StatelessWidget {
   final String remoteLabel, localLabel, waitingLabel, cameraOffLabel;
 
   @override
-  Widget build(BuildContext context) => Column(children: [
+  Widget build(BuildContext context) => Stack(children: [
         VideoCameraPane(
+            aspectRatio: 4 / 5,
             controller: video.remoteVideo,
             label: remoteLabel,
             placeholder: waitingLabel),
-        const SizedBox(height: 12),
-        Align(
-            alignment: Alignment.centerRight,
-            child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 240),
+        Positioned(
+            right: 12,
+            bottom: 12,
+            child: Container(
+                width: 128,
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(color: NsColors.cyan, width: 2),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black45, blurRadius: 20)
+                    ]),
                 child: VideoCameraPane(
+                    aspectRatio: 3 / 4,
                     controller: video.cameraEnabled ? video.localVideo : null,
                     label: localLabel,
                     placeholder:

@@ -5,6 +5,7 @@ import '../core/controller.dart';
 import '../core/matching.dart';
 import 'screens.dart' show PageBody, ErrorNotice, StatusCard;
 import 'video_preflight.dart' show testRateLabel, testTariffDescription;
+import 'redesign/design_system.dart';
 
 class MatchingScreen extends ConsumerStatefulWidget {
   const MatchingScreen({super.key});
@@ -47,6 +48,8 @@ class _MatchingScreenState extends ConsumerState<MatchingScreen> {
         child: Scaffold(
             appBar: AppBar(
                 automaticallyImplyLeading: false,
+                backgroundColor: Colors.transparent,
+                centerTitle: true,
                 title: Text(state.text('Find a Listener', 'கேட்பவரைத் தேடு')),
                 actions: [
                   if (!matching.blocked)
@@ -62,7 +65,46 @@ class _MatchingScreenState extends ConsumerState<MatchingScreen> {
                     semanticsLabel: state.text('Updating search status',
                         'தேடல் நிலையை புதுப்பிக்கிறது')),
               if (request != null) ...[
+                if (request.active)
+                  Center(
+                      child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 28),
+                          child: Container(
+                              width: 188,
+                              height: 220,
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(36),
+                                  border: Border.all(
+                                      color:
+                                          NsColors.cyan.withValues(alpha: .5)),
+                                  gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        NsColors.violet.withValues(alpha: .38),
+                                        NsColors.surface
+                                      ]),
+                                  boxShadow: [
+                                    BoxShadow(
+                                        color: NsColors.violet
+                                            .withValues(alpha: .2),
+                                        blurRadius: 40)
+                                  ]),
+                              child: const Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.people_outline,
+                                        color: NsColors.cyan, size: 70),
+                                    SizedBox(height: 30),
+                                    SizedBox(
+                                        height: 3,
+                                        width: 120,
+                                        child:
+                                            ColoredBox(color: NsColors.cyan)),
+                                  ])))),
                 Text(_title(state, request),
+                    textAlign: request.active ? TextAlign.center : null,
                     style: Theme.of(context).textTheme.headlineSmall),
                 const SizedBox(height: 12),
                 Text(state.text(
