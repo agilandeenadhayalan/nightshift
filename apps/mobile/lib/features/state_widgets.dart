@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'redesign/design_system.dart';
 
 /// Shared progress state with the same visible and screen-reader description.
 class LoadingNotice extends StatelessWidget {
@@ -13,9 +14,21 @@ class LoadingNotice extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const CircularProgressIndicator(),
+              Container(
+                width: 64,
+                height: 64,
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: NsColors.violet.withAlpha(20),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: NsColors.violet.withAlpha(45)),
+                ),
+                child: const CircularProgressIndicator(strokeWidth: 2.5),
+              ),
               const SizedBox(height: 16),
-              Text(label, textAlign: TextAlign.center),
+              Text(label,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium),
             ]),
           ),
         ),
@@ -43,29 +56,24 @@ class FailureNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         liveRegion: true,
-        child: Card(
-          color: Theme.of(context).colorScheme.errorContainer,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(offline ? Icons.wifi_off : Icons.error_outline),
-                const SizedBox(height: 8),
-                Text(title, style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 8),
-                Text(message),
-                if (reference != null) SelectableText(reference!),
-                Wrap(spacing: 8, children: [
+        child: NightshiftMessagePanel(
+          title: title,
+          message: message,
+          icon: offline ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
+          accent: Theme.of(context).colorScheme.error,
+          details: reference == null
+              ? null
+              : SelectableText(reference!,
+                  style: Theme.of(context).textTheme.bodySmall),
+          action: onRetry == null && onDismiss == null
+              ? null
+              : Wrap(spacing: 8, runSpacing: 6, children: [
                   if (onRetry != null)
                     TextButton(onPressed: onRetry, child: Text(retryLabel)),
                   if (onDismiss != null && dismissLabel != null)
                     TextButton(
                         onPressed: onDismiss, child: Text(dismissLabel!)),
                 ]),
-              ],
-            ),
-          ),
         ),
       );
 }

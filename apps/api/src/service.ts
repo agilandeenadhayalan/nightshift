@@ -87,11 +87,12 @@ export class NightShiftService {
   }
 
   async user(id: string, c: Query = this.db.pool) {
-    const { rows } = await c.query('SELECT * FROM users WHERE id=$1', [id]);
+    const { rows } = await c.query('SELECT u.*,p.avatar_code FROM users u LEFT JOIN profiles p ON p.user_id=u.id WHERE u.id=$1', [id]);
     requireThat(rows.length, 404, 'NOT_FOUND', 'Account not found');
     const u = rows[0];
-    return { id: u.id, displayName: u.display_name, languages: u.languages, mode: u.mode,
-      listenerApproved: u.listener_approved, online: (await this.reachable([id], c)).has(id) };
+    return { id: u.id, displayName: u.display_name, ...(u.avatar_code?{avatarCode:u.avatar_code as string}:{}), languages: u.languages, mode: u.mode,
+      listenerApproved: u.listener_approved, online: (await this.reachable([id], c)).has(id),
+      availability:{online:u.desired_online as boolean,audioEnabled:u.audio_enabled as boolean,videoEnabled:u.video_enabled as boolean} };
   }
   async wallet(id: string, c: Query = this.db.pool) {
     const balance = await c.query('SELECT coalesce(sum(amount),0)::text total FROM journal_lines WHERE account_id=$1', [`customer:${id}`]);
@@ -130,12 +131,16 @@ export class NightShiftService {
     return this.user(actor.id);
   }
   async availability(actor: Actor, raw: unknown) {
-    const body = object(raw); fields(body, ['online']);
+    const body = object(raw); fields(body, ['online','audioEnabled','videoEnabled']);
     requireThat(typeof body.online === 'boolean', 400, 'INVALID_FIELD', 'online must be a boolean');
+    for(const field of ['audioEnabled','videoEnabled'])requireThat(body[field]===undefined||typeof body[field]==='boolean',400,'INVALID_FIELD',`${field} must be a boolean`);
     const version = await this.db.tx(async c => {
       const user = await this.liveOwner(c, actor);
       requireThat(user.listener_approved && user.mode === 'listener', 403, 'LISTENER_NOT_APPROVED', 'Use approved Listener mode');
-      const updated = await c.query('UPDATE users SET desired_online=$2,presence_version=presence_version+1 WHERE id=$1 RETURNING presence_version', [actor.id, body.online]);
+      requireThat(body.videoEnabled!==true||this.videoAvailable(),503,'VIDEO_UNAVAILABLE','Private test video is not available');
+      const updated = await c.query(`UPDATE users SET desired_online=$2,audio_enabled=COALESCE($3,audio_enabled),
+        video_enabled=COALESCE($4,video_enabled),presence_version=presence_version+1 WHERE id=$1 RETURNING presence_version`,
+        [actor.id,body.online,body.audioEnabled??null,body.videoEnabled??null]);
       return String(updated.rows[0].presence_version);
     });
     if (body.online) await this.presence.heartbeat(actor.id, version); else await this.presence.clear(actor.id, version);
@@ -187,10 +192,12 @@ export class NightShiftService {
       requireThat(shared.rows.length===2,403,'CALL_NOT_ELIGIBLE','The selected conversation language is no longer available.');}
   }
   private async view(c: Query, r: Row) {
-    const names=await c.query('SELECT id,display_name FROM users WHERE id=ANY($1::uuid[])',[[r.customer_id,r.listener_id]]);
+    const names=await c.query('SELECT u.id,u.display_name,p.avatar_code FROM users u LEFT JOIN profiles p ON p.user_id=u.id WHERE u.id=ANY($1::uuid[])',[[r.customer_id,r.listener_id]]);
+    const customer=names.rows.find(u=>u.id===r.customer_id),listener=names.rows.find(u=>u.id===r.listener_id);
     return { id:r.id,customerId:r.customer_id,listenerId:r.listener_id,mediaType:r.media_type??'audio',
-      customerName:names.rows.find(u=>u.id===r.customer_id)?.display_name,
-      listenerName:names.rows.find(u=>u.id===r.listener_id)?.display_name,state:r.state,version:r.version,
+      customerName:customer?.display_name,listenerName:listener?.display_name,
+      ...(customer?.avatar_code?{customerAvatarCode:customer.avatar_code as string}:{}),
+      ...(listener?.avatar_code?{listenerAvatarCode:listener.avatar_code as string}:{}),state:r.state,version:r.version,
       createdAt:iso(r.created_at),expiresAt:iso(r.expires_at),acceptedAt:iso(r.accepted_at),endedAt:iso(r.ended_at),reason:r.reason,
       connectedMs:Number(r.connected_ms),chargeMicrocredits:Number(r.charge_microcredits),earningPaise:Number(r.earning_paise),
       // The frozen 60..600-second development allowance includes free time.
@@ -267,6 +274,8 @@ export class NightShiftService {
       const channel=(await this.push.reachable(c,[listenerId])).get(listenerId);
       requireThat(listener?.listener_approved&&listener.adult_confirmed&&!listener.suspended&&listener.mode==='listener'&&listener.desired_online
         &&channel&&(mediaType==='audio'||channel==='foreground'),409,'LISTENER_OFFLINE','Listener is unavailable');
+      requireThat(mediaType==='audio'?listener.audio_enabled:listener.video_enabled,
+        409,'LISTENER_MEDIA_UNAVAILABLE','The Listener is not accepting this call type');
       requireThat(customer.languages.some((language:string)=>listener.languages.includes(language)),409,'LANGUAGE_MISMATCH','Choose a listener who speaks one of your conversation languages');
       requireThat(!matching||customer.languages.includes(matching.language)&&listener.languages.includes(matching.language),409,'LANGUAGE_MISMATCH','The selected language must match both participants.');
       const blocked=await c.query('SELECT 1 FROM blocks WHERE (actor_id=$1 AND target_id=$2) OR (actor_id=$2 AND target_id=$1)',[actor.id,listenerId]);

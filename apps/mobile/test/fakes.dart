@@ -313,7 +313,18 @@ class FakeApi extends NightShiftApi {
       return user;
     }
     if (path == '/me/availability') {
-      user = {...user, 'online': body!['online']};
+      final previous = user['availability'] as Json?;
+      user = {
+        ...user,
+        'online': body!['online'],
+        'availability': {
+          'online': body['online'],
+          'audioEnabled':
+              body['audioEnabled'] ?? previous?['audioEnabled'] ?? true,
+          'videoEnabled':
+              body['videoEnabled'] ?? previous?['videoEnabled'] ?? true,
+        }
+      };
       return user;
     }
     if (path.endsWith('/rtc-token')) {

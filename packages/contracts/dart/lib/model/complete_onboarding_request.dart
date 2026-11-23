@@ -186,6 +186,66 @@ enum CompleteOnboardingRequestAvatarCodeEnum {
   star._(r'star'),
   leaf._(r'leaf'),
   wave._(r'wave'),
+  male01._(r'male_01'),
+  male02._(r'male_02'),
+  male03._(r'male_03'),
+  male04._(r'male_04'),
+  male05._(r'male_05'),
+  male06._(r'male_06'),
+  male07._(r'male_07'),
+  male08._(r'male_08'),
+  male09._(r'male_09'),
+  male10._(r'male_10'),
+  male11._(r'male_11'),
+  male12._(r'male_12'),
+  male13._(r'male_13'),
+  male14._(r'male_14'),
+  male15._(r'male_15'),
+  male16._(r'male_16'),
+  male17._(r'male_17'),
+  male18._(r'male_18'),
+  male19._(r'male_19'),
+  male20._(r'male_20'),
+  male21._(r'male_21'),
+  male22._(r'male_22'),
+  male23._(r'male_23'),
+  male24._(r'male_24'),
+  male25._(r'male_25'),
+  male26._(r'male_26'),
+  male27._(r'male_27'),
+  male28._(r'male_28'),
+  male29._(r'male_29'),
+  male30._(r'male_30'),
+  female01._(r'female_01'),
+  female02._(r'female_02'),
+  female03._(r'female_03'),
+  female04._(r'female_04'),
+  female05._(r'female_05'),
+  female06._(r'female_06'),
+  female07._(r'female_07'),
+  female08._(r'female_08'),
+  female09._(r'female_09'),
+  female10._(r'female_10'),
+  female11._(r'female_11'),
+  female12._(r'female_12'),
+  female13._(r'female_13'),
+  female14._(r'female_14'),
+  female15._(r'female_15'),
+  female16._(r'female_16'),
+  female17._(r'female_17'),
+  female18._(r'female_18'),
+  female19._(r'female_19'),
+  female20._(r'female_20'),
+  female21._(r'female_21'),
+  female22._(r'female_22'),
+  female23._(r'female_23'),
+  female24._(r'female_24'),
+  female25._(r'female_25'),
+  female26._(r'female_26'),
+  female27._(r'female_27'),
+  female28._(r'female_28'),
+  female29._(r'female_29'),
+  female30._(r'female_30'),
   ;
 
   /// Instantiate a new enum with the provided value.
@@ -247,6 +307,66 @@ class CompleteOnboardingRequestAvatarCodeEnumTypeTransformer {
         case r'star': return CompleteOnboardingRequestAvatarCodeEnum.star;
         case r'leaf': return CompleteOnboardingRequestAvatarCodeEnum.leaf;
         case r'wave': return CompleteOnboardingRequestAvatarCodeEnum.wave;
+        case r'male_01': return CompleteOnboardingRequestAvatarCodeEnum.male01;
+        case r'male_02': return CompleteOnboardingRequestAvatarCodeEnum.male02;
+        case r'male_03': return CompleteOnboardingRequestAvatarCodeEnum.male03;
+        case r'male_04': return CompleteOnboardingRequestAvatarCodeEnum.male04;
+        case r'male_05': return CompleteOnboardingRequestAvatarCodeEnum.male05;
+        case r'male_06': return CompleteOnboardingRequestAvatarCodeEnum.male06;
+        case r'male_07': return CompleteOnboardingRequestAvatarCodeEnum.male07;
+        case r'male_08': return CompleteOnboardingRequestAvatarCodeEnum.male08;
+        case r'male_09': return CompleteOnboardingRequestAvatarCodeEnum.male09;
+        case r'male_10': return CompleteOnboardingRequestAvatarCodeEnum.male10;
+        case r'male_11': return CompleteOnboardingRequestAvatarCodeEnum.male11;
+        case r'male_12': return CompleteOnboardingRequestAvatarCodeEnum.male12;
+        case r'male_13': return CompleteOnboardingRequestAvatarCodeEnum.male13;
+        case r'male_14': return CompleteOnboardingRequestAvatarCodeEnum.male14;
+        case r'male_15': return CompleteOnboardingRequestAvatarCodeEnum.male15;
+        case r'male_16': return CompleteOnboardingRequestAvatarCodeEnum.male16;
+        case r'male_17': return CompleteOnboardingRequestAvatarCodeEnum.male17;
+        case r'male_18': return CompleteOnboardingRequestAvatarCodeEnum.male18;
+        case r'male_19': return CompleteOnboardingRequestAvatarCodeEnum.male19;
+        case r'male_20': return CompleteOnboardingRequestAvatarCodeEnum.male20;
+        case r'male_21': return CompleteOnboardingRequestAvatarCodeEnum.male21;
+        case r'male_22': return CompleteOnboardingRequestAvatarCodeEnum.male22;
+        case r'male_23': return CompleteOnboardingRequestAvatarCodeEnum.male23;
+        case r'male_24': return CompleteOnboardingRequestAvatarCodeEnum.male24;
+        case r'male_25': return CompleteOnboardingRequestAvatarCodeEnum.male25;
+        case r'male_26': return CompleteOnboardingRequestAvatarCodeEnum.male26;
+        case r'male_27': return CompleteOnboardingRequestAvatarCodeEnum.male27;
+        case r'male_28': return CompleteOnboardingRequestAvatarCodeEnum.male28;
+        case r'male_29': return CompleteOnboardingRequestAvatarCodeEnum.male29;
+        case r'male_30': return CompleteOnboardingRequestAvatarCodeEnum.male30;
+        case r'female_01': return CompleteOnboardingRequestAvatarCodeEnum.female01;
+        case r'female_02': return CompleteOnboardingRequestAvatarCodeEnum.female02;
+        case r'female_03': return CompleteOnboardingRequestAvatarCodeEnum.female03;
+        case r'female_04': return CompleteOnboardingRequestAvatarCodeEnum.female04;
+        case r'female_05': return CompleteOnboardingRequestAvatarCodeEnum.female05;
+        case r'female_06': return CompleteOnboardingRequestAvatarCodeEnum.female06;
+        case r'female_07': return CompleteOnboardingRequestAvatarCodeEnum.female07;
+        case r'female_08': return CompleteOnboardingRequestAvatarCodeEnum.female08;
+        case r'female_09': return CompleteOnboardingRequestAvatarCodeEnum.female09;
+        case r'female_10': return CompleteOnboardingRequestAvatarCodeEnum.female10;
+        case r'female_11': return CompleteOnboardingRequestAvatarCodeEnum.female11;
+        case r'female_12': return CompleteOnboardingRequestAvatarCodeEnum.female12;
+        case r'female_13': return CompleteOnboardingRequestAvatarCodeEnum.female13;
+        case r'female_14': return CompleteOnboardingRequestAvatarCodeEnum.female14;
+        case r'female_15': return CompleteOnboardingRequestAvatarCodeEnum.female15;
+        case r'female_16': return CompleteOnboardingRequestAvatarCodeEnum.female16;
+        case r'female_17': return CompleteOnboardingRequestAvatarCodeEnum.female17;
+        case r'female_18': return CompleteOnboardingRequestAvatarCodeEnum.female18;
+        case r'female_19': return CompleteOnboardingRequestAvatarCodeEnum.female19;
+        case r'female_20': return CompleteOnboardingRequestAvatarCodeEnum.female20;
+        case r'female_21': return CompleteOnboardingRequestAvatarCodeEnum.female21;
+        case r'female_22': return CompleteOnboardingRequestAvatarCodeEnum.female22;
+        case r'female_23': return CompleteOnboardingRequestAvatarCodeEnum.female23;
+        case r'female_24': return CompleteOnboardingRequestAvatarCodeEnum.female24;
+        case r'female_25': return CompleteOnboardingRequestAvatarCodeEnum.female25;
+        case r'female_26': return CompleteOnboardingRequestAvatarCodeEnum.female26;
+        case r'female_27': return CompleteOnboardingRequestAvatarCodeEnum.female27;
+        case r'female_28': return CompleteOnboardingRequestAvatarCodeEnum.female28;
+        case r'female_29': return CompleteOnboardingRequestAvatarCodeEnum.female29;
+        case r'female_30': return CompleteOnboardingRequestAvatarCodeEnum.female30;
         default:
           if (!allowNull) {
             throw const FormatException('Unknown enum value');

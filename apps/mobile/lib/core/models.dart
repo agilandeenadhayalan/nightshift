@@ -5,6 +5,17 @@ int number(dynamic value) =>
 
 enum AppMode { customer, listener }
 
+String? _avatarCode(Json json, [String field = 'avatarCode']) {
+  if (!json.containsKey(field)) return null;
+  final value = json[field];
+  if (value is String &&
+      (const ['moon', 'star', 'leaf', 'wave'].contains(value) ||
+          RegExp(r'^(male|female)_(0[1-9]|[12][0-9]|30)$').hasMatch(value))) {
+    return value;
+  }
+  throw const FormatException('Unsupported avatar code');
+}
+
 /// A server-owned test quote. The UI displays these values; it never settles calls.
 class CallRate {
   const CallRate({
@@ -70,6 +81,25 @@ CallRate _callRate(Json json) {
   return rate;
 }
 
+class ListenerAvailability {
+  const ListenerAvailability(
+      {required this.online,
+      required this.audioEnabled,
+      required this.videoEnabled});
+  factory ListenerAvailability.fromJson(Json json) {
+    if (json['online'] is! bool ||
+        json['audioEnabled'] is! bool ||
+        json['videoEnabled'] is! bool) {
+      throw const FormatException('Invalid listener availability');
+    }
+    return ListenerAvailability(
+        online: json['online'] as bool,
+        audioEnabled: json['audioEnabled'] as bool,
+        videoEnabled: json['videoEnabled'] as bool);
+  }
+  final bool online, audioEnabled, videoEnabled;
+}
+
 class UserProfile {
   const UserProfile(
       {required this.id,
@@ -77,18 +107,26 @@ class UserProfile {
       required this.mode,
       required this.listenerApproved,
       required this.online,
+      this.availability,
+      this.avatarCode,
       required this.languages});
   factory UserProfile.fromJson(Json json) => UserProfile(
         id: json['id'] as String,
         name: json['displayName'] as String,
+        avatarCode: _avatarCode(json),
         mode: json['mode'] == 'listener' ? AppMode.listener : AppMode.customer,
         listenerApproved: json['listenerApproved'] == true,
         online: json['online'] == true,
+        availability: json['availability'] == null
+            ? null
+            : ListenerAvailability.fromJson(json['availability'] as Json),
         languages: List<String>.from(json['languages'] ?? ['ta', 'en']),
       );
   final String id, name;
+  final String? avatarCode;
   final AppMode mode;
   final bool listenerApproved, online;
+  final ListenerAvailability? availability;
   final List<String> languages;
 }
 
@@ -98,20 +136,26 @@ class ListenerProfile {
       required this.name,
       required this.languages,
       required this.available,
+      this.audioAvailable,
+      this.videoAvailable,
       this.busy = false,
       this.favorite = false,
       this.reachability = 'foreground',
+      this.avatarCode,
       this.rate = const CallRate.audio(),
       this.videoRate});
   factory ListenerProfile.fromJson(Json json) => ListenerProfile(
         id: json['id'] as String,
         name: json['displayName'] as String,
+        avatarCode: _avatarCode(json),
         languages: List<String>.from(json['languages'] ?? []),
         available: json['busy'] != true &&
             (json.containsKey('available')
                 ? json['available'] == true
                 : json['status'] == 'available' || json['online'] == true),
         busy: json['busy'] == true,
+        audioAvailable: json['audioAvailable'] as bool?,
+        videoAvailable: json['videoAvailable'] as bool?,
         favorite: json['favorite'] == true,
         reachability: json['reachability'] as String? ??
             (json['online'] == true ? 'foreground' : 'offline'),
@@ -123,12 +167,23 @@ class ListenerProfile {
   final String id, name;
   final List<String> languages;
   final bool available, busy, favorite;
+  final bool? audioAvailable, videoAvailable;
+  bool acceptsMedia({bool video = false}) =>
+      available &&
+      !busy &&
+      (video
+          ? (videoAvailable ?? videoRate != null)
+          : (audioAvailable ?? true));
   final String reachability;
+  final String? avatarCode;
   ListenerProfile withFavorite(bool value) => ListenerProfile(
       id: id,
       name: name,
+      avatarCode: avatarCode,
       languages: languages,
       available: available,
+      audioAvailable: audioAvailable,
+      videoAvailable: videoAvailable,
       busy: busy,
       favorite: value,
       reachability: reachability,
@@ -164,6 +219,8 @@ class CallSession {
       required this.listenerId,
       required this.customerName,
       required this.listenerName,
+      this.customerAvatarCode,
+      this.listenerAvatarCode,
       required this.state,
       required this.version,
       required this.connectedMs,
@@ -184,6 +241,8 @@ class CallSession {
         listenerId: json['listenerId'] as String,
         customerName: json['customerName'] as String? ?? 'Customer',
         listenerName: json['listenerName'] as String? ?? 'Listener',
+        customerAvatarCode: _avatarCode(json, 'customerAvatarCode'),
+        listenerAvatarCode: _avatarCode(json, 'listenerAvatarCode'),
         state: json['state'] as String,
         version: number(json['version']),
         connectedMs: number(json['connectedMs']),
@@ -202,6 +261,7 @@ class CallSession {
         rate: _callRate(json),
       );
   final String id, customerId, listenerId, customerName, listenerName, state;
+  final String? customerAvatarCode, listenerAvatarCode;
   final String? reason;
   final CallDurationLimitReason? durationLimitReason;
   final bool _allowanceFieldsValid;

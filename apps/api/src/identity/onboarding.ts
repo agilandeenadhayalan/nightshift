@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Actor } from '../auth';
 import { Database } from '../db';
 import { fields, object, requireThat, string } from '../errors';
+import { isAvatarCode } from './avatars';
 
 export const ONBOARDING_CONSENT = 'adult-onboarding-v1';
 
@@ -52,7 +53,7 @@ export class Onboarding {
     requireThat([...displayName].length >= 2 && [...displayName].length <= 40
       && /^[\p{L}\p{M}\p{N} ._-]+$/u.test(displayName) && /[\p{L}]/u.test(displayName)
       && !/[\p{N}]{6}/u.test(displayName),400,'INVALID_DISPLAY_NAME','Use a short nickname without contact details.');
-    requireThat(typeof body.avatarCode==='string' && ['moon','star','leaf','wave'].includes(body.avatarCode),400,'INVALID_AVATAR','Choose a built-in avatar.');
+    requireThat(isAvatarCode(body.avatarCode),400,'INVALID_AVATAR','Choose a built-in avatar.');
     requireThat(typeof body.interfaceLanguage==='string' && ['ta','en'].includes(body.interfaceLanguage),400,'INVALID_LANGUAGE','Choose Tamil or English.');
     requireThat(Array.isArray(body.languages) && body.languages.length > 0 && body.languages.length <= 2
       && body.languages.every(x=>['ta','en'].includes(x)) && new Set(body.languages).size===body.languages.length,

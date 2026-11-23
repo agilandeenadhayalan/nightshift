@@ -14,18 +14,40 @@ class SetAvailabilityRequest {
   /// Returns a new [SetAvailabilityRequest] instance.
   SetAvailabilityRequest({
     required this.online,
+    this.audioEnabled,
+    this.videoEnabled,
   });
 
   bool online;
 
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  bool? audioEnabled;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  bool? videoEnabled;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is SetAvailabilityRequest &&
-    other.online == online;
+    other.online == online &&
+    other.audioEnabled == audioEnabled &&
+    other.videoEnabled == videoEnabled;
 
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
-    (online.hashCode);
+    (online.hashCode) +
+    (audioEnabled == null ? 0 : audioEnabled!.hashCode) +
+    (videoEnabled == null ? 0 : videoEnabled!.hashCode);
 
   @override
   // Never include tokens, access keys or private fields in diagnostics.
@@ -34,6 +56,12 @@ class SetAvailabilityRequest {
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
       json[r'online'] = this.online;
+    if (this.audioEnabled != null) {
+      json[r'audioEnabled'] = this.audioEnabled;
+    }
+    if (this.videoEnabled != null) {
+      json[r'videoEnabled'] = this.videoEnabled;
+    }
     return json;
   }
 
@@ -57,9 +85,17 @@ class SetAvailabilityRequest {
       if (json[r'online'] != null && json[r'online'] is! bool) {
         throw const FormatException('Invalid SetAvailabilityRequest.online boolean');
       }
+      if (json[r'audioEnabled'] != null && json[r'audioEnabled'] is! bool) {
+        throw const FormatException('Invalid SetAvailabilityRequest.audioEnabled boolean');
+      }
+      if (json[r'videoEnabled'] != null && json[r'videoEnabled'] is! bool) {
+        throw const FormatException('Invalid SetAvailabilityRequest.videoEnabled boolean');
+      }
 
       return SetAvailabilityRequest(
         online: mapValueOfType<bool>(json, r'online')!,
+        audioEnabled: mapValueOfType<bool>(json, r'audioEnabled'),
+        videoEnabled: mapValueOfType<bool>(json, r'videoEnabled'),
       );
     }
     return null;

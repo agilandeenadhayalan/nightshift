@@ -30,7 +30,7 @@ const active=(r:Row)=>r.state==='searching'||r.state==='ringing';
 const ms=(v:unknown)=>new Date(v as string).getTime();
 const hash=(v:string)=>createHash('sha256').update(v).digest('hex');
 const reasons=['language_match','currently_available','fair_rotation'] as const;
-const retryable=new Set(['LISTENER_OFFLINE','LISTENER_BUSY','PAIR_BLOCKED','LANGUAGE_MISMATCH']);
+const retryable=new Set(['LISTENER_OFFLINE','LISTENER_MEDIA_UNAVAILABLE','LISTENER_BUSY','PAIR_BLOCKED','LANGUAGE_MISMATCH']);
 class RetrySelection extends Error{}
 
 /** Durable ninety-second consent, separate from the existing call lifecycle.
@@ -121,7 +121,7 @@ export class MatchingCoordinator {
       FROM users u LEFT JOIN matching_listener_fairness f ON f.listener_id=u.id
       LEFT JOIN LATERAL (SELECT count(*) offered,count(*) FILTER(WHERE q.accepted_at IS NOT NULL) accepted FROM
         (SELECT s.accepted_at FROM matching_attempts a JOIN call_sessions s ON s.id=a.call_id WHERE a.listener_id=u.id ORDER BY a.created_at DESC LIMIT 20) q) history ON true
-      WHERE u.id<>$1 AND u.listener_approved AND u.adult_confirmed AND NOT u.suspended AND u.mode='listener' AND u.desired_online
+      WHERE u.id<>$1 AND u.listener_approved AND u.adult_confirmed AND NOT u.suspended AND u.mode='listener' AND u.desired_online AND u.audio_enabled
       AND $2=ANY(u.languages) AND NOT(u.id=ANY($3::uuid[]))
       AND NOT EXISTS(SELECT 1 FROM blocks b WHERE (b.actor_id=$1 AND b.target_id=u.id) OR (b.target_id=$1 AND b.actor_id=u.id))
       AND NOT EXISTS(SELECT 1 FROM active_participant_claims a WHERE a.user_id=u.id)

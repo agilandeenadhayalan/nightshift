@@ -45,7 +45,7 @@ async function snapshot(db:Database){
   const result:Record<string,unknown>={};
   for(const table of ['rate_versions','users','wallet_accounts','journal_batches','journal_lines','listener_reviews','call_sessions','call_events','outbox_events']){
     // Compare the original financial fields across future metadata-only migrations.
-    const record=table==='journal_batches'?"to_jsonb(t)-'sealed'":'to_jsonb(t)';
+    const record=table==='journal_batches'?"to_jsonb(t)-'sealed'":table==='users'?"to_jsonb(t)-'audio_enabled'-'video_enabled'":'to_jsonb(t)';
     result[table]=(await db.pool.query(`SELECT ${record} AS record FROM ${table} t ORDER BY id`)).rows;
   }
   return result;
@@ -164,7 +164,7 @@ for(const conflicting of [false,true])test(`forward upgrade preserves ${conflict
   assert.equal(checksums.length,17);
   await migrate(db);await migrate(db);assert.deepEqual(await snapshot(db),before);
   assert.deepEqual((await db.pool.query('SELECT name,checksum FROM schema_migrations ORDER BY name LIMIT 17')).rows,checksums);
-  assert.equal((await db.pool.query('SELECT count(*)::int count FROM schema_migrations')).rows[0].count,19);
+  assert.equal((await db.pool.query('SELECT count(*)::int count FROM schema_migrations')).rows[0].count,21);
   if(conflicting)await assert.rejects(seed(db),conflict);else await seed(db);
   assert.deepEqual(await snapshot(db),before);
   await assert.rejects(db.pool.query("UPDATE rate_versions SET policy='{}'::jsonb WHERE id=$1",[TEST_RATE.id]),{code:'23514'});

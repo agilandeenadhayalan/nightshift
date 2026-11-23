@@ -5,11 +5,45 @@ import '../core/controller.dart';
 import '../core/matching.dart';
 import 'screens.dart' show PageBody, ErrorNotice, StatusCard;
 import 'video_preflight.dart' show testRateLabel, testTariffDescription;
+import 'redesign/design_system.dart';
+import 'redesign/call_components.dart';
 
 class MatchingScreen extends ConsumerStatefulWidget {
   const MatchingScreen({super.key});
   @override
   ConsumerState<MatchingScreen> createState() => _MatchingScreenState();
+}
+
+/// Unknown candidates remain neutral. A portrait is shown only after the
+/// matching request identifies an actual call with a selected avatar code.
+class _MatchingPortraitRail extends StatelessWidget {
+  const _MatchingPortraitRail({this.avatarCode, this.compact = false});
+  final bool compact;
+  final String? avatarCode;
+  @override
+  Widget build(BuildContext context) => Padding(
+      padding: EdgeInsets.symmetric(vertical: compact ? 16 : 28),
+      child: Center(
+          child: Container(
+              width: compact ? 112 : 200,
+              height: compact ? 120 : 220,
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(36),
+                  border:
+                      Border.all(color: NsColors.cyan.withValues(alpha: .3)),
+                  gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF263855), Color(0xFF151B32)])),
+              child: avatarAssetPath(avatarCode) != null
+                  ? AvatarPortrait(
+                      assetPath: avatarAssetPath(avatarCode)!,
+                      borderRadius: BorderRadius.circular(36))
+                  : const Center(
+                      child: NightshiftIllustration(
+                          icon: Icons.headset_mic_outlined,
+                          color: NsColors.cyan,
+                          size: 88)))));
 }
 
 class _MatchingScreenState extends ConsumerState<MatchingScreen> {
@@ -40,14 +74,37 @@ class _MatchingScreenState extends ConsumerState<MatchingScreen> {
     }
     final busy = matching.busy || state.busy;
     final pending = matching.uncertain;
+    final compact = MediaQuery.textScalerOf(context).scale(1) > 1.5 ||
+        MediaQuery.sizeOf(context).height < 700;
+    final budget = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+            color: const Color(0xAA11192A),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white12)),
+        child: Text(
+            matching.remainingSeconds > 0
+                ? state.text('Up to ${matching.remainingSeconds}s remaining',
+                    'அதிகபட்சம் ${matching.remainingSeconds} வினாடிகள் மீதம்')
+                : state.text(
+                    'The wait budget has elapsed. Checking the final status…',
+                    'காத்திருப்பு நேரம் முடிந்தது. இறுதி நிலையை சரிபார்க்கிறது…'),
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium));
     final showConsent =
         !matching.blocked && (request?.state != 'matched' || reviewNewSearch);
     return PopScope(
         canPop: !matching.blocked,
         child: Scaffold(
+            backgroundColor: const Color(0xFF11172D),
             appBar: AppBar(
                 automaticallyImplyLeading: false,
-                title: Text(state.text('Find a Listener', 'கேட்பவரைத் தேடு')),
+                backgroundColor: Colors.transparent,
+                centerTitle: true,
+                title: const Align(
+                    alignment: Alignment.centerLeft,
+                    child: NightshiftBrand(size: 24)),
                 actions: [
                   if (!matching.blocked)
                     IconButton(
@@ -55,183 +112,232 @@ class _MatchingScreenState extends ConsumerState<MatchingScreen> {
                         onPressed: matching.dismiss,
                         icon: const Icon(Icons.close))
                 ]),
-            body: PageBody(children: [
-              const ErrorNotice(),
-              if (matching.loading || busy)
-                LinearProgressIndicator(
-                    semanticsLabel: state.text('Updating search status',
-                        'தேடல் நிலையை புதுப்பிக்கிறது')),
-              if (request != null) ...[
-                Text(_title(state, request),
-                    style: Theme.of(context).textTheme.headlineSmall),
-                const SizedBox(height: 12),
-                Text(state.text(
-                    'Audio · ${request.language == 'ta' ? 'Tamil' : 'English'} · Attempt ${request.attemptCount} of 3',
-                    'ஆடியோ · ${request.language == 'ta' ? 'தமிழ்' : 'ஆங்கிலம்'} · முயற்சி ${request.attemptCount} / 3')),
-                if (request.active) ...[
-                  const SizedBox(height: 12),
-                  Text(matching.remainingSeconds > 0
-                      ? state.text(
-                          'Up to ${matching.remainingSeconds}s remaining',
-                          'அதிகபட்சம் ${matching.remainingSeconds} வினாடிகள் மீதம்')
-                      : state.text(
-                          'The wait budget has elapsed. Checking the final status…',
-                          'காத்திருப்பு நேரம் முடிந்தது. இறுதி நிலையை சரிபார்க்கிறது…')),
-                  Text(state.text(
-                      'Searching and ringing use no test credits. Keep the app open for the call.',
-                      'தேடலுக்கும் அழைப்பு மணிக்கும் சோதனை நாணயங்கள் செலவாகாது. அழைப்புக்காக செயலியை திறந்து வைக்கவும்.')),
-                  if (request.callId != null &&
-                      state.activeCall?.id == request.callId)
-                    Text(state.text(
-                        'Inviting ${state.activeCall!.listenerName}',
-                        '${state.activeCall!.listenerName} அழைக்கப்படுகிறார்')),
-                  if (request.reasons.isNotEmpty)
-                    Text(state.text(
-                        'Selected for language, current availability and fair rotation.',
-                        'மொழி, தற்போதைய கிடைக்கும் நிலை மற்றும் சமமான வாய்ப்பு அடிப்படையில் தேர்வு.')),
-                  const SizedBox(height: 16),
-                  FilledButton.tonal(
-                      onPressed:
-                          busy || pending != null ? null : matching.cancel,
-                      child: Text(
-                          state.text('Cancel search', 'தேடலை ரத்து செய்'))),
-                ] else ...[
-                  const SizedBox(height: 12),
-                  Text(_outcome(state, request)),
-                  if (request.state == 'matched') ...[
-                    Text(state.text(
-                        'This search will not invite another Listener. Call status is checked separately.',
-                        'இந்த தேடல் மற்றொரு கேட்பவரை அழைக்காது. அழைப்பு நிலை தனியாக சரிபார்க்கப்படும்.')),
-                    OutlinedButton(
-                        onPressed: state.refresh,
-                        child: Text(state.text(
-                            'Refresh call status', 'அழைப்பு நிலையை புதுப்பி'))),
-                    if (!state.hasCall && !reviewNewSearch)
-                      OutlinedButton(
-                          onPressed: busy
-                              ? null
-                              : () {
-                                  setState(() {
-                                    reviewNewSearch = true;
-                                    consent = false;
-                                  });
-                                  unawaited(matching.loadRate());
-                                },
-                          child: Text(state.text('Review a new audio search',
-                              'புதிய ஆடியோ தேடலை பரிசீலி'))),
-                  ],
-                ],
-              ],
-              if (pending != null)
-                StatusCard(
-                    title: state.text('Request outcome not yet confirmed',
-                        'கோரிக்கையின் முடிவு இன்னும் உறுதியாகவில்லை'),
-                    message: state.text(
-                        'Check status before retrying. No new search or cancellation is sent automatically.',
-                        'மீண்டும் முயற்சிக்கும் முன் நிலையை சரிபார்க்கவும். புதிய தேடலோ ரத்துசெய்தலோ தானாக அனுப்பப்படாது.'),
-                    action: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
+            bottomNavigationBar: request?.active == true
+                ? SafeArea(
+                    minimum: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                    child: FilledButton.tonal(
+                        style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF11172D),
+                            foregroundColor: const Color(0xFFB391FF),
+                            side: const BorderSide(color: Color(0xFF526078)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20))),
+                        onPressed:
+                            busy || pending != null ? null : matching.cancel,
+                        child: Text(
+                            state.text('Cancel search', 'தேடலை ரத்து செய்'))))
+                : null,
+            body: DecoratedBox(
+                decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                      Color(0xFF192B47),
+                      Color(0xFF11172D),
+                      Color(0xFF080C18)
+                    ])),
+                child: PageBody(children: [
+                  const ErrorNotice(),
+                  if (matching.loading || busy)
+                    LinearProgressIndicator(
+                        semanticsLabel: state.text('Updating search status',
+                            'தேடல் நிலையை புதுப்பிக்கிறது')),
+                  if (request != null) ...[
+                    if (request.active)
+                      Center(
+                          child: CallStatusPill(
+                              icon: Icons.info_outline,
+                              color: NsColors.gold,
+                              label: state.text(
+                                  'Keep this screen open while connecting',
+                                  'இணைக்கும் வரை இந்த திரையை திறந்து வைக்கவும்'))),
+                    if (request.active && compact) ...[
+                      const SizedBox(height: 12),
+                      budget,
+                    ],
+                    if (request.active)
+                      _MatchingPortraitRail(
+                          compact: compact,
+                          avatarCode: request.callId != null &&
+                                  state.activeCall?.id == request.callId
+                              ? state.activeCall?.listenerAvatarCode
+                              : null),
+                    Text(_title(state, request),
+                        textAlign: request.active ? TextAlign.center : null,
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineLarge
+                            ?.copyWith(fontSize: compact ? 18 : 28)),
+                    const SizedBox(height: 16),
+                    Text(
+                        state.text(
+                            'Audio · ${request.language == 'ta' ? 'Tamil' : 'English'} · Attempt ${request.attemptCount} of 3',
+                            'ஆடியோ · ${request.language == 'ta' ? 'தமிழ்' : 'ஆங்கிலம்'} · முயற்சி ${request.attemptCount} / 3'),
+                        textAlign: TextAlign.center),
+                    if (request.active) ...[
+                      const SizedBox(height: 12),
+                      if (!compact) budget,
+                      Text(
+                          state.text(
+                              'Searching and ringing use no test credits. Keep the app open for the call.',
+                              'தேடலுக்கும் அழைப்பு மணிக்கும் சோதனை நாணயங்கள் செலவாகாது. அழைப்புக்காக செயலியை திறந்து வைக்கவும்.'),
+                          textAlign: TextAlign.center),
+                      if (request.callId != null &&
+                          state.activeCall?.id == request.callId)
+                        Text(state.text(
+                            'Inviting ${state.activeCall!.listenerName}',
+                            '${state.activeCall!.listenerName} அழைக்கப்படுகிறார்')),
+                      if (request.reasons.isNotEmpty)
+                        Text(state.text(
+                            'Selected for language, current availability and fair rotation.',
+                            'மொழி, தற்போதைய கிடைக்கும் நிலை மற்றும் சமமான வாய்ப்பு அடிப்படையில் தேர்வு.')),
+                      const SizedBox(height: 16),
+                    ] else ...[
+                      const SizedBox(height: 12),
+                      Text(_outcome(state, request)),
+                      if (request.state == 'matched') ...[
+                        Text(state.text(
+                            'This search will not invite another Listener. Call status is checked separately.',
+                            'இந்த தேடல் மற்றொரு கேட்பவரை அழைக்காது. அழைப்பு நிலை தனியாக சரிபார்க்கப்படும்.')),
+                        OutlinedButton(
+                            onPressed: state.refresh,
+                            child: Text(state.text('Refresh call status',
+                                'அழைப்பு நிலையை புதுப்பி'))),
+                        if (!state.hasCall && !reviewNewSearch)
                           OutlinedButton(
-                              onPressed: busy || matching.loading
+                              onPressed: busy
                                   ? null
-                                  : matching.recover,
-                              child: Text(state.text('Check search status',
-                                  'தேடல் நிலையை சரிபார்'))),
-                          if (matching.retryAllowed)
-                            FilledButton(
-                                onPressed: busy ? null : matching.retry,
-                                child: Text(state.text('Retry the same request',
-                                    'அதே கோரிக்கையை மீண்டும் முயற்சி'))),
-                        ])),
-              if (matching.error != null)
-                StatusCard(
-                    title: state.text('Search status needs attention',
-                        'தேடல் நிலையை சரிபார்க்கவும்'),
-                    message: _error(state, matching.error!.code),
-                    action: OutlinedButton(
-                        onPressed: busy || matching.loading
+                                  : () {
+                                      setState(() {
+                                        reviewNewSearch = true;
+                                        consent = false;
+                                      });
+                                      unawaited(matching.loadRate());
+                                    },
+                              child: Text(state.text(
+                                  'Review a new audio search',
+                                  'புதிய ஆடியோ தேடலை பரிசீலி'))),
+                      ],
+                    ],
+                  ],
+                  if (pending != null)
+                    CallAttentionCard(
+                        title: state.text('Request outcome not yet confirmed',
+                            'கோரிக்கையின் முடிவு இன்னும் உறுதியாகவில்லை'),
+                        message: matching.error != null
+                            ? _error(state, matching.error!.code)
+                            : state.text(
+                                'Check status before retrying. No new search or cancellation is sent automatically.',
+                                'மீண்டும் முயற்சிக்கும் முன் நிலையை சரிபார்க்கவும். புதிய தேடலோ ரத்துசெய்தலோ தானாக அனுப்பப்படாது.'),
+                        action: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              OutlinedButton(
+                                  onPressed: busy || matching.loading
+                                      ? null
+                                      : matching.recover,
+                                  child: Text(state.text('Check search status',
+                                      'தேடல் நிலையை சரிபார்'))),
+                              if (matching.retryAllowed)
+                                FilledButton(
+                                    onPressed: busy ? null : matching.retry,
+                                    child: Text(state.text(
+                                        'Retry the same request',
+                                        'அதே கோரிக்கையை மீண்டும் முயற்சி'))),
+                            ])),
+                  if (matching.error != null && pending == null)
+                    StatusCard(
+                        title: state.text('Search status needs attention',
+                            'தேடல் நிலையை சரிபார்க்கவும்'),
+                        message: _error(state, matching.error!.code),
+                        action: OutlinedButton(
+                            onPressed: busy || matching.loading
+                                ? null
+                                : () async {
+                                    await matching.recover();
+                                    if (!matching.blocked) {
+                                      await matching.loadRate();
+                                    }
+                                  },
+                            child: Text(state.text('Refresh search status',
+                                'தேடல் நிலையை புதுப்பி')))),
+                  if (showConsent) ...[
+                    const SizedBox(height: 20),
+                    Text(
+                        state.text('A bounded audio search',
+                            'வரையறுக்கப்பட்ட ஆடியோ தேடல்'),
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 12),
+                    Text(state.text(
+                        'Try up to 3 Listeners, one at a time, within 90 seconds total. Each invitation lasts at most 30 seconds. Availability is not guaranteed. Searching, ringing and declined invitations cost no test credits.',
+                        'மொத்தம் 90 வினாடிகளுக்குள், ஒருவருக்குப் பின் ஒருவராக அதிகபட்சம் 3 கேட்பவர்களை முயற்சிக்கலாம். ஒவ்வொரு அழைப்புக்கும் அதிகபட்சம் 30 வினாடிகள். கிடைப்பது உறுதியல்ல. தேடல், அழைப்பு மணி, மறுக்கப்பட்ட அழைப்புகளுக்கு சோதனை நாணயங்கள் செலவாகாது.')),
+                    const SizedBox(height: 12),
+                    if (matching.rate != null) ...[
+                      Text(testRateLabel(state, matching.rate!)),
+                      Text(testTariffDescription(state, matching.rate!)),
+                    ] else
+                      Text(state.text('Loading the server test-credit rate…',
+                          'சேவையக சோதனை நாணய விகிதம் ஏற்றப்படுகிறது…')),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                        value: selectedLanguage,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                            labelText: state.text(
+                                'Conversation language', 'உரையாடல் மொழி')),
+                        items: [
+                          for (final language
+                              in state.user?.languages ?? <String>[])
+                            DropdownMenuItem(
+                                value: language,
+                                child: Text(language == 'ta'
+                                    ? 'தமிழ் · Tamil'
+                                    : 'English'))
+                        ],
+                        onChanged: busy
+                            ? null
+                            : (value) => setState(() {
+                                  selectedLanguage = value;
+                                  consent = false;
+                                })),
+                    CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: consent,
+                        onChanged: busy
+                            ? null
+                            : (value) =>
+                                setState(() => consent = value == true),
+                        title: Text(state.text(
+                            'I agree to this audio search and the displayed test-credit rate.',
+                            'இந்த ஆடியோ தேடலுக்கும் காட்டப்பட்ட சோதனை நாணய விகிதத்திற்கும் ஒப்புக்கொள்கிறேன்.'))),
+                    FilledButton(
+                        onPressed: busy ||
+                                matching.loading ||
+                                !matching.restored ||
+                                matching.rate == null ||
+                                !consent ||
+                                selectedLanguage == null
                             ? null
                             : () async {
-                                await matching.recover();
-                                if (!matching.blocked) {
-                                  await matching.loadRate();
+                                final expectedOwner = owner,
+                                    language = selectedLanguage!;
+                                if (expectedOwner != state.accountIdentity) {
+                                  return;
                                 }
+                                await state.startMatching(
+                                    language: language, consent: consent);
+                                if (mounted) setState(() => consent = false);
                               },
-                        child: Text(state.text('Refresh search status',
-                            'தேடல் நிலையை புதுப்பி')))),
-              if (showConsent) ...[
-                const SizedBox(height: 20),
-                Text(
-                    state.text('A bounded audio search',
-                        'வரையறுக்கப்பட்ட ஆடியோ தேடல்'),
-                    style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                Text(state.text(
-                    'Try up to 3 Listeners, one at a time, within 90 seconds total. Each invitation lasts at most 30 seconds. Availability is not guaranteed. Searching, ringing and declined invitations cost no test credits.',
-                    'மொத்தம் 90 வினாடிகளுக்குள், ஒருவருக்குப் பின் ஒருவராக அதிகபட்சம் 3 கேட்பவர்களை முயற்சிக்கலாம். ஒவ்வொரு அழைப்புக்கும் அதிகபட்சம் 30 வினாடிகள். கிடைப்பது உறுதியல்ல. தேடல், அழைப்பு மணி, மறுக்கப்பட்ட அழைப்புகளுக்கு சோதனை நாணயங்கள் செலவாகாது.')),
-                const SizedBox(height: 12),
-                if (matching.rate != null) ...[
-                  Text(testRateLabel(state, matching.rate!)),
-                  Text(testTariffDescription(state, matching.rate!)),
-                ] else
-                  Text(state.text('Loading the server test-credit rate…',
-                      'சேவையக சோதனை நாணய விகிதம் ஏற்றப்படுகிறது…')),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                    value: selectedLanguage,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                        labelText: state.text(
-                            'Conversation language', 'உரையாடல் மொழி')),
-                    items: [
-                      for (final language
-                          in state.user?.languages ?? <String>[])
-                        DropdownMenuItem(
-                            value: language,
-                            child: Text(
-                                language == 'ta' ? 'தமிழ் · Tamil' : 'English'))
-                    ],
-                    onChanged: busy
-                        ? null
-                        : (value) => setState(() {
-                              selectedLanguage = value;
-                              consent = false;
-                            })),
-                CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: consent,
-                    onChanged: busy
-                        ? null
-                        : (value) => setState(() => consent = value == true),
-                    title: Text(state.text(
-                        'I agree to this audio search and the displayed test-credit rate.',
-                        'இந்த ஆடியோ தேடலுக்கும் காட்டப்பட்ட சோதனை நாணய விகிதத்திற்கும் ஒப்புக்கொள்கிறேன்.'))),
-                FilledButton(
-                    onPressed: busy ||
-                            matching.loading ||
-                            !matching.restored ||
-                            matching.rate == null ||
-                            !consent ||
-                            selectedLanguage == null
-                        ? null
-                        : () async {
-                            final expectedOwner = owner,
-                                language = selectedLanguage!;
-                            if (expectedOwner != state.accountIdentity) return;
-                            await state.startMatching(
-                                language: language, consent: consent);
-                            if (mounted) setState(() => consent = false);
-                          },
-                    child: Text(state.text(
-                        'Start audio search', 'ஆடியோ தேடலைத் தொடங்கு'))),
-              ],
-              if (!matching.blocked)
-                TextButton(
-                    onPressed: matching.dismiss,
-                    child: Text(state.text(
-                        'Back to Discover', 'கண்டறி பக்கத்திற்கு திரும்பு'))),
-            ])));
+                        child: Text(state.text(
+                            'Start audio search', 'ஆடியோ தேடலைத் தொடங்கு'))),
+                  ],
+                  if (!matching.blocked)
+                    TextButton(
+                        onPressed: matching.dismiss,
+                        child: Text(state.text('Back to Discover',
+                            'கண்டறி பக்கத்திற்கு திரும்பு'))),
+                ]))));
   }
 
   String _title(AppController state, MatchRequest request) =>

@@ -73,6 +73,22 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - assets/avatars/male/
+    - assets/avatars/female/
+    - assets/fonts/plusjakartasans-OFL.txt
+    - assets/fonts/spacegrotesk-OFL.txt
+    - assets/fonts/outfit-OFL.txt
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Variable.ttf
+    - family: SpaceGrotesk
+      fonts:
+        - asset: assets/fonts/SpaceGrotesk-Variable.ttf
+    - family: Outfit
+      fonts:
+        - asset: assets/fonts/Outfit-Variable.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

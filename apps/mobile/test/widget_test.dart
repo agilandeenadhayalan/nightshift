@@ -42,15 +42,15 @@ void main() {
   });
 
   testWidgets(
-      'approved Listener navigation includes online control and history',
+      'approved Listener navigation includes channel controls and history',
       (tester) async {
     final state = await setup(tester, listener: true);
     expect(find.text('Availability'), findsOneWidget);
     expect(find.text('Earnings'), findsOneWidget);
-    await tester.tap(find.text('Go online'));
+    await tester.tap(find.byKey(const ValueKey('listener-audio-availability')));
     await tester.pumpAndSettle();
     expect(state.user!.online, isTrue);
-    expect(find.text('You are online'), findsOneWidget);
+    expect(find.text('Live · Audio only'), findsOneWidget);
     await tester.tap(find.text('Earnings'));
     await tester.pumpAndSettle();
     expect(find.text('Earnings & calls'), findsOneWidget);
@@ -86,6 +86,8 @@ void main() {
     await tester.tap(find.text('Cancel call'));
     await tester.pumpAndSettle();
     expect(find.text('Your conversations'), findsOneWidget);
+    await tester.tap(find.byTooltip('Call details'));
+    await tester.pumpAndSettle();
     expect(find.text('Call ID: call-id'), findsOneWidget);
   });
 }

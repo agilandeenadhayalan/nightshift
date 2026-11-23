@@ -286,7 +286,7 @@ for(const anomalous of [false,true])test(`forward upgrade closes and exactly pre
   assert.deepEqual((await db.pool.query(`SELECT (SELECT jsonb_agg(to_jsonb(c)) FROM call_sessions c) AS calls,
     (SELECT jsonb_agg(to_jsonb(e)) FROM call_events e) AS events,(SELECT jsonb_agg(to_jsonb(o)) FROM outbox_events o) AS outbox`)).rows,history);
   assert.deepEqual((await db.pool.query('SELECT name,checksum FROM schema_migrations ORDER BY name LIMIT 18')).rows,checksums);
-  assert.equal((await db.pool.query('SELECT count(*)::int count FROM schema_migrations')).rows[0].count,19);
+  assert.equal((await db.pool.query('SELECT count(*)::int count FROM schema_migrations')).rows[0].count,21);
   assert.equal((await db.pool.query('SELECT count(*)::int count FROM journal_batches WHERE sealed=true')).rows[0].count,before.batches.length);
   await db.pool.query("INSERT INTO wallet_accounts(id,unit,kind) VALUES('future:a','TEST_MICROCREDIT','platform_test'),('future:b','TEST_MICROCREDIT','platform_test')");
   await assert.rejects(db.pool.query("INSERT INTO journal_lines(batch_id,account_id,amount) VALUES($1,'future:a',1),($1,'future:b',-1)",[before.batches[0].id]),{code:'23514'});

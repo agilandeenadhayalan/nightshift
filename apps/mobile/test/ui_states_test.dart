@@ -6,6 +6,7 @@ import 'package:nightshift/app.dart';
 import 'package:nightshift/core/api.dart';
 import 'package:nightshift/core/controller.dart';
 import 'package:nightshift/core/models.dart';
+import 'package:nightshift/features/screens.dart';
 import 'fakes.dart';
 
 Future<AppController> mountApp(WidgetTester tester,
@@ -77,6 +78,8 @@ void main() {
     fail = false;
     await tester.tap(find.text('Retry'));
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Call details'));
+    await tester.pumpAndSettle();
     expect(find.text('Call ID: call-id'), findsOneWidget);
     expect(find.text('Connection unavailable'), findsNothing);
     expect(
@@ -139,12 +142,40 @@ void main() {
       testWidgets(
           'restores $path with initialization before mount $beforeMount',
           (tester) async {
-        await mountApp(tester, path: path, initializeBeforeMount: beforeMount);
+        final state = await mountApp(tester,
+            path: path, initializeBeforeMount: beforeMount);
+        final container = ProviderScope.containerOf(
+            tester.element(find.byType(NightShiftApp)));
         expect(
-            find.text(path == '/history'
-                ? 'Your conversations'
-                : 'One account • Customer and Listener permissions'),
-            findsOneWidget);
+            container
+                .read(routerProvider)
+                .routeInformationProvider
+                .value
+                .uri
+                .path,
+            path);
+        expect(state.isListener, isFalse);
+        if (path == '/history') {
+          expect(find.text('Your conversations'), findsOneWidget);
+        } else {
+          final profile = find.byType(ProfileScreen);
+          expect(profile, findsOneWidget);
+          expect(
+              find.descendant(
+                  of: profile, matching: find.text(state.user!.name)),
+              findsOneWidget);
+          expect(find.descendant(of: profile, matching: find.text('Customer')),
+              findsOneWidget);
+          final edit = find.descendant(
+              of: profile, matching: find.byTooltip('Edit profile'));
+          expect(edit.hitTestable(), findsOneWidget);
+          expect(
+              tester
+                  .widget<IconButton>(find.ancestor(
+                      of: edit, matching: find.byType(IconButton)))
+                  .onPressed,
+              isNotNull);
+        }
         expect(
             tester
                 .widget<NavigationBar>(find.byType(NavigationBar))
@@ -171,7 +202,7 @@ void main() {
     await tester.tap(find.text('Switch to Listener'));
     await tester.pumpAndSettle();
     expect(state.isListener, isTrue);
-    expect(find.text('You are offline'), findsOneWidget);
+    expect(find.text('Standby · Offline'), findsOneWidget);
     expect(find.text('Availability'), findsOneWidget);
     expect(store.values['lastPath'], '/home');
     expect(
@@ -339,6 +370,8 @@ void main() {
         {...callJson(state: 'ended'), 'reason': 'connection_timeout'}
       ];
     await mountApp(tester, api: api, path: '/history', locale: 'ta');
+    await tester.tap(find.byTooltip('அழைப்பு விவரங்கள்'));
+    await tester.pumpAndSettle();
     expect(find.text('முடிவு காரணம்: இணைப்பு நேரம் முடிந்தது'), findsOneWidget);
     expect(find.textContaining('connection_timeout'), findsNothing);
     api.interceptor = (method, path, body) async {

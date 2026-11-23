@@ -6,12 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'core/controller.dart';
 import 'features/screens.dart';
-import 'features/state_widgets.dart';
 import 'features/account_screens.dart';
 import 'features/privacy_screens.dart';
 import 'features/listener_application_screen.dart';
 import 'features/staff_workspace_screen.dart';
 import 'features/matching_screen.dart';
+import 'features/redesign/design_system.dart';
+import 'features/redesign/design_catalog.dart';
+import 'features/redesign/commerce_designs.dart';
+import 'features/redesign/entry_designs.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final state = ref.read(appControllerProvider);
@@ -22,6 +25,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, route) {
       final path = route.matchedLocation;
       if (state.initializing) return path == '/loading' ? null : '/loading';
+      if (!kReleaseMode &&
+          path.startsWith('/designs') &&
+          !state.hasCall &&
+          !state.showMatching) {
+        return null;
+      }
       if (state.user == null) {
         if (path == '/privacy' && state.privacy.receipt != null) {
           return '/deletion-status';
@@ -37,6 +46,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       if (state.showMatching) return path == '/matching' ? null : '/matching';
       if (state.hasCall) return path == '/call' ? null : '/call';
+      if (path == '/earnings' && !state.isListener) return '/profile';
       if ([
         '/login',
         '/phone-login',
@@ -51,17 +61,33 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(
-          path: '/loading',
-          builder: (_, __) => Scaffold(
-              body: Center(
-                  child: LoadingNotice(
-                      label: state.text('Loading NightShift…',
-                          'NightShift ஏற்றப்படுகிறது…'))))),
+          path: '/loading', builder: (_, __) => const NightshiftSplashScreen()),
+      GoRoute(
+          path: '/designs', builder: (_, __) => const DesignCollectionScreen()),
+      GoRoute(
+          path: '/designs/:id',
+          builder: (_, route) => DesignReviewScreen(
+              id: int.tryParse(route.pathParameters['id'] ?? '') ?? 0)),
+      GoRoute(
+          path: '/wallet',
+          builder: (_, __) => const CommerceDesignScreen(designId: 15)),
+      GoRoute(
+          path: '/earnings',
+          builder: (_, __) => const CommerceDesignScreen(designId: 10)),
+      GoRoute(
+          path: '/support',
+          builder: (_, __) => const CommerceDesignScreen(designId: 35)),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(
           path: '/phone-login', builder: (_, __) => const PhoneLoginScreen()),
       GoRoute(
-          path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
+          path: '/onboarding',
+          builder: (_, __) =>
+              OnboardingScreen(key: ValueKey(state.accountIdentity))),
+      GoRoute(
+          path: '/edit-profile',
+          builder: (_, __) => OnboardingScreen(
+              key: ValueKey(state.accountIdentity), editing: true)),
       GoRoute(path: '/call', builder: (_, __) => const CallScreen()),
       GoRoute(path: '/matching', builder: (_, __) => const MatchingScreen()),
       GoRoute(path: '/privacy', builder: (_, __) => const PrivacyScreen()),
@@ -131,27 +157,7 @@ class _NightShiftAppState extends ConsumerState<NightShiftApp>
       supportedLocales: const [Locale('en'), Locale('ta')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       routerConfig: ref.watch(routerProvider),
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF176B5B),
-            surface: const Color(0xFFFAF8F3)),
-        scaffoldBackgroundColor: const Color(0xFFFAF8F3),
-        appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFFFAF8F3), scrolledUnderElevation: 0),
-        inputDecorationTheme:
-            const InputDecorationTheme(border: OutlineInputBorder()),
-        filledButtonTheme: FilledButtonThemeData(
-            style: FilledButton.styleFrom(minimumSize: const Size(48, 52))),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-            style: OutlinedButton.styleFrom(minimumSize: const Size(48, 52))),
-        textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(minimumSize: const Size(48, 48))),
-        cardTheme: const CardTheme(
-            elevation: 0,
-            margin: EdgeInsets.symmetric(vertical: 6),
-            color: Color(0xFFF0EEE6)),
-      ),
+      theme: nightshiftTheme(),
       builder: (context, child) => kReleaseMode
           ? const Scaffold(
               body: Center(

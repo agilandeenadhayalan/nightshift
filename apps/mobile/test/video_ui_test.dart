@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -268,10 +269,10 @@ void main() {
     await reveal(tester, find.text('Switch camera'));
     expect(
         tester
-            .widget<OutlinedButton>(find.ancestor(
+            .widget<ButtonStyleButton>(find.ancestor(
                 of: find.text('Switch camera'),
-                matching: find
-                    .byWidgetPredicate((widget) => widget is OutlinedButton)))
+                matching: find.byWidgetPredicate(
+                    (widget) => widget is ButtonStyleButton)))
             .onPressed,
         isNull);
     await tapVisible(tester, find.text('Turn camera on'));
@@ -352,14 +353,14 @@ void main() {
       {...callJson(state: 'ended'), 'id': 'audio-history-call'}
     ];
     await tapVisible(tester, find.text('Recents'));
-    expect(find.text('Video call'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Audio call'), 220,
+    expect(find.textContaining('Video call ·'), findsOneWidget);
+    await tester.scrollUntilVisible(find.textContaining('Audio call ·'), 220,
         scrollable: find
             .descendant(
                 of: find.byType(ListView), matching: find.byType(Scrollable))
             .first);
     await tester.pumpAndSettle();
-    expect(find.text('Audio call'), findsOneWidget);
+    expect(find.textContaining('Audio call ·'), findsOneWidget);
   });
 
   testWidgets('Tamil video at 2x text keeps end and report reachable',
@@ -379,21 +380,31 @@ void main() {
     expect(video.videoJoinCount, 1);
     expect(tester.takeException(), isNull);
     expect(find.text('அழைப்பை முடி').hitTestable(), findsOneWidget);
-    expect(find.text('புகாரளி அல்லது தடு').hitTestable(), findsOneWidget);
-    controller.busy = true;
-    video.onChanged?.call();
-    await tester.pump();
-    final endButton = tester.widget<FilledButton>(find.ancestor(
-        of: find.text('அழைப்பை முடி'),
-        matching: find.byWidgetPredicate((widget) => widget is FilledButton)));
-    expect(endButton.onPressed, isNotNull,
-        reason: 'A pending camera operation cannot disable End.');
-    await tester.tap(find.text('அழைப்பை முடி'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(api.requests.where((r) => r['path'] == '/calls/call-id/end'),
-        hasLength(1));
-    controller.busy = false;
+    expect(find.byTooltip('புகாரளி அல்லது தடு').hitTestable(), findsOneWidget);
+    final busyGate = Completer<void>();
+    final pendingOperation = controller.perform(() => busyGate.future);
+    try {
+      expect(controller.busy, isTrue);
+      video.onChanged?.call();
+      await tester.pump();
+      final endButton = tester.widget<FilledButton>(find.ancestor(
+          of: find.text('அழைப்பை முடி'),
+          matching:
+              find.byWidgetPredicate((widget) => widget is FilledButton)));
+      expect(endButton.onPressed, isNotNull,
+          reason: 'A pending camera operation cannot disable End.');
+      await tester.tap(find.text('அழைப்பை முடி'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(api.requests.where((r) => r['path'] == '/calls/call-id/end'),
+          hasLength(1));
+    } finally {
+      busyGate.complete();
+      // Flush the fake-async microtasks before awaiting the held operation.
+      await tester.pump();
+      await pendingOperation;
+    }
+    expect(controller.busy, isFalse);
     video.onChanged?.call();
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);

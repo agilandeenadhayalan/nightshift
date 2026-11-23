@@ -81,7 +81,7 @@ export class PushService {
       requireThat(r?.id===id&&r.version===version&&r.binding_id===binding,409,'PUSH_REGISTRATION_CHANGED','Refresh the current notification binding.');
       requireThat(['prepared','active'].includes(r.state)&&r.device_record_id===source.device_record_id&&Number(r.auth_time)===actor.identityAuthTime
         &&r.identity_id===actor.identityBindingId&&r.project_id===this.config.push!.projectId,409,'PUSH_REGISTRATION_CHANGED','Prepare a current notification binding.');
-      requireThat(source.listener_approved&&source.mode==='listener'&&source.desired_online,403,'LISTENER_NOT_APPROVED','Use approved available Listener mode.');if(!this.available())this.missing();
+      requireThat(source.listener_approved&&source.mode==='listener'&&source.desired_online&&source.audio_enabled,403,'LISTENER_NOT_APPROVED','Use approved Listener mode with Audio available.');if(!this.available())this.missing();
       const result=(await c.query("UPDATE push_registrations SET state='active',expires_at=$2,updated_at=$3 WHERE id=$1 RETURNING *",[r.id,new Date(Math.min(this.clock()+1800000,ms(source.expires_at))),new Date(this.clock())])).rows[0];
       if(r.state!=='active')await c.query("INSERT INTO consents(id,user_id,purpose,notice_version,granted,created_at) VALUES($1,$2,'background-invitations','background-invitations-v1',true,$3)",[randomUUID(),actor.id,new Date(this.clock())]);
       await this.record(c,actor,'activate',key,fingerprint,r.version);
@@ -107,7 +107,7 @@ export class PushService {
     const read=()=>c.query(`SELECT u.id,u.presence_version,${background?`EXISTS(SELECT 1 FROM push_registrations p JOIN auth_identities i ON i.id=p.identity_id AND i.user_id=p.user_id AND i.state='verified' AND i.issuer=p.project_id
       JOIN devices d ON d.id=p.device_record_id AND d.user_id=p.user_id AND d.active AND d.revoked_at IS NULL
       JOIN auth_sessions s ON s.user_id=p.user_id AND s.device_record_id=d.id AND s.auth_kind='firebase' AND s.token_hash=d.last_token_hash AND s.revoked_at IS NULL AND s.expires_at>$2
-      WHERE p.user_id=u.id AND p.project_id=$3 AND p.state='active' AND p.expires_at>$2 AND p.auth_time=u.identity_last_auth_time
+      WHERE p.user_id=u.id AND u.audio_enabled AND p.project_id=$3 AND p.state='active' AND p.expires_at>$2 AND p.auth_time=u.identity_last_auth_time
         AND (u.identity_revoked_before IS NULL OR p.auth_time>u.identity_revoked_before))`:'false'} background
       FROM users u WHERE u.id=ANY($1::uuid[]) AND u.desired_online AND u.listener_approved AND u.adult_confirmed AND NOT u.suspended AND u.mode='listener'
       AND EXISTS(SELECT 1 FROM auth_sessions s LEFT JOIN devices d ON d.id=s.device_record_id WHERE s.user_id=u.id AND s.revoked_at IS NULL AND s.expires_at>$2
@@ -120,24 +120,27 @@ export class PushService {
     // Also invoked by call recovery. No additional row/user locks here.
     await c.query(`INSERT INTO push_delivery_jobs(id,event_id,call_id,recipient_id,registration_id,registration_version,binding_id,kind,event_version,expires_at,next_attempt_at,created_at)
       SELECT $1,$2,$3,p.user_id,p.id,p.version,p.binding_id,$4,$5,$6,$7,$7 FROM push_registrations p
-      WHERE p.user_id=$8 AND p.state='active' AND p.expires_at>$7 ON CONFLICT(event_id,registration_id,registration_version) DO NOTHING`,
-      [randomUUID(),eventId,call.id,call.state==='ringing'?'call.invitation':'call.terminal',call.version,call.expires_at,new Date(this.clock()),call.listener_id]);
+      WHERE p.user_id=$8 AND p.state='active' AND p.expires_at>$7
+        AND ($9 OR EXISTS(SELECT 1 FROM users u WHERE u.id=p.user_id AND u.audio_enabled))
+      ON CONFLICT(event_id,registration_id,registration_version) DO NOTHING`,
+      [randomUUID(),eventId,call.id,call.state==='ringing'?'call.invitation':'call.terminal',call.version,call.expires_at,new Date(this.clock()),call.listener_id,call.state!=='ringing']);
   }
-  private async currentSource(c:Query,r:Row){
+  private async currentSource(c:Query,r:Row,requireAudio=false){
     if(r.project_id!==this.config.push!.projectId)return undefined;
     return(await c.query(`SELECT s.expires_at FROM users u JOIN devices d ON d.id=$2 AND d.user_id=u.id AND d.active AND d.revoked_at IS NULL
       JOIN auth_identities i ON i.id=$3 AND i.user_id=u.id AND i.state='verified' AND i.issuer=$5
       JOIN auth_sessions s ON s.user_id=u.id AND s.device_record_id=d.id AND s.auth_kind='firebase' AND s.token_hash=d.last_token_hash AND s.revoked_at IS NULL AND s.expires_at>$6
       WHERE u.id=$1 AND u.adult_confirmed AND NOT u.suspended AND u.listener_approved AND u.mode='listener' AND u.desired_online
-      AND u.identity_last_auth_time=$4 AND (u.identity_revoked_before IS NULL OR u.identity_revoked_before<$4)`,
-      [r.user_id,r.device_record_id,r.identity_id,r.auth_time,r.project_id,new Date(this.clock())])).rows[0] as Row|undefined;
+      AND u.identity_last_auth_time=$4 AND (u.identity_revoked_before IS NULL OR u.identity_revoked_before<$4)
+      AND (NOT $7 OR u.audio_enabled)`,
+      [r.user_id,r.device_record_id,r.identity_id,r.auth_time,r.project_id,new Date(this.clock()),requireAudio])).rows[0] as Row|undefined;
   }
   /** Final reservation check; caller holds the participant user locks. */
   async backgroundEligible(c:Query,owner:string):Promise<boolean>{
     if(!this.available())return false;
     const r=(await c.query('SELECT * FROM push_registrations WHERE user_id=$1',[owner])).rows[0];
     if(!r||r.state!=='active'||!r.ciphertext)return false;
-    const source=await this.currentSource(c,r);
+    const source=await this.currentSource(c,r,true);
     return !!source&&this.available()&&ms(r.expires_at)>this.clock()&&ms(source.expires_at)>this.clock();
   }
   private async disposeJob(c:Query,id:string,state:string,code:string,next?:number){
@@ -155,7 +158,7 @@ export class PushService {
       const event=(await c.query('SELECT 1 FROM call_events WHERE id=$1 AND call_id=$2 AND version=$3',[job.event_id,job.call_id,job.event_version])).rowCount;
       const valid=event&&call.media_type==='audio'&&call.listener_id===job.recipient_id&&call.version===job.event_version&&validType
         &&ms(call.expires_at)===ms(job.expires_at)&&ms(job.expires_at)-this.clock()>=1000&&r?.id===job.registration_id&&r.version===job.registration_version
-        &&r.binding_id===job.binding_id&&r.state==='active'&&r.ciphertext&&ms(r.expires_at)>this.clock()&&await this.currentSource(c,r);
+        &&r.binding_id===job.binding_id&&r.state==='active'&&r.ciphertext&&ms(r.expires_at)>this.clock()&&await this.currentSource(c,r,job.kind==='call.invitation');
       if(!valid){await this.disposeJob(c,job.id,'suppressed','SUPERSEDED_OR_EXPIRED');return;}
       if(!this.available()){await this.disposeJob(c,job.id,'retry','UNAVAILABLE',this.clock()+10000);return;}
       await c.query('INSERT INTO push_send_budgets(call_id,kind) VALUES($1,$2) ON CONFLICT DO NOTHING',[job.call_id,job.kind]);
@@ -169,7 +172,7 @@ export class PushService {
       await c.query('INSERT INTO push_delivery_attempts(id,job_id,call_id,kind,ordinal,registration_version,started_at) VALUES($1,$2,$3,$4,$5,$6,$7)',[attemptId,job.id,job.call_id,job.kind,ordinal,job.registration_version,new Date(this.clock())]);
       // Query/lock waits can consume a lease. Recheck after every admission write;
       // roll back the send admission rather than spending a provider attempt.
-      const source=await this.currentSource(c,r);
+      const source=await this.currentSource(c,r,job.kind==='call.invitation');
       if(!source||ms(source.expires_at)<=this.clock()||ms(r.expires_at)<=this.clock()||ms(job.expires_at)-this.clock()<1000||!this.available()){
         await c.query('ROLLBACK TO SAVEPOINT push_admission');await this.disposeJob(c,job.id,'suppressed','SUPERSEDED_OR_EXPIRED');return;
       }
@@ -193,7 +196,7 @@ export class PushService {
         ||call.listener_id!==job.recipient_id||call.version!==job.event_version||ms(call.expires_at)!==ms(job.expires_at)
         ||(job.kind==='call.invitation'?call.state!=='ringing':call.state==='ringing'||job.event_version<=1)
         ||!r||r.id!==job.registration_id||r.version!==job.registration_version||r.binding_id!==job.binding_id||r.target_digest!==targetDigest||r.state!=='active'||!r.ciphertext)return false;
-      const source=await this.currentSource(c,r);
+      const source=await this.currentSource(c,r,job.kind==='call.invitation');
       return !!source&&this.available()&&ms(source.expires_at)>this.clock()&&ms(r.expires_at)>this.clock()
         &&ms(current.lease_until)>this.clock()&&ms(job.expires_at)-this.clock()>=1000;
     });

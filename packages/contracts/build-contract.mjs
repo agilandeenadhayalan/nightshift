@@ -4,8 +4,10 @@ const date={type:'string',format:'date-time'}, nullableDate={type:['string','nul
 const ref=name=>({$ref:`#/components/schemas/${name}`});
 const array=items=>({type:'array',items});
 const object=(properties,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
+const avatarCode={type:'string',enum:['moon','star','leaf','wave',...['male','female'].flatMap(prefix=>Array.from({length:30},(_,i)=>`${prefix}_${String(i+1).padStart(2,'0')}`))]};
 const mediaType={type:'string',enum:['audio','video']};
 const schemas={
+  ListenerAvailability:object({online:{...bool,description:'Saved master availability intent; not a presence or provider capability proof.'},audioEnabled:bool,videoEnabled:bool}),
   User:object({id,displayName:str,languages:array({type:'string',enum:['ta','en']}),mode:{type:'string',enum:['customer','listener']},listenerApproved:bool,online:bool}),
   Rate:object({id:{enum:['test-audio-v1','test-video-v1'],type:'string'},coinsPerMinute:integer,microcreditsPerCoin:integer,microcreditsPerSecond:integer,freeThroughSeconds:integer,minimumChargedSeconds:integer,listenerPaisePerHour:integer,testOnly:{const:true,type:'boolean'}}),
   Wallet:object({balanceMicrocredits:integer,heldMicrocredits:integer,availableMicrocredits:integer,testOnly:{const:true,type:'boolean'}}),
@@ -40,9 +42,9 @@ const schemas={
   PhoneSessionRequest:object({idToken:{type:'string',minLength:1,maxLength:16384},deviceId:{type:'string',minLength:1,maxLength:128},attemptId:id},['idToken','deviceId']),
   FirebasePhoneAdmission:object({attemptId:id,expiresAt:date,retryAt:date}),
   PhoneSession:object({token:str,expiresAt:date,user:ref('User'),needsOnboarding:bool,testOnly:{const:true,type:'boolean'}}),
-  OnboardingProfile:object({displayName:{type:'string',maxLength:40},avatarCode:{type:'string',enum:['moon','star','leaf','wave']},interfaceLanguage:{type:'string',enum:['ta','en']},languages:{type:'array',minItems:1,maxItems:2,uniqueItems:true,items:{type:'string',enum:['ta','en']}},dateOfBirth:{type:['string','null'],format:'date'}}),
+  OnboardingProfile:object({displayName:{type:'string',maxLength:40},avatarCode,interfaceLanguage:{type:'string',enum:['ta','en']},languages:{type:'array',minItems:1,maxItems:2,uniqueItems:true,items:{type:'string',enum:['ta','en']}},dateOfBirth:{type:['string','null'],format:'date'}}),
   OnboardingState:object({required:bool,profile:ref('OnboardingProfile')}),
-  CompleteOnboardingRequest:object({displayName:{type:'string',minLength:2,maxLength:40},avatarCode:{type:'string',enum:['moon','star','leaf','wave']},interfaceLanguage:{type:'string',enum:['ta','en']},languages:{type:'array',minItems:1,maxItems:2,uniqueItems:true,items:{type:'string',enum:['ta','en']}},dateOfBirth:{type:'string',format:'date'},consentVersion:{type:'string',enum:['adult-onboarding-v1']}}),
+  CompleteOnboardingRequest:object({displayName:{type:'string',minLength:2,maxLength:40},avatarCode,interfaceLanguage:{type:'string',enum:['ta','en']},languages:{type:'array',minItems:1,maxItems:2,uniqueItems:true,items:{type:'string',enum:['ta','en']}},dateOfBirth:{type:'string',format:'date'},consentVersion:{type:'string',enum:['adult-onboarding-v1']}}),
   ConsentEvent:object({id,purpose:str,noticeVersion:str,granted:bool,createdAt:date}),
   ConsentHistory:object({items:array(ref('ConsentEvent'))}),
   DeletionNotice:object({noticeVersion:{type:'string',const:'account-deletion-test-v1'},text:str,testOnly:{type:'boolean',const:true},retentionReviewRequired:{type:'boolean',const:true}}),
@@ -65,6 +67,13 @@ const schemas={
   Event:object({id,type:{type:'string',enum:['call.invited','call.state_changed']},entityId:id,version:integer,timestamp:date,data:ref('Call')})
 };
 // Additive optional fields preserve old durable event/idempotency payloads.
+schemas.User.properties.avatarCode=avatarCode;
+schemas.User.properties.availability=ref('ListenerAvailability');
+schemas.Listener.properties.avatarCode=avatarCode;
+schemas.Listener.properties.audioAvailable={...bool,description:'Effective audio invitation eligibility, including saved preference, reachability and busy state.'};
+schemas.Listener.properties.videoAvailable={...bool,description:'Effective video invitation eligibility, including saved preference, foreground reachability, server capability and busy state.'};
+schemas.Call.properties.customerAvatarCode=avatarCode;
+schemas.Call.properties.listenerAvatarCode=avatarCode;
 schemas.Call.properties.mediaType=mediaType;
 schemas.Call.properties.durationLimitReason={type:'string',enum:['test_credit_balance','test_duration_cap'],description:'Reason for the frozen connected-time allowance at reservation. May be absent on legacy events and idempotent responses.'};
 schemas.RtcToken.properties.mediaType=mediaType;
@@ -105,7 +114,7 @@ const paths={
   '/v1/me':{get:{operationId:'getMe',responses:responses(ref('User'))}},
   '/v1/snapshot':{get:{operationId:'getSnapshot',parameters:[{name:'language',in:'query',schema:{type:'string',enum:['ta','en'],default:'ta'}}],responses:responses(ref('Snapshot'))}},
   '/v1/me/mode':{put:{operationId:'setMode',requestBody:json(object({mode:{type:'string',enum:['customer','listener']}})),responses:responses(ref('User'))}},
-  '/v1/me/availability':{put:{operationId:'setAvailability',requestBody:json(object({online:bool})),responses:responses(ref('User'))}},
+  '/v1/me/availability':{put:{operationId:'setAvailability',requestBody:json(object({online:bool,audioEnabled:bool,videoEnabled:bool},['online'])),responses:responses(ref('User'))}},
   '/v1/me/languages':{put:{operationId:'setLanguages',requestBody:json(object({languages:array({type:'string',enum:['ta','en']})})),responses:responses(ref('User'))}},
   '/v1/presence/heartbeat':{post:{operationId:'heartbeat',responses:responses(object({serverTime:date}))}},
   '/v1/listeners':{get:{operationId:'listListeners',parameters:directoryParameters,description:'Twenty-card pages from a five-minute owner/filter-bound frozen view. Live eligibility is rechecked without reranking; refresh creates a new view. At most four active views per owner and 2000 IDs per view. A truncated view must not be presented as complete or as proof of no language supply.',responses:directoryResponses}},

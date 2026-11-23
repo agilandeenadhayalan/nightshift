@@ -1,0 +1,371 @@
+part of '../screens.dart';
+
+class HistoryScreen extends ConsumerStatefulWidget {
+  const HistoryScreen({super.key});
+  @override
+  ConsumerState<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends ConsumerState<HistoryScreen> {
+  final Set<String> _expanded = {};
+
+  bool _favorites = false, _measurePending = false;
+  late final Discovery _discovery;
+  final Map<String, GlobalKey> _recentKeys = {};
+  void _watchVisible() {
+    if (_measurePending) return;
+    _measurePending = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _measurePending = false;
+      if (!mounted || _favorites) return;
+      final state = ref.read(appControllerProvider);
+      if (state.isListener) return;
+      final viewport = context.findRenderObject();
+      if (viewport is! RenderBox || !viewport.hasSize) return;
+      final top = viewport.localToGlobal(Offset.zero).dy,
+          bottom = top + viewport.size.height;
+      final ids = <String>[];
+      for (final call in state.history) {
+        final box = _recentKeys[call.id]?.currentContext?.findRenderObject();
+        if (box is! RenderBox || !box.hasSize || !box.attached) continue;
+        final y = box.localToGlobal(Offset.zero).dy;
+        if (y < bottom && y + box.size.height > top) ids.add(call.listenerId);
+      }
+      state.discovery.watchRecents(ids);
+    });
+  }
+
+  @override
+  void dispose() {
+    _discovery.watchRecents([]);
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _discovery = ref.read(appControllerProvider).discovery;
+    Future.microtask(() {
+      if (!mounted) return;
+      final state = ref.read(appControllerProvider);
+      if (!state.historyLoaded && state.historyError == null) {
+        unawaited(state.loadHistory());
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(appControllerProvider);
+    _watchVisible();
+    if (state.isListener) return _history(context, state);
+    return Column(children: [
+      Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          child: LayoutBuilder(builder: (context, constraints) {
+            final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.5;
+            Widget tabLabel(String text) => largeText
+                ? SizedBox(
+                    width: constraints.maxWidth - 64,
+                    child: Text(text, textAlign: TextAlign.center))
+                : Text(text);
+            return SegmentedButton<bool>(
+                direction: largeText ? Axis.vertical : Axis.horizontal,
+                style: largeText
+                    ? ButtonStyle(
+                        shape: WidgetStatePropertyAll(RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18))))
+                    : null,
+                segments: [
+                  ButtonSegment(
+                      value: false,
+                      label: tabLabel(
+                          state.text('Recent calls', 'சமீபத்திய அழைப்புகள்'))),
+                  ButtonSegment(
+                      value: true,
+                      label:
+                          tabLabel(state.text('Favorites', 'விருப்பமானவர்கள்')))
+                ],
+                selected: {_favorites},
+                onSelectionChanged: (value) {
+                  state.discovery.watchRecents([]);
+                  setState(() => _favorites = value.single);
+                });
+          })),
+      Expanded(
+          child: _favorites
+              ? DirectoryScreen(state: state, kind: DirectoryKind.favorites)
+              : NotificationListener<ScrollNotification>(
+                  onNotification: (_) {
+                    _watchVisible();
+                    return false;
+                  },
+                  child: _history(context, state))),
+    ]);
+  }
+
+  Widget _history(BuildContext context, AppController state) {
+    final earned = state.history
+        .where((c) => c.listenerId == state.user?.id)
+        .fold<int>(0, (sum, call) => sum + call.earningPaise);
+    return RefreshIndicator(
+        onRefresh: () async {
+          await state.loadHistory();
+          await state.discovery.refreshRecents();
+        },
+        child: PageBody(children: [
+          const ErrorNotice(),
+          Text(
+              state.isListener
+                  ? state.text(
+                      'Earnings & calls', 'வருமானம் மற்றும் அழைப்புகள்')
+                  : state.text('Your conversations', 'உங்கள் உரையாடல்கள்'),
+              style: Theme.of(context).textTheme.headlineSmall),
+          if (state.isListener && state.historyLoaded)
+            NightshiftEarningsSummary(
+                title: state.text('Test earnings in loaded history',
+                    'ஏற்றப்பட்ட வரலாற்றின் சோதனை வருமானம்'),
+                amount: '₹${(earned / 100).toStringAsFixed(2)}',
+                subtitle: state.text(
+                    'No cash payouts. Amounts are settled by the server.',
+                    'பணம் வழங்கப்படாது. தொகைகள் சேவையகத்தால் கணக்கிடப்படுகின்றன.'),
+                audioLabel: state.text('Audio ₹', 'ஆடியோ ₹') +
+                    (state.history.where((c) => !c.isVideo && c.listenerId == state.user?.id).fold<int>(0, (v, c) => v + c.earningPaise) / 100)
+                        .toStringAsFixed(2),
+                videoLabel: state.text('Video ₹', 'வீடியோ ₹') +
+                    (state.history
+                                .where((c) => c.isVideo && c.listenerId == state.user?.id)
+                                .fold<int>(0, (v, c) => v + c.earningPaise) /
+                            100)
+                        .toStringAsFixed(2)),
+          const SizedBox(height: 16),
+          if (state.historyError != null)
+            FailureNotice(
+              offline: state.historyError!.code == 'OFFLINE',
+              title: state.historyError!.code == 'OFFLINE'
+                  ? state.text(
+                      'Connection unavailable', 'இணைப்பு கிடைக்கவில்லை')
+                  : state.text(
+                      'Could not load calls', 'அழைப்புகளை ஏற்ற முடியவில்லை'),
+              message: errorMessage(state.historyError!.code, state.locale),
+              reference: state.historyError!.requestId == null
+                  ? null
+                  : state.text('Reference: ${state.historyError!.requestId}',
+                      'குறிப்பு: ${state.historyError!.requestId}'),
+              retryLabel: state.text('Retry', 'மீண்டும் முயற்சி'),
+              onRetry: state.historyLoading ? null : state.retryHistory,
+            ),
+          if (state.history.isEmpty &&
+              state.historyLoaded &&
+              !state.historyLoading &&
+              state.historyError == null)
+            StatusCard(
+                title: state.text('No completed calls yet',
+                    'முடிந்த அழைப்புகள் இன்னும் இல்லை'),
+                message: state.text(
+                    'Your completed, cancelled and declined calls will appear here.',
+                    'முடிந்த, ரத்தான, நிராகரிக்கப்பட்ட அழைப்புகள் இங்கே தெரியும்.')),
+          for (final (index, call) in state.history.indexed) ...[
+            if (index == 0 ||
+                historyDay(call.createdAt, DateTime.now()) !=
+                    historyDay(
+                        state.history[index - 1].createdAt, DateTime.now()))
+              Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text(
+                      switch (historyDay(call.createdAt, DateTime.now())) {
+                        'today' => state.text('Today', 'இன்று'),
+                        'yesterday' => state.text('Yesterday', 'நேற்று'),
+                        _ => state.text('Earlier', 'முன்பு'),
+                      },
+                      style: Theme.of(context).textTheme.titleMedium)),
+            Padding(
+                key: _recentKeys.putIfAbsent(call.id, GlobalKey.new),
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Column(children: [
+                  NightshiftSessionSummary(
+                      name: call.otherName(state.user!.id),
+                      avatarCode: call.listenerId == state.user?.id
+                          ? call.customerAvatarCode
+                          : call.listenerAvatarCode,
+                      description:
+                          '${call.isVideo ? state.text('Video call', 'வீடியோ அழைப்பு') : state.text('Audio call', 'ஆடியோ அழைப்பு')} · ${durationLabel(call.connectedMs)}',
+                      date: _summaryDate(call.createdAt),
+                      video: call.isVideo,
+                      missed: call.connectedMs == 0,
+                      amount: call.listenerId == state.user?.id
+                          ? '₹${(call.earningPaise / 100).toStringAsFixed(2)}'
+                          : null,
+                      onTap: () => setState(() => _expanded.contains(call.id)
+                          ? _expanded.remove(call.id)
+                          : _expanded.add(call.id)),
+                      action: IconButton(
+                          key: ValueKey('history-details-${call.id}'),
+                          tooltip:
+                              state.text('Call details', 'அழைப்பு விவரங்கள்'),
+                          onPressed: () => setState(() =>
+                              _expanded.contains(call.id)
+                                  ? _expanded.remove(call.id)
+                                  : _expanded.add(call.id)),
+                          icon: Icon(
+                              _expanded.contains(call.id)
+                                  ? Icons.expand_less
+                                  : Icons.chevron_right,
+                              color: NsColors.muted))),
+                  if (_expanded.contains(call.id))
+                    Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(state.text(
+                                  'Started: ${_localDate(call.createdAt)}',
+                                  'தொடக்கம்: ${_localDate(call.createdAt)}')),
+                              const SizedBox(height: 6),
+                              Text(state.text(
+                                      'End reason: ', 'முடிவு காரணம்: ') +
+                                  endReasonLabel(call.reason, state.locale)),
+                              Text(creditAmount(call.chargeMicrocredits) +
+                                  state.text(
+                                      ' test coins', ' சோதனை நாணயங்கள்')),
+                              if (call.listenerId == state.user!.id)
+                                Text(state.text(
+                                        'Test earnings ₹', 'சோதனை வருமானம் ₹') +
+                                    (call.earningPaise / 100)
+                                        .toStringAsFixed(2)),
+                              if (!state.isListener &&
+                                  call.customerId == state.user?.id)
+                                RecentAvailability(
+                                    state: state, listenerId: call.listenerId),
+                              const SizedBox(height: 8),
+                              SelectableText(
+                                  state.text('Call ID: ', 'அழைப்பு எண்: ') +
+                                      call.id,
+                                  style: const TextStyle(
+                                      color: NsColors.muted, fontSize: 10)),
+                              MediaDiagnosticsButton(
+                                  state: state, callId: call.id),
+                              if (!state.isListener &&
+                                  call.customerId == state.user?.id &&
+                                  call.ended &&
+                                  call.connectedMs > 0 &&
+                                  !state.hasCall)
+                                TextButton.icon(
+                                    onPressed: () =>
+                                        showCallRating(context, state, call),
+                                    icon: const Icon(Icons.star_outline),
+                                    label: Text(state.text('Rate conversation',
+                                        'உரையாடலை மதிப்பிடு'))),
+                              TextButton.icon(
+                                  onPressed: state.busy
+                                      ? null
+                                      : () => showSafetyDialog(
+                                          context, state, call),
+                                  icon: const Icon(Icons.shield_outlined),
+                                  label: Text(state.text('Report or block',
+                                      'புகாரளி அல்லது தடு'))),
+                            ])),
+                ])),
+          ],
+          if (state.historyLoading ||
+              (!state.historyLoaded && state.historyError == null))
+            LoadingNotice(
+                label: state.text(
+                    'Loading calls…', 'அழைப்புகள் ஏற்றப்படுகின்றன…')),
+          if (state.historyCursor != null)
+            OutlinedButton(
+                onPressed: state.historyLoading
+                    ? null
+                    : () => state.loadHistory(append: true),
+                child: Text(state.text(
+                    'Load earlier calls', 'முந்தைய அழைப்புகளை காட்டு'))),
+        ]));
+  }
+
+  String _localDate(DateTime time) {
+    final local = time.toLocal();
+    return '${local.day}/${local.month}/${local.year} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')} ${local.timeZoneName}';
+  }
+
+  String _summaryDate(DateTime time) {
+    final now = DateTime.now();
+    final local = time.toLocal();
+    final clock =
+        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    if (historyDay(time, now) != 'older') return clock;
+    final year = local.year == now.year ? '' : '/${local.year}';
+    return '${local.day}/${local.month}$year · $clock';
+  }
+}
+
+Future<void> showSafetyDialog(
+    BuildContext context, AppController state, CallSession call) async {
+  final owner = state.accountIdentity;
+  final result = await showDialog<(String, bool)>(
+      context: context, builder: (context) => _SafetyDialog(controller: state));
+  if (result != null && owner == state.accountIdentity) {
+    await state.submitSafety(call, result.$1, block: result.$2);
+    if (context.mounted &&
+        owner == state.accountIdentity &&
+        state.error == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(state.text(
+              'Your action was saved.', 'உங்கள் செயல் சேமிக்கப்பட்டது.'))));
+    }
+  }
+}
+
+class _SafetyDialog extends StatefulWidget {
+  const _SafetyDialog({required this.controller});
+  final AppController controller;
+  @override
+  State<_SafetyDialog> createState() => _SafetyDialogState();
+}
+
+class _SafetyDialogState extends State<_SafetyDialog> {
+  final reason = TextEditingController();
+  bool block = false;
+  @override
+  void dispose() {
+    reason.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = widget.controller;
+    return AlertDialog(
+      title: Text(state.text('Report or block', 'புகாரளி அல்லது தடு')),
+      content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text(state.text(
+            'Blocking stops this call and prevents further calls between you. Reports in this test build are stored for review; no staffed response time is promised.',
+            'தடுப்பது இந்த அழைப்பை நிறுத்தி எதிர்கால அழைப்புகளைத் தடுக்கும். சோதனை புகார்கள் ஆய்விற்காக சேமிக்கப்படும்; பதிலளிக்கும் நேரம் உறுதி செய்யப்படவில்லை.')),
+        const SizedBox(height: 16),
+        TextField(
+            controller: reason,
+            maxLength: 1000,
+            maxLines: 3,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+                labelText: state.text('Reason (optional when blocking)',
+                    'காரணம் (தடுக்கும்போது விருப்பம்)'))),
+        CheckboxListTile(
+            value: block,
+            contentPadding: EdgeInsets.zero,
+            onChanged: (value) => setState(() => block = value!),
+            title: Text(state.text('Block this person', 'இவரை தடு'))),
+      ])),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(state.text('Cancel', 'ரத்து'))),
+        FilledButton(
+            onPressed: !block && reason.text.trim().isEmpty
+                ? null
+                : () => Navigator.pop(context, (reason.text, block)),
+            child: Text(state.text('Submit', 'சமர்ப்பி')))
+      ],
+    );
+  }
+}

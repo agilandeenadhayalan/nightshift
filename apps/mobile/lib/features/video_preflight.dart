@@ -3,6 +3,7 @@ import '../core/controller.dart';
 import '../core/models.dart';
 import 'message_copy.dart';
 import 'video_view.dart';
+import 'redesign/entry_components.dart';
 
 String testRateLabel(AppController state, CallRate rate) => state.text(
     '${rate.coinsPerMinute} test coins / minute',
@@ -124,24 +125,35 @@ class _VideoPreflightState extends State<_VideoPreflight> {
                         Text(state.text(
                             'Listener is no longer available. Refresh before calling.',
                             'கேட்பவர் தற்போது கிடைக்கவில்லை. அழைப்பதற்கு முன் புதுப்பிக்கவும்.')),
-                      Text(testRateLabel(state, widget.rate),
-                          style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      Text(testTariffDescription(state, widget.rate)),
-                      const SizedBox(height: 16),
-                      Text(state.text(
-                          'Preview stays on this phone. Your microphone is off during preview. Nothing is shared until you confirm and the call is accepted.',
-                          'முன்னோட்டம் இந்த தொலைபேசியில் மட்டுமே தெரியும். முன்னோட்டத்தில் மைக்ரோஃபோன் இயங்காது. நீங்கள் உறுதிசெய்து அழைப்பு ஏற்கப்படும் வரை எதுவும் பகிரப்படாது.')),
-                      const SizedBox(height: 16),
-                      if (previewing) ...[
+                      if (!previewing)
+                        NightshiftPermissionCard(
+                            icon: Icons.videocam_outlined,
+                            title: state.text('Camera and microphone',
+                                'கேமரா மற்றும் மைக்ரோஃபோன்'),
+                            explanation: state.text(
+                                'Preview stays on this phone. Your microphone is off during preview. Nothing is shared until you confirm and the call is accepted.',
+                                'முன்னோட்டம் இந்த தொலைபேசியில் மட்டுமே தெரியும். முன்னோட்டத்தில் மைக்ரோஃபோன் இயங்காது. நீங்கள் உறுதிசெய்து அழைப்பு ஏற்கப்படும் வரை எதுவும் பகிரப்படாது.'),
+                            action: FilledButton.icon(
+                                onPressed: state.videoPreviewBusy || _closing
+                                    ? null
+                                    : () async {
+                                        setState(() => _consent = false);
+                                        await state.prepareVideoPreview();
+                                      },
+                                icon: const Icon(Icons.videocam_outlined),
+                                label: Text(state.videoPreviewBusy
+                                    ? state.text(
+                                        'Opening camera…', 'கேமரா திறக்கிறது…')
+                                    : state.text('Preview camera',
+                                        'கேமரா முன்னோட்டம்'))))
+                      else
                         VideoCameraPane(
                             controller: video!.localVideo,
                             label: state.text('Only you · camera preview',
                                 'நீங்கள் மட்டும் · கேமரா முன்னோட்டம்'),
                             placeholder: state.text('Camera preview ready',
                                 'கேமரா முன்னோட்டம் தயார்')),
-                        const SizedBox(height: 12),
-                      ],
+                      const SizedBox(height: 16),
                       if (state.videoPreviewError != null) ...[
                         Semantics(
                             liveRegion: true,
@@ -153,22 +165,28 @@ class _VideoPreflightState extends State<_VideoPreflight> {
                                         Theme.of(context).colorScheme.error))),
                         const SizedBox(height: 12),
                       ],
-                      OutlinedButton.icon(
-                          onPressed:
-                              state.videoPreviewBusy || previewing || _closing
-                                  ? null
-                                  : () async {
-                                      setState(() => _consent = false);
-                                      await state.prepareVideoPreview();
-                                    },
-                          icon: const Icon(Icons.videocam_outlined),
-                          label: Text(state.videoPreviewBusy
-                              ? state.text(
-                                  'Opening camera…', 'கேமரா திறக்கிறது…')
-                              : state.text(
-                                  'Preview camera', 'கேமரா முன்னோட்டம்'))),
+                      Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: .035),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white12)),
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(testRateLabel(state, widget.rate),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium),
+                                const SizedBox(height: 10),
+                                Text(testTariffDescription(state, widget.rate),
+                                    style: const TextStyle(
+                                        fontSize: 13, height: 1.5)),
+                              ])),
+                      const SizedBox(height: 16),
                       CheckboxListTile(
                           contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
                           value: _consent,
                           onChanged:
                               previewing && !state.videoPreviewBusy && !_closing

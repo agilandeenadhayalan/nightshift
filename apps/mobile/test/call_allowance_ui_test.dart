@@ -247,7 +247,7 @@ void main() {
             tester, find.text(locale == 'ta' ? 'அழைப்பை முடி' : 'End call'));
         await revealAllowance(
             tester,
-            find.text(
+            find.byTooltip(
                 locale == 'ta' ? 'புகாரளி அல்லது தடு' : 'Report or block'));
         expect(tester.takeException(), isNull);
       });
