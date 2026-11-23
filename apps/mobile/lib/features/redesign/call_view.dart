@@ -50,23 +50,33 @@ class CallScreen extends ConsumerWidget {
                 title: Text(call.isVideo
                     ? state.text('Video call', 'வீடியோ அழைப்பு')
                     : state.text('Audio call', 'ஆடியோ அழைப்பு'))),
-            bottomNavigationBar: call.isVideo && !call.ringing
-                ? SafeArea(
-                    minimum: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      SizedBox(
-                          width: double.infinity,
-                          child: _endCallButton(context, state)),
-                      TextButton.icon(
-                          onPressed: state.busy
-                              ? null
-                              : () => showSafetyDialog(context, state, call),
-                          icon: const Icon(Icons.shield_outlined),
-                          label: Text(state.text(
-                              'Report or block', 'புகாரளி அல்லது தடு'))),
-                    ]))
-                : null,
-            body: PageBody(children: [
+            bottomNavigationBar: SafeArea(
+                minimum: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  SizedBox(
+                      width: double.infinity,
+                      child: call.ringing
+                          ? OutlinedButton(
+                              onPressed: state.endingLocally
+                                  ? null
+                                  : () => state.transition(
+                                      incoming ? 'decline' : 'cancel'),
+                              child: Text(incoming
+                                  ? state.text('Decline', 'நிராகரி')
+                                  : state.text(
+                                      'Cancel call', 'அழைப்பை ரத்து செய்')))
+                          : _endCallButton(context, state)),
+                  if (call.isVideo && !call.ringing)
+                    TextButton.icon(
+                        onPressed: state.busy
+                            ? null
+                            : () => showSafetyDialog(context, state, call),
+                        icon: const Icon(Icons.shield_outlined),
+                        label: Text(state.text(
+                            'Report or block', 'புகாரளி அல்லது தடு'))),
+                ])),
+            body: NightshiftBackdrop(
+                child: _CallBody(children: [
               const ErrorNotice(),
               if (call.isVideo &&
                   !call.ringing &&
@@ -74,6 +84,15 @@ class CallScreen extends ConsumerWidget {
                   state.video != null)
                 VideoCallView(
                     video: state.video!,
+                    remoteAvatarCode: !state.isListener &&
+                            state.discovery.removed(call.listenerId)
+                        ? null
+                        : incoming
+                            ? call.customerAvatarCode
+                            : call.listenerAvatarCode,
+                    localAvatarCode: incoming
+                        ? call.listenerAvatarCode
+                        : call.customerAvatarCode,
                     remoteLabel: call.otherName(state.user!.id),
                     localLabel: state.text('You', 'நீங்கள்'),
                     waitingLabel: state.text(
@@ -88,6 +107,12 @@ class CallScreen extends ConsumerWidget {
                             'Unavailable listener', 'கிடைக்காத கேட்பவர்')
                         : call.otherName(state.user!.id),
                     listener: !incoming,
+                    avatarCode: !state.isListener &&
+                            state.discovery.removed(call.listenerId)
+                        ? null
+                        : incoming
+                            ? call.customerAvatarCode
+                            : call.listenerAvatarCode,
                     connecting: call.state != 'connected'),
               const SizedBox(height: 24),
               Text(
@@ -149,14 +174,6 @@ class CallScreen extends ConsumerWidget {
                           : state.text('Accept', 'ஏற்கவும்'))),
                   const SizedBox(height: 12),
                 ],
-                OutlinedButton(
-                    onPressed: state.endingLocally
-                        ? null
-                        : () =>
-                            state.transition(incoming ? 'decline' : 'cancel'),
-                    child: Text(incoming
-                        ? state.text('Decline', 'நிராகரி')
-                        : state.text('Cancel call', 'அழைப்பை ரத்து செய்'))),
               ] else ...[
                 if (call.isVideo && state.needsVideoConsent)
                   StatusCard(
@@ -173,20 +190,28 @@ class CallScreen extends ConsumerWidget {
                           icon: const Icon(Icons.videocam_outlined),
                           label: Text(
                               state.text('Review camera', 'கேமராவை சரிபார்')))),
-                Container(
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    decoration: BoxDecoration(
-                        color: NsColors.card,
-                        borderRadius: BorderRadius.circular(26),
-                        border: Border.all(color: Colors.white12)),
-                    child: Text(durationLabel(call.connectedMs),
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context)
-                            .textTheme
-                            .displaySmall
-                            ?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 3))),
+                Center(
+                    child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 13, horizontal: 28),
+                        decoration: BoxDecoration(
+                            color: const Color(0xFF20273C),
+                            borderRadius: BorderRadius.circular(40),
+                            border: Border.all(color: const Color(0xFFB997DB)),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: NsColors.violet.withValues(alpha: .12),
+                                  blurRadius: 24)
+                            ]),
+                        child: Text(
+                            durationLabel(call.connectedMs).padLeft(5, '0'),
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context)
+                                .textTheme
+                                .displaySmall
+                                ?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 3)))),
                 const SizedBox(height: 10),
                 Text(
                     state.text('Server-confirmed connected time',
@@ -212,7 +237,7 @@ class CallScreen extends ConsumerWidget {
                     spacing: 12,
                     runSpacing: 12,
                     children: [
-                      OutlinedButton.icon(
+                      _LiveCallControl(
                           onPressed: state.endingLocally ||
                                   state.busy ||
                                   state.needsVideoConsent
@@ -223,7 +248,7 @@ class CallScreen extends ConsumerWidget {
                           label: Text(state.audio.muted
                               ? state.text('Unmute', 'ஒலியை இயக்கு')
                               : state.text('Mute', 'ஒலியை நிறுத்து'))),
-                      OutlinedButton.icon(
+                      _LiveCallControl(
                           onPressed: state.endingLocally ||
                                   state.busy ||
                                   state.needsVideoConsent
@@ -297,7 +322,6 @@ class CallScreen extends ConsumerWidget {
                           'வீடியோவை முடித்து ஆடியோவை பயன்படுத்து'))),
                 ],
                 const SizedBox(height: 24),
-                if (!call.isVideo) _endCallButton(context, state),
                 const SizedBox(height: 16),
                 Text(
                     call.isVideo
@@ -323,7 +347,7 @@ class CallScreen extends ConsumerWidget {
                   state.text('Call ID: ${call.id}', 'அழைப்பு எண்: ${call.id}'),
                   style: Theme.of(context).textTheme.bodySmall),
               MediaDiagnosticsButton(state: state, callId: call.id),
-            ])));
+            ]))));
   }
 }
 
@@ -338,43 +362,103 @@ Widget _endCallButton(BuildContext context, AppController state) =>
         icon: const Icon(Icons.call_end),
         label: Text(state.text('End call', 'அழைப்பை முடி')));
 
+class _CallBody extends StatelessWidget {
+  const _CallBody({required this.children});
+  final List<Widget> children;
+  @override
+  Widget build(BuildContext context) => Center(
+      child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+              children: [
+                Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: children)
+              ])));
+}
+
+class _LiveCallControl extends StatelessWidget {
+  const _LiveCallControl(
+      {required this.onPressed, required this.icon, required this.label});
+  final VoidCallback? onPressed;
+  final Widget icon, label;
+  @override
+  Widget build(BuildContext context) => SizedBox(
+      width: MediaQuery.textScalerOf(context).scale(1) > 1.5 ? 144 : 112,
+      child: TextButton(
+          onPressed: onPressed,
+          style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+                width: 62,
+                height: 62,
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: onPressed == null
+                        ? NsColors.surface
+                        : const Color(0xFF293149),
+                    border: Border.all(color: Colors.white24)),
+                child: IconTheme(
+                    data: IconThemeData(
+                        color:
+                            onPressed == null ? NsColors.muted : Colors.white,
+                        size: 25),
+                    child: icon)),
+            const SizedBox(height: 10),
+            DefaultTextStyle.merge(
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12),
+                child: label),
+          ])));
+}
+
 class _CallPortrait extends StatelessWidget {
   const _CallPortrait({
     required this.name,
     required this.listener,
     required this.connecting,
+    this.avatarCode,
   });
   final String name;
+  final String? avatarCode;
   final bool listener, connecting;
 
   @override
   Widget build(BuildContext context) => Center(
       child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24),
+          padding: const EdgeInsets.symmetric(vertical: 28),
           child: Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(25),
               decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border:
-                      Border.all(color: NsColors.cyan.withValues(alpha: .18)),
+                      Border.all(color: NsColors.violet.withValues(alpha: .2)),
                   gradient: RadialGradient(colors: [
                     NsColors.violet.withValues(alpha: .3),
                     NsColors.violet.withValues(alpha: .04),
                   ])),
               child: Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(13),
                   decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                          color: connecting ? NsColors.violet : NsColors.cyan,
-                          width: 2),
+                          color: connecting
+                              ? NsColors.violet
+                              : const Color(0xFFB999FF),
+                          width: 3),
                       boxShadow: [
                         BoxShadow(
-                            color: NsColors.violet.withValues(alpha: .18),
-                            blurRadius: 35)
+                            color: NsColors.violet.withValues(alpha: .35),
+                            blurRadius: 40)
                       ]),
                   child: NightshiftAvatar(
-                      name: name, size: 120, listener: listener)))));
+                      name: name,
+                      size: 160,
+                      listener: listener,
+                      avatarCode: avatarCode)))));
 }
 
 Future<void> _reviewVideoCall(

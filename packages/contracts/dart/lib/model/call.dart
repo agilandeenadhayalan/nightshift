@@ -31,6 +31,8 @@ class Call {
     required this.rate,
     required this.maxDurationSeconds,
     required this.testOnly,
+    this.customerAvatarCode,
+    this.listenerAvatarCode,
     this.mediaType,
     this.durationLimitReason,
   });
@@ -71,6 +73,10 @@ class Call {
 
   CallTestOnlyEnum testOnly;
 
+  CallCustomerAvatarCodeEnum? customerAvatarCode;
+
+  CallListenerAvatarCodeEnum? listenerAvatarCode;
+
   CallMediaTypeEnum? mediaType;
 
   /// Reason for the frozen connected-time allowance at reservation. May be absent on legacy events and idempotent responses.
@@ -96,6 +102,8 @@ class Call {
     other.rate == rate &&
     other.maxDurationSeconds == maxDurationSeconds &&
     other.testOnly == testOnly &&
+    other.customerAvatarCode == customerAvatarCode &&
+    other.listenerAvatarCode == listenerAvatarCode &&
     other.mediaType == mediaType &&
     other.durationLimitReason == durationLimitReason;
 
@@ -120,6 +128,8 @@ class Call {
     (rate.hashCode) +
     (maxDurationSeconds.hashCode) +
     (testOnly.hashCode) +
+    (customerAvatarCode == null ? 0 : customerAvatarCode!.hashCode) +
+    (listenerAvatarCode == null ? 0 : listenerAvatarCode!.hashCode) +
     (mediaType == null ? 0 : mediaType!.hashCode) +
     (durationLimitReason == null ? 0 : durationLimitReason!.hashCode);
 
@@ -159,6 +169,12 @@ class Call {
       json[r'rate'] = this.rate;
       json[r'maxDurationSeconds'] = this.maxDurationSeconds;
       json[r'testOnly'] = this.testOnly;
+    if (this.customerAvatarCode != null) {
+      json[r'customerAvatarCode'] = this.customerAvatarCode;
+    }
+    if (this.listenerAvatarCode != null) {
+      json[r'listenerAvatarCode'] = this.listenerAvatarCode;
+    }
     if (this.mediaType != null) {
       json[r'mediaType'] = this.mediaType;
     }
@@ -328,6 +344,8 @@ class Call {
         rate: Rate.fromJson(json[r'rate'])!,
         maxDurationSeconds: mapValueOfType<int>(json, r'maxDurationSeconds')!,
         testOnly: CallTestOnlyEnum.fromJson(json[r'testOnly'])!,
+        customerAvatarCode: CallCustomerAvatarCodeEnum.fromJson(json[r'customerAvatarCode']),
+        listenerAvatarCode: CallListenerAvatarCodeEnum.fromJson(json[r'listenerAvatarCode']),
         mediaType: CallMediaTypeEnum.fromJson(json[r'mediaType']),
         durationLimitReason: CallDurationLimitReasonEnum.fromJson(json[r'durationLimitReason']),
       );
@@ -552,6 +570,408 @@ class CallTestOnlyEnumTypeTransformer {
 
   /// The singleton instance of this transformer.
   static CallTestOnlyEnumTypeTransformer? _instance;
+}
+
+
+
+enum CallCustomerAvatarCodeEnum {
+  moon._(r'moon'),
+  star._(r'star'),
+  leaf._(r'leaf'),
+  wave._(r'wave'),
+  male01._(r'male_01'),
+  male02._(r'male_02'),
+  male03._(r'male_03'),
+  male04._(r'male_04'),
+  male05._(r'male_05'),
+  male06._(r'male_06'),
+  male07._(r'male_07'),
+  male08._(r'male_08'),
+  male09._(r'male_09'),
+  male10._(r'male_10'),
+  male11._(r'male_11'),
+  male12._(r'male_12'),
+  male13._(r'male_13'),
+  male14._(r'male_14'),
+  male15._(r'male_15'),
+  male16._(r'male_16'),
+  male17._(r'male_17'),
+  male18._(r'male_18'),
+  male19._(r'male_19'),
+  male20._(r'male_20'),
+  male21._(r'male_21'),
+  male22._(r'male_22'),
+  male23._(r'male_23'),
+  male24._(r'male_24'),
+  male25._(r'male_25'),
+  male26._(r'male_26'),
+  male27._(r'male_27'),
+  male28._(r'male_28'),
+  male29._(r'male_29'),
+  male30._(r'male_30'),
+  female01._(r'female_01'),
+  female02._(r'female_02'),
+  female03._(r'female_03'),
+  female04._(r'female_04'),
+  female05._(r'female_05'),
+  female06._(r'female_06'),
+  female07._(r'female_07'),
+  female08._(r'female_08'),
+  female09._(r'female_09'),
+  female10._(r'female_10'),
+  female11._(r'female_11'),
+  female12._(r'female_12'),
+  female13._(r'female_13'),
+  female14._(r'female_14'),
+  female15._(r'female_15'),
+  female16._(r'female_16'),
+  female17._(r'female_17'),
+  female18._(r'female_18'),
+  female19._(r'female_19'),
+  female20._(r'female_20'),
+  female21._(r'female_21'),
+  female22._(r'female_22'),
+  female23._(r'female_23'),
+  female24._(r'female_24'),
+  female25._(r'female_25'),
+  female26._(r'female_26'),
+  female27._(r'female_27'),
+  female28._(r'female_28'),
+  female29._(r'female_29'),
+  female30._(r'female_30'),
+  ;
+
+  /// Instantiate a new enum with the provided value.
+  const CallCustomerAvatarCodeEnum._(this._value);
+
+  /// The underlying value of this enum member.
+  final String _value;
+
+  @override
+  String toString() => _value;
+
+  /// Encodes this enum as a value suitable for JSON.
+  String toJson() => _value;
+
+  /// Returns the instance of [CallCustomerAvatarCodeEnum] that was successfully decoded
+  /// from the passed [value] on success, null otherwise.
+  static CallCustomerAvatarCodeEnum? fromJson(dynamic value) => CallCustomerAvatarCodeEnumTypeTransformer().decode(value);
+
+  /// Returns a [List] containing instances of [CallCustomerAvatarCodeEnum]
+  /// that were successfully decoded from the passed [JSON][json].
+  static List<CallCustomerAvatarCodeEnum> listFromJson(dynamic json, {bool growable = false,}) {
+    final result = <CallCustomerAvatarCodeEnum>[];
+    if (json is List && json.isNotEmpty) {
+      for (final row in json) {
+        final value = CallCustomerAvatarCodeEnum.fromJson(row);
+        if (value == null) throw const FormatException('Invalid enum list item');
+        result.add(value);
+      }
+    }
+    return result.toList(growable: growable);
+  }
+}
+
+/// Transformation class that can [encode] an instance of [CallCustomerAvatarCodeEnum] to String,
+/// and [decode] dynamic data back to [CallCustomerAvatarCodeEnum].
+class CallCustomerAvatarCodeEnumTypeTransformer {
+  factory CallCustomerAvatarCodeEnumTypeTransformer() => _instance ??= const CallCustomerAvatarCodeEnumTypeTransformer._();
+
+  const CallCustomerAvatarCodeEnumTypeTransformer._();
+
+  String encode(CallCustomerAvatarCodeEnum data) => data._value;
+
+  /// Returns the instance of [CallCustomerAvatarCodeEnum] that was successfully decoded
+  /// from the passed [data] value on success, null otherwise.
+  ///
+  /// If [allowNull] is true and the [dynamic value][data] cannot be decoded successfully,
+  /// then null is returned. However, if [allowNull] is false and the [dynamic value][data]
+  /// cannot be decoded successfully, then an [UnimplementedError] is thrown.
+  ///
+  /// The [allowNull] is very handy when an API changes and a new enum value is added or removed,
+  /// and users are still using an old app with the old code.
+  CallCustomerAvatarCodeEnum? decode(dynamic data, {bool allowNull = false}) {
+    if (data is CallCustomerAvatarCodeEnum) {
+      return data;
+    }
+    if (data != null) {
+      switch (data) {
+        case r'moon': return CallCustomerAvatarCodeEnum.moon;
+        case r'star': return CallCustomerAvatarCodeEnum.star;
+        case r'leaf': return CallCustomerAvatarCodeEnum.leaf;
+        case r'wave': return CallCustomerAvatarCodeEnum.wave;
+        case r'male_01': return CallCustomerAvatarCodeEnum.male01;
+        case r'male_02': return CallCustomerAvatarCodeEnum.male02;
+        case r'male_03': return CallCustomerAvatarCodeEnum.male03;
+        case r'male_04': return CallCustomerAvatarCodeEnum.male04;
+        case r'male_05': return CallCustomerAvatarCodeEnum.male05;
+        case r'male_06': return CallCustomerAvatarCodeEnum.male06;
+        case r'male_07': return CallCustomerAvatarCodeEnum.male07;
+        case r'male_08': return CallCustomerAvatarCodeEnum.male08;
+        case r'male_09': return CallCustomerAvatarCodeEnum.male09;
+        case r'male_10': return CallCustomerAvatarCodeEnum.male10;
+        case r'male_11': return CallCustomerAvatarCodeEnum.male11;
+        case r'male_12': return CallCustomerAvatarCodeEnum.male12;
+        case r'male_13': return CallCustomerAvatarCodeEnum.male13;
+        case r'male_14': return CallCustomerAvatarCodeEnum.male14;
+        case r'male_15': return CallCustomerAvatarCodeEnum.male15;
+        case r'male_16': return CallCustomerAvatarCodeEnum.male16;
+        case r'male_17': return CallCustomerAvatarCodeEnum.male17;
+        case r'male_18': return CallCustomerAvatarCodeEnum.male18;
+        case r'male_19': return CallCustomerAvatarCodeEnum.male19;
+        case r'male_20': return CallCustomerAvatarCodeEnum.male20;
+        case r'male_21': return CallCustomerAvatarCodeEnum.male21;
+        case r'male_22': return CallCustomerAvatarCodeEnum.male22;
+        case r'male_23': return CallCustomerAvatarCodeEnum.male23;
+        case r'male_24': return CallCustomerAvatarCodeEnum.male24;
+        case r'male_25': return CallCustomerAvatarCodeEnum.male25;
+        case r'male_26': return CallCustomerAvatarCodeEnum.male26;
+        case r'male_27': return CallCustomerAvatarCodeEnum.male27;
+        case r'male_28': return CallCustomerAvatarCodeEnum.male28;
+        case r'male_29': return CallCustomerAvatarCodeEnum.male29;
+        case r'male_30': return CallCustomerAvatarCodeEnum.male30;
+        case r'female_01': return CallCustomerAvatarCodeEnum.female01;
+        case r'female_02': return CallCustomerAvatarCodeEnum.female02;
+        case r'female_03': return CallCustomerAvatarCodeEnum.female03;
+        case r'female_04': return CallCustomerAvatarCodeEnum.female04;
+        case r'female_05': return CallCustomerAvatarCodeEnum.female05;
+        case r'female_06': return CallCustomerAvatarCodeEnum.female06;
+        case r'female_07': return CallCustomerAvatarCodeEnum.female07;
+        case r'female_08': return CallCustomerAvatarCodeEnum.female08;
+        case r'female_09': return CallCustomerAvatarCodeEnum.female09;
+        case r'female_10': return CallCustomerAvatarCodeEnum.female10;
+        case r'female_11': return CallCustomerAvatarCodeEnum.female11;
+        case r'female_12': return CallCustomerAvatarCodeEnum.female12;
+        case r'female_13': return CallCustomerAvatarCodeEnum.female13;
+        case r'female_14': return CallCustomerAvatarCodeEnum.female14;
+        case r'female_15': return CallCustomerAvatarCodeEnum.female15;
+        case r'female_16': return CallCustomerAvatarCodeEnum.female16;
+        case r'female_17': return CallCustomerAvatarCodeEnum.female17;
+        case r'female_18': return CallCustomerAvatarCodeEnum.female18;
+        case r'female_19': return CallCustomerAvatarCodeEnum.female19;
+        case r'female_20': return CallCustomerAvatarCodeEnum.female20;
+        case r'female_21': return CallCustomerAvatarCodeEnum.female21;
+        case r'female_22': return CallCustomerAvatarCodeEnum.female22;
+        case r'female_23': return CallCustomerAvatarCodeEnum.female23;
+        case r'female_24': return CallCustomerAvatarCodeEnum.female24;
+        case r'female_25': return CallCustomerAvatarCodeEnum.female25;
+        case r'female_26': return CallCustomerAvatarCodeEnum.female26;
+        case r'female_27': return CallCustomerAvatarCodeEnum.female27;
+        case r'female_28': return CallCustomerAvatarCodeEnum.female28;
+        case r'female_29': return CallCustomerAvatarCodeEnum.female29;
+        case r'female_30': return CallCustomerAvatarCodeEnum.female30;
+        default:
+          if (!allowNull) {
+            throw const FormatException('Unknown enum value');
+          }
+      }
+    }
+    return null;
+  }
+
+  /// The singleton instance of this transformer.
+  static CallCustomerAvatarCodeEnumTypeTransformer? _instance;
+}
+
+
+
+enum CallListenerAvatarCodeEnum {
+  moon._(r'moon'),
+  star._(r'star'),
+  leaf._(r'leaf'),
+  wave._(r'wave'),
+  male01._(r'male_01'),
+  male02._(r'male_02'),
+  male03._(r'male_03'),
+  male04._(r'male_04'),
+  male05._(r'male_05'),
+  male06._(r'male_06'),
+  male07._(r'male_07'),
+  male08._(r'male_08'),
+  male09._(r'male_09'),
+  male10._(r'male_10'),
+  male11._(r'male_11'),
+  male12._(r'male_12'),
+  male13._(r'male_13'),
+  male14._(r'male_14'),
+  male15._(r'male_15'),
+  male16._(r'male_16'),
+  male17._(r'male_17'),
+  male18._(r'male_18'),
+  male19._(r'male_19'),
+  male20._(r'male_20'),
+  male21._(r'male_21'),
+  male22._(r'male_22'),
+  male23._(r'male_23'),
+  male24._(r'male_24'),
+  male25._(r'male_25'),
+  male26._(r'male_26'),
+  male27._(r'male_27'),
+  male28._(r'male_28'),
+  male29._(r'male_29'),
+  male30._(r'male_30'),
+  female01._(r'female_01'),
+  female02._(r'female_02'),
+  female03._(r'female_03'),
+  female04._(r'female_04'),
+  female05._(r'female_05'),
+  female06._(r'female_06'),
+  female07._(r'female_07'),
+  female08._(r'female_08'),
+  female09._(r'female_09'),
+  female10._(r'female_10'),
+  female11._(r'female_11'),
+  female12._(r'female_12'),
+  female13._(r'female_13'),
+  female14._(r'female_14'),
+  female15._(r'female_15'),
+  female16._(r'female_16'),
+  female17._(r'female_17'),
+  female18._(r'female_18'),
+  female19._(r'female_19'),
+  female20._(r'female_20'),
+  female21._(r'female_21'),
+  female22._(r'female_22'),
+  female23._(r'female_23'),
+  female24._(r'female_24'),
+  female25._(r'female_25'),
+  female26._(r'female_26'),
+  female27._(r'female_27'),
+  female28._(r'female_28'),
+  female29._(r'female_29'),
+  female30._(r'female_30'),
+  ;
+
+  /// Instantiate a new enum with the provided value.
+  const CallListenerAvatarCodeEnum._(this._value);
+
+  /// The underlying value of this enum member.
+  final String _value;
+
+  @override
+  String toString() => _value;
+
+  /// Encodes this enum as a value suitable for JSON.
+  String toJson() => _value;
+
+  /// Returns the instance of [CallListenerAvatarCodeEnum] that was successfully decoded
+  /// from the passed [value] on success, null otherwise.
+  static CallListenerAvatarCodeEnum? fromJson(dynamic value) => CallListenerAvatarCodeEnumTypeTransformer().decode(value);
+
+  /// Returns a [List] containing instances of [CallListenerAvatarCodeEnum]
+  /// that were successfully decoded from the passed [JSON][json].
+  static List<CallListenerAvatarCodeEnum> listFromJson(dynamic json, {bool growable = false,}) {
+    final result = <CallListenerAvatarCodeEnum>[];
+    if (json is List && json.isNotEmpty) {
+      for (final row in json) {
+        final value = CallListenerAvatarCodeEnum.fromJson(row);
+        if (value == null) throw const FormatException('Invalid enum list item');
+        result.add(value);
+      }
+    }
+    return result.toList(growable: growable);
+  }
+}
+
+/// Transformation class that can [encode] an instance of [CallListenerAvatarCodeEnum] to String,
+/// and [decode] dynamic data back to [CallListenerAvatarCodeEnum].
+class CallListenerAvatarCodeEnumTypeTransformer {
+  factory CallListenerAvatarCodeEnumTypeTransformer() => _instance ??= const CallListenerAvatarCodeEnumTypeTransformer._();
+
+  const CallListenerAvatarCodeEnumTypeTransformer._();
+
+  String encode(CallListenerAvatarCodeEnum data) => data._value;
+
+  /// Returns the instance of [CallListenerAvatarCodeEnum] that was successfully decoded
+  /// from the passed [data] value on success, null otherwise.
+  ///
+  /// If [allowNull] is true and the [dynamic value][data] cannot be decoded successfully,
+  /// then null is returned. However, if [allowNull] is false and the [dynamic value][data]
+  /// cannot be decoded successfully, then an [UnimplementedError] is thrown.
+  ///
+  /// The [allowNull] is very handy when an API changes and a new enum value is added or removed,
+  /// and users are still using an old app with the old code.
+  CallListenerAvatarCodeEnum? decode(dynamic data, {bool allowNull = false}) {
+    if (data is CallListenerAvatarCodeEnum) {
+      return data;
+    }
+    if (data != null) {
+      switch (data) {
+        case r'moon': return CallListenerAvatarCodeEnum.moon;
+        case r'star': return CallListenerAvatarCodeEnum.star;
+        case r'leaf': return CallListenerAvatarCodeEnum.leaf;
+        case r'wave': return CallListenerAvatarCodeEnum.wave;
+        case r'male_01': return CallListenerAvatarCodeEnum.male01;
+        case r'male_02': return CallListenerAvatarCodeEnum.male02;
+        case r'male_03': return CallListenerAvatarCodeEnum.male03;
+        case r'male_04': return CallListenerAvatarCodeEnum.male04;
+        case r'male_05': return CallListenerAvatarCodeEnum.male05;
+        case r'male_06': return CallListenerAvatarCodeEnum.male06;
+        case r'male_07': return CallListenerAvatarCodeEnum.male07;
+        case r'male_08': return CallListenerAvatarCodeEnum.male08;
+        case r'male_09': return CallListenerAvatarCodeEnum.male09;
+        case r'male_10': return CallListenerAvatarCodeEnum.male10;
+        case r'male_11': return CallListenerAvatarCodeEnum.male11;
+        case r'male_12': return CallListenerAvatarCodeEnum.male12;
+        case r'male_13': return CallListenerAvatarCodeEnum.male13;
+        case r'male_14': return CallListenerAvatarCodeEnum.male14;
+        case r'male_15': return CallListenerAvatarCodeEnum.male15;
+        case r'male_16': return CallListenerAvatarCodeEnum.male16;
+        case r'male_17': return CallListenerAvatarCodeEnum.male17;
+        case r'male_18': return CallListenerAvatarCodeEnum.male18;
+        case r'male_19': return CallListenerAvatarCodeEnum.male19;
+        case r'male_20': return CallListenerAvatarCodeEnum.male20;
+        case r'male_21': return CallListenerAvatarCodeEnum.male21;
+        case r'male_22': return CallListenerAvatarCodeEnum.male22;
+        case r'male_23': return CallListenerAvatarCodeEnum.male23;
+        case r'male_24': return CallListenerAvatarCodeEnum.male24;
+        case r'male_25': return CallListenerAvatarCodeEnum.male25;
+        case r'male_26': return CallListenerAvatarCodeEnum.male26;
+        case r'male_27': return CallListenerAvatarCodeEnum.male27;
+        case r'male_28': return CallListenerAvatarCodeEnum.male28;
+        case r'male_29': return CallListenerAvatarCodeEnum.male29;
+        case r'male_30': return CallListenerAvatarCodeEnum.male30;
+        case r'female_01': return CallListenerAvatarCodeEnum.female01;
+        case r'female_02': return CallListenerAvatarCodeEnum.female02;
+        case r'female_03': return CallListenerAvatarCodeEnum.female03;
+        case r'female_04': return CallListenerAvatarCodeEnum.female04;
+        case r'female_05': return CallListenerAvatarCodeEnum.female05;
+        case r'female_06': return CallListenerAvatarCodeEnum.female06;
+        case r'female_07': return CallListenerAvatarCodeEnum.female07;
+        case r'female_08': return CallListenerAvatarCodeEnum.female08;
+        case r'female_09': return CallListenerAvatarCodeEnum.female09;
+        case r'female_10': return CallListenerAvatarCodeEnum.female10;
+        case r'female_11': return CallListenerAvatarCodeEnum.female11;
+        case r'female_12': return CallListenerAvatarCodeEnum.female12;
+        case r'female_13': return CallListenerAvatarCodeEnum.female13;
+        case r'female_14': return CallListenerAvatarCodeEnum.female14;
+        case r'female_15': return CallListenerAvatarCodeEnum.female15;
+        case r'female_16': return CallListenerAvatarCodeEnum.female16;
+        case r'female_17': return CallListenerAvatarCodeEnum.female17;
+        case r'female_18': return CallListenerAvatarCodeEnum.female18;
+        case r'female_19': return CallListenerAvatarCodeEnum.female19;
+        case r'female_20': return CallListenerAvatarCodeEnum.female20;
+        case r'female_21': return CallListenerAvatarCodeEnum.female21;
+        case r'female_22': return CallListenerAvatarCodeEnum.female22;
+        case r'female_23': return CallListenerAvatarCodeEnum.female23;
+        case r'female_24': return CallListenerAvatarCodeEnum.female24;
+        case r'female_25': return CallListenerAvatarCodeEnum.female25;
+        case r'female_26': return CallListenerAvatarCodeEnum.female26;
+        case r'female_27': return CallListenerAvatarCodeEnum.female27;
+        case r'female_28': return CallListenerAvatarCodeEnum.female28;
+        case r'female_29': return CallListenerAvatarCodeEnum.female29;
+        case r'female_30': return CallListenerAvatarCodeEnum.female30;
+        default:
+          if (!allowNull) {
+            throw const FormatException('Unknown enum value');
+          }
+      }
+    }
+    return null;
+  }
+
+  /// The singleton instance of this transformer.
+  static CallListenerAvatarCodeEnumTypeTransformer? _instance;
 }
 
 

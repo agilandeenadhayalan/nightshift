@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'design_system.dart';
+import 'call_designs.dart';
+import 'commerce_designs.dart';
 
 /// Review-only presentation state. It never changes accounts, availability or money.
 class HomeDesignState {
@@ -10,11 +12,13 @@ class HomeDesignState {
       this.video = false,
       this.offer = 0,
       this.favorite = false,
+      this.favorites = const {},
       this.online = false,
       this.avatar = 0,
       this.nickname = ''});
   final String language, mood, nickname;
   final bool video, favorite, online;
+  final Set<int> favorites;
   final int offer, avatar;
   HomeDesignState copyWith(
           {String? language,
@@ -22,6 +26,7 @@ class HomeDesignState {
           String? nickname,
           bool? video,
           bool? favorite,
+          Set<int>? favorites,
           bool? online,
           int? offer,
           int? avatar}) =>
@@ -31,6 +36,7 @@ class HomeDesignState {
           nickname: nickname ?? this.nickname,
           video: video ?? this.video,
           favorite: favorite ?? this.favorite,
+          favorites: favorites ?? this.favorites,
           online: online ?? this.online,
           offer: offer ?? this.offer,
           avatar: avatar ?? this.avatar);
@@ -42,7 +48,12 @@ class HomeDesignController extends StateNotifier<HomeDesignState> {
   void mood(String value) => state = state.copyWith(mood: value);
   void video(bool value) => state = state.copyWith(video: value);
   void offer(int value) => state = state.copyWith(offer: value);
-  void favorite() => state = state.copyWith(favorite: !state.favorite);
+  void favorite([int index = 0]) {
+    final values = {...state.favorites};
+    if (!values.add(index)) values.remove(index);
+    state = state.copyWith(favorites: values, favorite: values.contains(0));
+  }
+
   void online(bool value) => state = state.copyWith(online: value);
   void avatar(int value) => state = state.copyWith(avatar: value);
   void nickname(String value) => state = state.copyWith(nickname: value);
@@ -55,6 +66,27 @@ final homeDesignProvider = StateNotifierProvider.autoDispose
 class HomeDesignScreen extends ConsumerWidget {
   const HomeDesignScreen({super.key, required this.designId});
   final int designId;
+  String _asset(int index, {bool male = false}) =>
+      'assets/avatars/${male ? 'male' : 'female'}/avatar_${index.toString().padLeft(2, '0')}.png';
+  void _open(BuildContext context, Widget page) =>
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+  void _sheet(BuildContext context, String title, Widget child) =>
+      showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          builder: (context) => SafeArea(
+              child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
+                  child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(title,
+                            style: Theme.of(context).textTheme.titleLarge),
+                        const SizedBox(height: 18),
+                        child
+                      ]))));
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(homeDesignProvider(designId));
@@ -62,416 +94,1098 @@ class HomeDesignScreen extends ConsumerWidget {
     final profile = [17, 20, 22].contains(designId);
     final history = [24, 31].contains(designId);
     final listener = [20, 22, 24, 29].contains(designId);
-    final offer = [43, 45].contains(designId);
+    final largeText = MediaQuery.textScalerOf(context).scale(12) > 18;
     return Scaffold(
-      appBar: AppBar(title: const NightshiftBrand(size: 22), actions: [
-        const Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: Chip(
-                avatar: Icon(Icons.toll, color: NsColors.gold),
-                label: Text('Preview'))),
-      ]),
-      body: NightshiftBackdrop(
-          child: ListView(padding: const EdgeInsets.all(20), children: [
-        if (profile)
-          ..._profile(context, state, actions, listener)
-        else if (history)
-          ..._history(context, listener)
-        else if (designId == 29)
-          ..._availability(context, state, actions)
-        else if (designId == 41)
-          ..._filters(context, state, actions)
-        else if (offer)
-          ..._offer(context)
-        else
-          ..._feed(context, state, actions),
-      ])),
-      bottomNavigationBar: NavigationBar(
-          selectedIndex: profile
+      backgroundColor: const Color(0xFF0B0D17),
+      appBar: AppBar(
+          toolbarHeight: 56,
+          titleSpacing: 16,
+          title: const FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: NightshiftBrand(size: 22)),
+          bottom: largeText
+              ? const PreferredSize(
+                  preferredSize: Size.fromHeight(24),
+                  child: Padding(
+                      padding: EdgeInsets.only(bottom: 6),
+                      child: _PreviewBadge()))
+              : null,
+          actions: [
+            if (!largeText) ...[
+              const _PreviewBadge(),
+              const SizedBox(width: 8),
+            ],
+            Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: InkWell(
+                    borderRadius: BorderRadius.circular(24),
+                    onTap: () => _open(
+                        context,
+                        CommerceDesignScreen(
+                            designId: listener ? 10 : 15, preview: true)),
+                    child: _pill(listener ? '₹20.35' : '133',
+                        Icons.toll_rounded, NsColors.gold))),
+          ]),
+      body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            if (profile)
+              ..._profile(context, state, actions, listener)
+            else if (history)
+              ..._history(context, listener)
+            else if (designId == 29)
+              ..._availability(context, state, actions)
+            else if (designId == 41)
+              ..._filters(context, state, actions)
+            else if ([43, 45].contains(designId))
+              ..._offer(context, state, actions)
+            else
+              ..._feed(context, state, actions),
+          ]),
+      bottomNavigationBar: _navigation(
+          context,
+          profile
               ? 2
               : history
                   ? 1
                   : 0,
-          onDestinationSelected: (_) {},
-          destinations: const [
-            NavigationDestination(
-                icon: Icon(Icons.home_outlined), label: 'Home'),
-            NavigationDestination(
-                icon: Icon(Icons.history_rounded), label: 'Recents'),
-            NavigationDestination(
-                icon: Icon(Icons.person_outline), label: 'Profile'),
-          ]),
+          listener),
     );
   }
 
-  List<Widget> _feed(BuildContext context, HomeDesignState state,
+  Widget _navigation(BuildContext context, int index, bool listener) =>
+      SafeArea(
+          top: false,
+          child: Container(
+              decoration: const BoxDecoration(
+                  color: Color(0xFF0B0D17),
+                  border: Border(top: BorderSide(color: Color(0xFF202438)))),
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              child: Row(children: [
+                for (var i = 0; i < 3; i++)
+                  Expanded(
+                      child: TextButton(
+                          style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              foregroundColor:
+                                  i == index ? Colors.white : NsColors.muted),
+                          onPressed: i == index
+                              ? null
+                              : () => _open(
+                                  context,
+                                  HomeDesignScreen(
+                                      designId: [
+                                    listener ? 29 : 44,
+                                    listener ? 24 : 31,
+                                    listener ? 20 : 17
+                                  ][i])),
+                          child:
+                              Column(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(
+                                [
+                                  Icons.home_rounded,
+                                  Icons.history_rounded,
+                                  Icons.person_outline
+                                ][i],
+                                color:
+                                    i == index ? Colors.white : NsColors.muted,
+                                size: 23),
+                            const SizedBox(height: 4),
+                            Text(
+                                [
+                                  listener ? 'Home' : 'Home',
+                                  listener ? 'Call logs' : 'Recents',
+                                  'Profile'
+                                ][i],
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    color: i == index
+                                        ? Colors.white
+                                        : NsColors.muted)),
+                            const SizedBox(height: 4),
+                            Container(
+                                width: 4,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: i == index
+                                        ? NsColors.cyan
+                                        : Colors.transparent))
+                          ])))
+              ])));
+
+  Widget _pill(String text, IconData icon, Color color) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+          color: color.withAlpha(17),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: color.withAlpha(70))),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, color: color, size: 15),
+        const SizedBox(width: 6),
+        Flexible(
+            child: Text(text,
+                style: TextStyle(
+                    color: color, fontSize: 11, fontWeight: FontWeight.w700)))
+      ]));
+
+  Widget _banner(BuildContext context, HomeDesignState state,
       HomeDesignController actions) {
-    final loading = [11, 32].contains(designId);
-    return [
-      Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: const LinearGradient(
-                  colors: [Color(0xFF402073), Color(0xFF1D2143)])),
-          child: Row(children: [
-            const Icon(Icons.nightlight_round, color: NsColors.gold, size: 30),
-            const SizedBox(width: 14),
-            Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  Text('Find your conversation',
-                      style: Theme.of(context).textTheme.titleMedium),
-                  const Text('One-to-one · Customer & Listener',
-                      style: TextStyle(color: NsColors.muted, fontSize: 12)),
-                ]))
-          ])),
-      const SizedBox(height: 22),
-      if (loading) ...[
-        const Text('Finding available Listeners…'),
-        const SizedBox(height: 16),
-        for (var i = 0; i < 2; i++)
-          Padding(
-              padding: const EdgeInsets.only(bottom: 18),
-              child: NightshiftSurface(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    Container(
-                        height: designId == 11 ? 180 : 120,
-                        decoration: BoxDecoration(
-                            color: NsColors.violet.withAlpha(22),
-                            borderRadius: BorderRadius.circular(16))),
-                    const SizedBox(height: 16),
-                    _skeleton(140),
-                    const SizedBox(height: 10),
-                    _skeleton(220),
-                  ]))),
-      ] else ...[
-        Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(30),
-                gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF35205B), Color(0xFF13162B)])),
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Wrap(
-                      alignment: WrapAlignment.spaceBetween,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        const Chip(
-                            label: Text('Sample', softWrap: true),
-                            avatar: Icon(Icons.circle,
-                                color: NsColors.cyan, size: 10)),
-                        IconButton(
-                            tooltip: 'Save preview favorite',
-                            onPressed: actions.favorite,
-                            icon: Icon(
-                                state.favorite
-                                    ? Icons.favorite
-                                    : Icons.favorite_outline,
-                                color: NsColors.cyan)),
-                      ]),
-                  const SizedBox(height: 24),
-                  const Center(
-                      child: NightshiftAvatar(
-                          name: 'Sample Listener', size: 150, listener: true)),
-                  const SizedBox(height: 28),
-                  Text('A little time to talk.',
-                      style: Theme.of(context).textTheme.headlineSmall),
-                  const SizedBox(height: 8),
-                  const Text('Tamil · English',
-                      style: TextStyle(color: NsColors.muted)),
-                  const SizedBox(height: 14),
-                  const Wrap(spacing: 8, runSpacing: 6, children: [
-                    Chip(label: Text('Music')),
-                    Chip(label: Text('Everyday life')),
-                    Chip(label: Text('Just talk'))
-                  ]),
-                  const SizedBox(height: 18),
-                  const Text(
-                      'Preview only. Live availability and prices come from the server.',
-                      style: TextStyle(color: NsColors.muted, fontSize: 12)),
-                  const SizedBox(height: 16),
-                  const FilledButton(
-                      onPressed: null, child: Text('Start a conversation')),
-                ])),
-        if ([34, 39].contains(designId)) ...[
-          const SizedBox(height: 18),
-          NightshiftSurface(
+    final offers = [34, 39].contains(designId);
+    return Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: NsColors.violet.withAlpha(70)),
+            gradient: const LinearGradient(colors: [
+              Color(0xFF2A175B),
+              Color(0xFF151838),
+              Color(0xFF0D1630)
+            ])),
+        child: Row(children: [
+          Expanded(
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                const Text('Coin offers',
-                    style: TextStyle(
-                        color: NsColors.gold, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 14),
+                Text(
+                    offers
+                        ? [
+                            'Make more time to talk',
+                            'A little extra connection',
+                            'Your next conversation'
+                          ][state.offer % 3]
+                        : 'Play games on call',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, fontSize: 16)),
+                const SizedBox(height: 7),
+                Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                    decoration: BoxDecoration(
+                        color: NsColors.gold,
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Text(
+                        offers ? 'SAMPLE COIN OFFERS' : 'EXPLORE TOGETHER',
+                        style: const TextStyle(
+                            color: Color(0xFF241600),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800))),
+                const SizedBox(height: 9),
                 Row(children: [
-                  const Icon(Icons.toll_rounded,
-                      color: NsColors.gold, size: 44),
-                  const SizedBox(width: 16),
-                  Expanded(
-                      child: Text(
-                          'Offer design ${state.offer + 1} of 5\nPurchases are not available.')),
-                  IconButton(
-                      tooltip: 'Next offer design',
-                      onPressed: () => actions.offer((state.offer + 1) % 5),
-                      icon: const Icon(Icons.chevron_right))
-                ]),
+                  for (var i = 0; i < 3; i++)
+                    Container(
+                        width: i == state.offer % 3 ? 16 : 5,
+                        height: 5,
+                        margin: const EdgeInsets.only(right: 4),
+                        decoration: BoxDecoration(
+                            color: i == state.offer % 3
+                                ? Colors.white
+                                : Colors.white24,
+                            borderRadius: BorderRadius.circular(8)))
+                ])
               ])),
-        ],
-        const SizedBox(height: 20),
-        const FilledButton(
-            onPressed: null, child: Text('Find me a Listener ✨')),
-      ],
-    ];
+          const SizedBox(width: 12),
+          Column(children: [
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              NightshiftAvatar(
+                  name: 'Sample friend', assetPath: _asset(1), size: 30),
+              NightshiftAvatar(
+                  name: 'Sample friend',
+                  assetPath: _asset(1, male: true),
+                  size: 30)
+            ]),
+            IconButton(
+                tooltip: offers ? 'Next offer design' : 'Explore game preview',
+                onPressed: offers
+                    ? () => actions.offer((state.offer + 1) % 3)
+                    : () => _open(context,
+                        const CallDesignScreen(designId: 33, preview: true)),
+                icon: Icon(offers ? Icons.chevron_right : Icons.casino_outlined,
+                    color: NsColors.cyan, size: 23))
+          ])
+        ]));
   }
+
+  List<Widget> _feed(BuildContext context, HomeDesignState state,
+          HomeDesignController actions) =>
+      [
+        _banner(context, state, actions),
+        const SizedBox(height: 16),
+        if ([11, 32].contains(designId)) ...[
+          Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [_skeleton(120), _skeleton(64)]),
+          const SizedBox(height: 14),
+          LayoutBuilder(
+              builder: (context, c) =>
+                  Wrap(spacing: 12, runSpacing: 12, children: [
+                    for (var i = 0; i < 4; i++)
+                      SizedBox(
+                          width: (c.maxWidth - 12) / 2,
+                          child: Container(
+                              height: designId == 11 ? 245 : 180,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                  color: NsColors.surface,
+                                  borderRadius: BorderRadius.circular(20)),
+                              child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _skeleton(75),
+                                    const SizedBox(height: 8),
+                                    _skeleton(110)
+                                  ])))
+                  ])),
+          const SizedBox(height: 14),
+          const Text('Finding available Listeners…',
+              style: TextStyle(color: NsColors.muted, fontSize: 12)),
+        ] else ...[
+          if (designId == 6)
+            _portraitCard(context, state, actions, 0, hero: true)
+          else ...[
+            Row(children: [
+              const Expanded(
+                  child: Text('Find your conversation',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 16))),
+              TextButton.icon(
+                  onPressed: () =>
+                      _open(context, const HomeDesignScreen(designId: 41)),
+                  icon: const Icon(Icons.tune, size: 16),
+                  label: const Text('Filters', style: TextStyle(fontSize: 11)))
+            ]),
+            const SizedBox(height: 8),
+            LayoutBuilder(builder: (context, c) {
+              final columns =
+                  MediaQuery.textScalerOf(context).scale(12) > 18 ? 1 : 2;
+              return Wrap(spacing: 12, runSpacing: 12, children: [
+                for (var i = 0; i < 4; i++)
+                  SizedBox(
+                      width: columns == 1 ? c.maxWidth : (c.maxWidth - 12) / 2,
+                      child: _portraitCard(context, state, actions, i))
+              ]);
+            }),
+          ],
+          const SizedBox(height: 14),
+          _matchDock(context),
+        ],
+      ];
+
+  Widget _portraitCard(BuildContext context, HomeDesignState state,
+      HomeDesignController actions, int index,
+      {bool hero = false}) {
+    final names = ['Maya', 'Nila', 'Ananya', 'Meera'];
+    final name = names[index];
+    final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
+    return Container(
+        height: (hero ? 490 : 280) + (scale - 1) * 65,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(hero ? 28 : 20),
+            border: Border.all(color: Colors.white12)),
+        child: Stack(fit: StackFit.expand, children: [
+          AvatarPortrait(
+              assetPath: _asset(index + 1), borderRadius: BorderRadius.zero),
+          const DecoratedBox(
+              decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: [
+                .25,
+                .6,
+                1
+              ],
+                      colors: [
+                Colors.transparent,
+                Color(0x42070913),
+                Color(0xFF090D18)
+              ]))),
+          Positioned(
+              top: 10,
+              left: 10,
+              child: _pill('ONLINE', Icons.circle, const Color(0xFF34D399))),
+          Positioned(
+              top: 5,
+              right: 3,
+              child: IconButton(
+                  tooltip: state.favorites.contains(index)
+                      ? 'Remove $name'
+                      : 'Save $name',
+                  onPressed: () => actions.favorite(index),
+                  icon: Icon(
+                      state.favorites.contains(index)
+                          ? Icons.favorite
+                          : Icons.favorite_outline,
+                      color: Colors.white,
+                      size: 21))),
+          Positioned(
+              left: hero ? 18 : 12,
+              right: hero ? 18 : 12,
+              bottom: 12,
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Flexible(
+                          child: Text(name,
+                              style: TextStyle(
+                                  fontSize: hero ? 24 : 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white))),
+                      const SizedBox(width: 5),
+                      const Icon(Icons.verified, size: 14, color: NsColors.cyan)
+                    ]),
+                    const SizedBox(height: 5),
+                    Text(index.isEven ? 'Tamil · English' : 'English · Tamil',
+                        style: TextStyle(
+                            color: Colors.white70, fontSize: hero ? 12 : 10)),
+                    const SizedBox(height: 8),
+                    if (hero) ...[
+                      const Wrap(spacing: 6, runSpacing: 6, children: [
+                        Chip(
+                            label: Text('Music & everyday life',
+                                style: TextStyle(fontSize: 10))),
+                        Chip(
+                            label: Text('Just talk',
+                                style: TextStyle(fontSize: 10)))
+                      ]),
+                      const SizedBox(height: 7)
+                    ],
+                    Row(children: [
+                      Expanded(
+                          child: Text('60 coins / min',
+                              style: TextStyle(
+                                  color: NsColors.gold,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: hero ? 13 : 10))),
+                      IconButton.filled(
+                          tooltip: 'Preview call with $name',
+                          style: IconButton.styleFrom(
+                              backgroundColor: NsColors.cyan,
+                              foregroundColor: NsColors.background,
+                              minimumSize: const Size(40, 40)),
+                          onPressed: () => _open(
+                              context,
+                              const CallDesignScreen(
+                                  designId: 50, preview: true)),
+                          icon: const Icon(Icons.call, size: 18))
+                    ])
+                  ]))
+        ]));
+  }
+
+  Widget _matchDock(BuildContext context) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          gradient: const LinearGradient(colors: [
+            Color(0xFF7C3AED),
+            Color(0xFF6366F1),
+            Color(0xFF4F46E5)
+          ])),
+      child: Row(children: [
+        const Icon(Icons.auto_awesome, size: 21, color: NsColors.gold),
+        const SizedBox(width: 9),
+        const Expanded(
+            child: Text('Find me the right conversation',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700))),
+        IconButton.filled(
+            tooltip: 'Audio match preview',
+            style: IconButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: NsColors.background),
+            onPressed: () =>
+                _open(context, const HomeDesignScreen(designId: 41)),
+            icon: const Icon(Icons.call, size: 19)),
+        IconButton(
+            tooltip: 'Video preview',
+            onPressed: () => _open(
+                context, const CallDesignScreen(designId: 52, preview: true)),
+            icon: const Icon(Icons.videocam, size: 21))
+      ]));
 
   Widget _skeleton(double width) => Container(
       width: width,
-      height: 14,
+      height: 12,
       decoration: BoxDecoration(
-          color: NsColors.violet.withAlpha(35),
-          borderRadius: BorderRadius.circular(8)));
-
-  List<Widget> _filters(BuildContext context, HomeDesignState state,
-          HomeDesignController actions) =>
-      [
-        const Icon(Icons.auto_awesome, size: 46, color: NsColors.cyan),
-        const SizedBox(height: 20),
-        Text('Find your kind of conversation',
-            style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 26),
-        const Text('Preferred language'),
-        const SizedBox(height: 10),
-        Wrap(spacing: 10, children: [
-          for (final language in ['Tamil', 'English'])
-            ChoiceChip(
-                label: Text(language),
-                selected: state.language == language,
-                onSelected: (_) => actions.language(language))
-        ]),
-        const SizedBox(height: 26),
-        const Text('Vibe & mood'),
-        const SizedBox(height: 10),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final mood in ['Just talk', 'Music', 'Share my day', 'Unwind'])
-            ChoiceChip(
-                label: Text(mood),
-                selected: state.mood == mood,
-                onSelected: (_) => actions.mood(mood))
-        ]),
-        const SizedBox(height: 26),
-        const Text('Call mode'),
-        const SizedBox(height: 10),
-        SegmentedButton<bool>(segments: const [
-          ButtonSegment(
-              value: false, label: Text('Audio'), icon: Icon(Icons.call)),
-          ButtonSegment(
-              value: true, label: Text('Video'), icon: Icon(Icons.videocam))
-        ], selected: {
-          state.video
-        }, onSelectionChanged: (v) => actions.video(v.single)),
-        const SizedBox(height: 32),
-        const FilledButton(onPressed: null, child: Text('Find a Listener')),
-        const SizedBox(height: 12),
-        const Text(
-            'Preview choices only. Live matching keeps its existing consent and eligibility checks.',
-            style: TextStyle(color: NsColors.muted)),
-      ];
-
-  List<Widget> _offer(BuildContext context) => [
-        const SizedBox(height: 26),
-        Container(
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(32),
-                gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: designId == 43
-                        ? [const Color(0xFF45265C), const Color(0xFF221139)]
-                        : [const Color(0xFF16754B), const Color(0xFF072E27)])),
-            child: Column(children: [
-              const Text('OFFER DESIGN'),
-              const SizedBox(height: 14),
-              Text(designId == 43 ? '₹800 off' : '₹2,000 off',
-                  style: Theme.of(context).textTheme.headlineLarge),
-              const SizedBox(height: 30),
-              const Icon(Icons.toll_rounded, size: 96, color: NsColors.gold),
-              const SizedBox(height: 24),
-              const Text(
-                  'Sample offer from the supplied design.\nNo approved price or purchasable pack.',
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 26),
-              const FilledButton(
-                  onPressed: null, child: Text('Offers unavailable'))
-            ])),
-      ];
+          color: const Color(0xFF292D42),
+          borderRadius: BorderRadius.circular(6)));
 
   List<Widget> _profile(BuildContext context, HomeDesignState state,
           HomeDesignController actions, bool listener) =>
       [
-        const SizedBox(height: 18),
-        Center(
-            child: NightshiftAvatar(
-                name: 'Preview profile', size: 118, listener: listener)),
-        const SizedBox(height: 20),
-        Text(listener ? 'Listener profile' : 'Customer profile',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 10),
-        const Text('Tamil · English',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: NsColors.muted)),
-        const SizedBox(height: 26),
+        Container(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+            decoration: BoxDecoration(
+                color: const Color(0xFF171722),
+                borderRadius: BorderRadius.circular(26),
+                border: Border.all(color: Colors.white10)),
+            child: Column(children: [
+              Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                      tooltip: 'Edit preview profile',
+                      onPressed: () =>
+                          _open(context, const HomeDesignScreen(designId: 22)),
+                      icon: const Icon(Icons.edit_outlined,
+                          size: 18, color: NsColors.muted))),
+              NightshiftAvatar(
+                  name: listener ? 'Priya' : 'Arjun',
+                  assetPath: _asset(state.avatar + 1, male: !listener),
+                  size: 94),
+              const SizedBox(height: 12),
+              Text(
+                  state.nickname.isNotEmpty
+                      ? state.nickname
+                      : listener
+                          ? 'Priya Sharma'
+                          : 'Arjun',
+                  style: const TextStyle(
+                      fontSize: 21, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 6),
+              Text(listener ? '@priya_270' : '@arjun_090',
+                  style: const TextStyle(color: NsColors.muted, fontSize: 11)),
+              const SizedBox(height: 10),
+              _pill(
+                  listener ? 'Listener · ★ 4.9' : 'Customer · Joined Nov 2026',
+                  listener ? Icons.headset_mic : Icons.person_outline,
+                  NsColors.violet),
+              if (!listener) ...[
+                const SizedBox(height: 15),
+                Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                        color: const Color(0xFF22212A),
+                        borderRadius: BorderRadius.circular(17)),
+                    child: Row(children: [
+                      const Icon(Icons.toll_rounded,
+                          color: NsColors.gold, size: 30),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                            Text('COINS BALANCE',
+                                style: TextStyle(
+                                    color: NsColors.muted,
+                                    fontSize: 9,
+                                    letterSpacing: 1)),
+                            Text('133 Coins',
+                                style: TextStyle(
+                                    color: NsColors.gold,
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800))
+                          ])),
+                      TextButton(
+                          onPressed: () => _open(
+                              context,
+                              const CommerceDesignScreen(
+                                  designId: 15, preview: true)),
+                          child: const Text('+ Recharge',
+                              style: TextStyle(
+                                  color: NsColors.gold, fontSize: 11)))
+                    ]))
+              ]
+            ])),
+        const SizedBox(height: 14),
         if (designId == 22) ...[
           TextField(
               decoration: const InputDecoration(
                   labelText: 'Nickname', hintText: 'Choose a display name'),
               onChanged: actions.nickname),
-          const SizedBox(height: 20),
-          const Text('Choose an avatar'),
+          const SizedBox(height: 18),
+          const Text('Choose an avatar',
+              style: TextStyle(fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
           Wrap(spacing: 12, runSpacing: 12, children: [
             for (var i = 0; i < 8; i++)
-              ChoiceChip(
-                  avatar: Icon([
-                    Icons.person,
-                    Icons.nightlight,
-                    Icons.star,
-                    Icons.music_note
-                  ][i % 4]),
-                  label: Text('${i + 1}'),
-                  selected: state.avatar == i,
-                  onSelected: (_) => actions.avatar(i))
+              InkWell(
+                  onTap: () => actions.avatar(i),
+                  borderRadius: BorderRadius.circular(50),
+                  child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: state.avatar == i
+                                  ? NsColors.cyan
+                                  : Colors.transparent,
+                              width: 2)),
+                      child: NightshiftAvatar(
+                          name: 'Avatar ${i + 1}',
+                          assetPath: _asset(i + 1),
+                          size: 58)))
           ]),
-          const SizedBox(height: 24),
-          const FilledButton(
-              onPressed: null, child: Text('Profile editing unavailable')),
-          const Text('This is a local draft. It does not change your account.',
-              style: TextStyle(color: NsColors.muted)),
+          const SizedBox(height: 18),
+          FilledButton(
+              onPressed: () => _sheet(context, 'Preview saved',
+                  const Text('Your local design choices are ready to review.')),
+              child: const Text('Save preview'))
         ] else ...[
-          NightshiftSurface(
-              child: Row(children: [
-            Icon(
-                listener
-                    ? Icons.diamond_outlined
-                    : Icons.account_balance_wallet_outlined,
-                size: 36,
-                color: NsColors.gold),
-            const SizedBox(width: 16),
-            Expanded(
-                child: Text(listener
-                    ? 'Earnings & withdrawal history'
-                    : 'Wallet & coins')),
-            const Icon(Icons.chevron_right)
-          ])),
-          const SizedBox(height: 20),
-          for (final entry in [
-            (Icons.edit_outlined, 'Edit profile'),
-            (Icons.translate, 'App language'),
-            (Icons.help_outline, 'Help & support'),
-            (Icons.privacy_tip_outlined, 'Privacy & account'),
-            (Icons.logout, 'Sign out')
-          ])
-            ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                leading: Icon(entry.$1, color: NsColors.violet),
-                title: Text(entry.$2),
-                trailing: const Icon(Icons.chevron_right)),
-        ],
+          InkWell(
+              onTap: () => listener
+                  ? _open(context, const HomeDesignScreen(designId: 6))
+                  : _sheet(
+                      context,
+                      'Become a Listener',
+                      const Text(
+                          'Discover one-to-one conversations in Tamil and English.')),
+              borderRadius: BorderRadius.circular(18),
+              child: Container(
+                  padding: const EdgeInsets.all(15),
+                  decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      gradient: const LinearGradient(
+                          colors: [Color(0xFF311451), Color(0xFF17132E)]),
+                      border: Border.all(color: NsColors.violet.withAlpha(50))),
+                  child: Row(children: [
+                    const Icon(Icons.headset_mic_outlined,
+                        color: NsColors.violet, size: 25),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                          Text(
+                              listener
+                                  ? 'Switch to Customer'
+                                  : 'Become a Listener',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 13)),
+                          const SizedBox(height: 3),
+                          Text(
+                              listener
+                                  ? 'Find a conversation, at your pace'
+                                  : 'Good conversations start with listening',
+                              style: const TextStyle(
+                                  color: NsColors.muted, fontSize: 10))
+                        ])),
+                    const Icon(Icons.chevron_right, size: 19)
+                  ]))),
+          const SizedBox(height: 14),
+          Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                  color: const Color(0xFF171923),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white10)),
+              child: Column(children: [
+                _menu(
+                    Icons.account_balance_wallet_outlined,
+                    'Wallet',
+                    () => _open(
+                        context,
+                        CommerceDesignScreen(
+                            designId: listener ? 10 : 15, preview: true)),
+                    value: listener ? '1,250 diamonds' : '133 Coins'),
+                _menu(
+                    Icons.receipt_long_outlined,
+                    'Transactions',
+                    () => _open(context,
+                        HomeDesignScreen(designId: listener ? 24 : 31))),
+                _menu(
+                    Icons.translate,
+                    'Language Settings',
+                    () => _sheet(
+                        context,
+                        'App language',
+                        Column(mainAxisSize: MainAxisSize.min, children: [
+                          for (final language in ['English', 'தமிழ்'])
+                            ListTile(
+                                title: Text(language),
+                                leading: const Icon(Icons.language),
+                                onTap: () {
+                                  actions.language(language == 'தமிழ்'
+                                      ? 'Tamil'
+                                      : 'English');
+                                  Navigator.pop(context);
+                                })
+                        ])),
+                    value: state.language),
+                _menu(
+                    Icons.help_outline,
+                    'Help & Support',
+                    () => _open(
+                        context,
+                        const CommerceDesignScreen(
+                            designId: 35, preview: true))),
+                _menu(Icons.settings_outlined, 'Account Settings',
+                    () => _open(context, const HomeDesignScreen(designId: 22)),
+                    last: true),
+              ])),
+          const SizedBox(height: 14),
+          Container(
+              decoration: BoxDecoration(
+                  color: const Color(0xFF171923),
+                  borderRadius: BorderRadius.circular(20)),
+              child: _menu(
+                  Icons.logout,
+                  'Log Out',
+                  () => _sheet(context, 'Design preview',
+                      const Text('Your signed-in account is unchanged.')),
+                  color: const Color(0xFFF43F5E),
+                  last: true)),
+        ]
       ];
 
+  Widget _menu(IconData icon, String title, VoidCallback action,
+          {String? value, Color color = NsColors.muted, bool last = false}) =>
+      Column(children: [
+        ListTile(
+            dense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+            leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(5),
+                    borderRadius: BorderRadius.circular(11),
+                    border: Border.all(color: Colors.white10)),
+                child: Icon(icon, size: 18, color: color)),
+            title: Text(title,
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: color == NsColors.muted ? Colors.white : color)),
+            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              if (value != null) ...[
+                Text(value,
+                    style: const TextStyle(fontSize: 10, color: NsColors.gold)),
+                const SizedBox(width: 8)
+              ],
+              const Icon(Icons.chevron_right, size: 17, color: NsColors.muted)
+            ]),
+            onTap: action),
+        if (!last) const Divider(height: 1, color: Color(0xFF242738))
+      ]);
+
   List<Widget> _history(BuildContext context, bool listener) => [
-        Text(listener ? 'Call logs & earnings' : 'Recent sessions',
-            style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 18),
-        if (listener)
-          const NightshiftSurface(
+        Row(children: [
+          Expanded(
+              child: Text(listener ? 'Call Logs & Earnings' : 'Recent sessions',
+                  style: const TextStyle(
+                      fontSize: 23, fontWeight: FontWeight.w800))),
+          IconButton(
+              tooltip: 'History filters',
+              onPressed: () => _sheet(context, 'Call type',
+                  const Text('All calls · Audio · Video')),
+              icon: const Icon(Icons.tune, size: 20))
+        ]),
+        const SizedBox(height: 14),
+        if (listener) ...[
+          Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  gradient: const LinearGradient(
+                      colors: [Color(0xFF282249), Color(0xFF131625)])),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text('TEST EARNINGS', style: TextStyle(color: NsColors.gold)),
-                SizedBox(height: 12),
-                Text('Server-confirmed amounts',
-                    style:
-                        TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                SizedBox(height: 8),
-                Text('No withdrawable cash balance is configured.'),
-              ])),
-        const SizedBox(height: 24),
-        const Text('Layout preview'),
-        const SizedBox(height: 14),
-        for (var i = 0; i < 3; i++)
-          Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: NightshiftSurface(
-                  child: Row(children: [
+                    const Text("TODAY'S EARNINGS",
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: NsColors.muted,
+                            letterSpacing: 1)),
+                    const SizedBox(height: 10),
+                    const Text('₹20.24',
+                        style: TextStyle(
+                            fontSize: 30, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 8),
+                    const Text('2 sessions  ·  18 mins on call',
+                        style: TextStyle(fontSize: 11, color: NsColors.muted)),
+                    const SizedBox(height: 15),
+                    Row(children: [
+                      Expanded(
+                          child:
+                              _pill('Audio ₹12.24', Icons.call, NsColors.cyan)),
+                      const SizedBox(width: 9),
+                      Expanded(
+                          child: _pill(
+                              'Video ₹8.00', Icons.videocam, NsColors.violet))
+                    ])
+                  ])),
+          const SizedBox(height: 18)
+        ],
+        const Text('TODAY',
+            style: TextStyle(
+                fontSize: 10, letterSpacing: 1.5, color: NsColors.muted)),
+        const SizedBox(height: 10),
+        for (var i = 0; i < 5; i++)
+          Container(
+              margin: const EdgeInsets.only(bottom: 9),
+              padding: const EdgeInsets.all(13),
+              decoration: BoxDecoration(
+                  color: const Color(0xFF151827),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withAlpha(9))),
+              child: Row(children: [
                 NightshiftAvatar(
-                    name: 'Sample ${i + 1}', size: 50, listener: !listener),
-                const SizedBox(width: 14),
+                    name: listener
+                        ? ['Arjun', 'Rohan', 'Dev', 'Vikram', 'Kiran'][i]
+                        : ['Maya', 'Nila', 'Ananya', 'Meera', 'Kavya'][i],
+                    assetPath: _asset(i + 1, male: listener),
+                    size: 48),
+                const SizedBox(width: 12),
                 Expanded(
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                      Text('Sample conversation ${i + 1}',
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
-                      const Text('Example row · no real call',
-                          style:
-                              TextStyle(color: NsColors.muted, fontSize: 12)),
+                      Text(
+                          listener
+                              ? ['Arjun', 'Rohan', 'Dev', 'Vikram', 'Kiran'][i]
+                              : ['Maya', 'Nila', 'Ananya', 'Meera', 'Kavya'][i],
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 13)),
+                      const SizedBox(height: 4),
+                      Text(
+                          i == 2
+                              ? 'Missed call'
+                              : '${i.isEven ? 'Audio' : 'Video'} · 0${i + 2}:24',
+                          style: TextStyle(
+                              fontSize: 10,
+                              color:
+                                  i == 2 ? Colors.redAccent : NsColors.muted)),
+                      const SizedBox(height: 4),
+                      Text('Today, ${10 + i}:24 AM',
+                          style: const TextStyle(
+                              color: NsColors.muted, fontSize: 9))
                     ])),
-                Icon(i.isEven ? Icons.call_outlined : Icons.videocam_outlined,
-                    color: NsColors.cyan)
-              ]))),
+                if (listener)
+                  Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Text(i == 2 ? '—' : '+₹${i + 3}.50',
+                          style: const TextStyle(
+                              color: NsColors.cyan,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700))),
+                IconButton(
+                    tooltip: 'Preview recent conversation',
+                    onPressed: () => _open(context,
+                        const CallDesignScreen(designId: 50, preview: true)),
+                    icon: Icon(
+                        i.isEven
+                            ? Icons.call_outlined
+                            : Icons.videocam_outlined,
+                        size: 20,
+                        color: NsColors.cyan))
+              ]))
       ];
 
   List<Widget> _availability(BuildContext context, HomeDesignState state,
           HomeDesignController actions) =>
       [
-        const Center(
+        _pill(
+            state.online
+                ? 'Live · Accepting calls'
+                : 'Offline · Ready when you are',
+            Icons.circle,
+            state.online ? NsColors.cyan : NsColors.muted),
+        const SizedBox(height: 16),
+        Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+                color: NsColors.surface,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: NsColors.violet.withAlpha(45))),
+            child: Column(children: [
+              LayoutBuilder(builder: (context, c) {
+                final wide = MediaQuery.textScalerOf(context).scale(12) <= 18;
+                return Wrap(spacing: 12, runSpacing: 12, children: [
+                  for (final video in [false, true])
+                    SizedBox(
+                        width: wide ? (c.maxWidth - 12) / 2 : c.maxWidth,
+                        child: Container(
+                            padding: const EdgeInsets.all(13),
+                            decoration: BoxDecoration(
+                                color: const Color(0xFF0E1221),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                    color: Colors.white.withAlpha(12))),
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(children: [
+                                    Expanded(
+                                        child: Text(video ? 'Video' : 'Audio',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 15))),
+                                    Icon(
+                                        video
+                                            ? Icons.videocam
+                                            : Icons.graphic_eq,
+                                        color: video
+                                            ? NsColors.cyan
+                                            : NsColors.violet,
+                                        size: 18)
+                                  ]),
+                                  const SizedBox(height: 15),
+                                  Row(children: [
+                                    Expanded(
+                                        child: Text(
+                                            (video ? state.video : state.online)
+                                                ? 'ONLINE'
+                                                : 'OFFLINE',
+                                            style: TextStyle(
+                                                fontSize: 9,
+                                                color: (video
+                                                        ? state.video
+                                                        : state.online)
+                                                    ? NsColors.cyan
+                                                    : NsColors.muted))),
+                                    Switch(
+                                        value:
+                                            video ? state.video : state.online,
+                                        onChanged: video
+                                            ? actions.video
+                                            : actions.online,
+                                        activeColor: NsColors.cyan,
+                                        materialTapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap)
+                                  ])
+                                ])))
+                ]);
+              }),
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 12),
+              Wrap(spacing: 10, runSpacing: 7, children: [
+                _pill('Basic', Icons.star, NsColors.gold),
+                _pill('₹0.9 / min', Icons.call, NsColors.muted),
+                _pill('₹5 / min', Icons.videocam, NsColors.muted)
+              ])
+            ])),
+        const SizedBox(height: 16),
+        Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: const LinearGradient(
+                    colors: [Color(0xFF15192D), Color(0xFF292147)])),
             child:
-                NightshiftAvatar(name: 'Listener', size: 112, listener: true)),
-        const SizedBox(height: 22),
-        Text('Make room for a conversation.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 24),
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text("TODAY'S EARNINGS",
+                  style: TextStyle(
+                      fontSize: 10, color: NsColors.muted, letterSpacing: .7)),
+              const SizedBox(height: 8),
+              Row(children: [
+                const Expanded(
+                    child: Text('₹20.24',
+                        style: TextStyle(
+                            fontSize: 30, fontWeight: FontWeight.w800))),
+                IconButton(
+                    tooltip: 'View earnings preview',
+                    onPressed: () =>
+                        _open(context, const HomeDesignScreen(designId: 24)),
+                    icon:
+                        const Icon(Icons.arrow_forward, color: NsColors.violet))
+              ]),
+              const Text('2 sessions · 18 mins on call',
+                  style: TextStyle(fontSize: 11, color: NsColors.muted))
+            ])),
+        const SizedBox(height: 16),
+        Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: NsColors.gold.withAlpha(80)),
+                gradient: const LinearGradient(
+                    colors: [Color(0xFF35230F), Color(0xFF102C3C)])),
+            child: const Row(children: [
+              Icon(Icons.local_fire_department, color: NsColors.gold, size: 31),
+              SizedBox(width: 13),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text('NIGHT OWL HOURS',
+                        style: TextStyle(
+                            color: NsColors.gold,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800)),
+                    SizedBox(height: 4),
+                    Text('A little time. A meaningful conversation.',
+                        style: TextStyle(fontSize: 11))
+                  ]))
+            ])),
+        const SizedBox(height: 16),
         NightshiftSurface(
-            child: Column(children: [
-          Icon(
-              state.online
-                  ? Icons.radio_button_checked
-                  : Icons.pause_circle_outline,
-              color: NsColors.cyan,
-              size: 40),
-          const SizedBox(height: 12),
-          Text(state.online ? 'Online appearance' : 'Offline appearance',
-              style: Theme.of(context).textTheme.titleLarge),
-          SwitchListTile(
-              title: const Text('Preview availability'),
-              value: state.online,
-              onChanged: actions.online),
-          const Text(
-              'This switch only changes this design preview. Your real availability is unchanged.',
-              style: TextStyle(color: NsColors.muted)),
-        ])),
-        const SizedBox(height: 22),
-        const NightshiftSurface(
-            child: Column(children: [
-          Icon(Icons.diamond_outlined, color: NsColors.gold, size: 32),
-          SizedBox(height: 12),
-          Text('Audio & video controls'),
-          SizedBox(height: 8),
-          Text('Real calls use your approved permissions and server state.'),
-        ])),
+            padding: const EdgeInsets.all(14),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('CALL PREFERENCES',
+                  style: TextStyle(
+                      fontSize: 10, color: NsColors.muted, letterSpacing: .7)),
+              _menu(
+                  Icons.translate,
+                  'Speaking language',
+                  () => _sheet(context, 'Speaking language',
+                      const Text('Tamil · English')),
+                  value: state.language),
+              _menu(
+                  Icons.favorite_outline,
+                  'Conversation interests',
+                  () => _sheet(context, 'Your interests',
+                      const Text('Music · Stories · Everyday life')),
+                  last: true)
+            ]))
       ];
+
+  List<Widget> _filters(BuildContext context, HomeDesignState state,
+          HomeDesignController actions) =>
+      [
+        _banner(context, state, actions),
+        const SizedBox(height: 22),
+        Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+                color: const Color(0xFF151827),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: NsColors.violet.withAlpha(70))),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                      child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                              color: Colors.white24,
+                              borderRadius: BorderRadius.circular(8)))),
+                  const SizedBox(height: 20),
+                  const Text('Find your kind of conversation',
+                      style:
+                          TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 7),
+                  const Text('A little more you. A better match.',
+                      style: TextStyle(color: NsColors.muted, fontSize: 12)),
+                  const SizedBox(height: 22),
+                  const Text('Preferred language',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  const SizedBox(height: 10),
+                  Wrap(spacing: 8, runSpacing: 8, children: [
+                    for (final language in ['Tamil', 'English'])
+                      ChoiceChip(
+                          label: Text(language),
+                          selected: state.language == language,
+                          onSelected: (_) => actions.language(language))
+                  ]),
+                  const SizedBox(height: 20),
+                  const Text('Vibe & mood',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  const SizedBox(height: 10),
+                  Wrap(spacing: 8, runSpacing: 8, children: [
+                    for (final mood in [
+                      'Just talk',
+                      'Music',
+                      'Share my day',
+                      'Unwind'
+                    ])
+                      ChoiceChip(
+                          label: Text(mood),
+                          selected: state.mood == mood,
+                          onSelected: (_) => actions.mood(mood))
+                  ]),
+                  const SizedBox(height: 20),
+                  const Text('Call mode',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  const SizedBox(height: 10),
+                  SegmentedButton<bool>(segments: const [
+                    ButtonSegment(
+                        value: false,
+                        label: Text('Audio'),
+                        icon: Icon(Icons.call)),
+                    ButtonSegment(
+                        value: true,
+                        label: Text('Video'),
+                        icon: Icon(Icons.videocam))
+                  ], selected: {
+                    state.video
+                  }, onSelectionChanged: (v) => actions.video(v.single)),
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                      onPressed: () => _open(
+                          context,
+                          CallDesignScreen(
+                              designId: state.video ? 52 : 54, preview: true)),
+                      icon: const Icon(Icons.auto_awesome),
+                      label: const Text('Find a Listener'))
+                ]))
+      ];
+
+  List<Widget> _offer(BuildContext context, HomeDesignState state,
+          HomeDesignController actions) =>
+      [
+        _banner(context, state, actions),
+        const SizedBox(height: 18),
+        Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                    color: (designId == 43 ? NsColors.violet : NsColors.cyan)
+                        .withAlpha(70)),
+                gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: designId == 43
+                        ? [const Color(0xFF45265C), const Color(0xFF1F1137)]
+                        : [const Color(0xFF0D704D), const Color(0xFF082F2E)])),
+            child: Column(children: [
+              Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(8))),
+              const SizedBox(height: 27),
+              _pill('LIMITED-TIME DESIGN', Icons.bolt, NsColors.gold),
+              const SizedBox(height: 22),
+              const Text('Your next connection,\na little closer.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 24),
+              const Icon(Icons.toll_rounded, size: 85, color: NsColors.gold),
+              const SizedBox(height: 15),
+              Text(designId == 43 ? 'FLAT ₹800 OFF' : 'FLAT ₹2,000 OFF',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      color: NsColors.gold,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800)),
+              const SizedBox(height: 10),
+              const Text('A sample offer from the design collection',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white70, fontSize: 11)),
+              const SizedBox(height: 25),
+              SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                      onPressed: () => _open(
+                          context,
+                          const CommerceDesignScreen(
+                              designId: 15, preview: true)),
+                      child: const Text('Explore coin packs'))),
+              const SizedBox(height: 12),
+              TextButton(
+                  onPressed: () =>
+                      _open(context, const HomeDesignScreen(designId: 44)),
+                  child: const Text('Maybe later',
+                      style: TextStyle(color: Colors.white70)))
+            ]))
+      ];
+}
+
+class _PreviewBadge extends StatelessWidget {
+  const _PreviewBadge();
+  @override
+  Widget build(BuildContext context) => const Text('PREVIEW',
+      style: TextStyle(fontSize: 8, color: NsColors.muted, letterSpacing: 1));
 }

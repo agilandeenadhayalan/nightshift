@@ -77,7 +77,7 @@ async function event(provider = 'fixture-payout', kind = 'payout', eventDigest =
 test('empty migration is repeatable and commerce cannot bypass test-only boundaries', async () => {
   const migrations = await db.pool.query('SELECT name FROM schema_migrations ORDER BY name');
   assert.deepEqual(migrations.rows.map(row => row.name), [
-    '001_android_test_milestone.sql', '002_durable_event_sequence.sql', '003_identity_commerce_foundation.sql', '004_otp_challenges.sql', '005_video_calls.sql', '006_account_onboarding.sql', '007_account_lifecycle.sql', '008_listener_applications.sql', '009_firebase_phone.sql', '010_presence_versions.sql', '011_discovery_views.sql', '012_staff_authority.sql', '013_staff_app_binding.sql', '014_staff_review_reads.sql', '015_listener_review_decisions.sql', '016_bounded_matching.sql', '017_android_call_push.sql', '018_rate_version_integrity.sql', '019_posted_journal_integrity.sql',
+    '001_android_test_milestone.sql', '002_durable_event_sequence.sql', '003_identity_commerce_foundation.sql', '004_otp_challenges.sql', '005_video_calls.sql', '006_account_onboarding.sql', '007_account_lifecycle.sql', '008_listener_applications.sql', '009_firebase_phone.sql', '010_presence_versions.sql', '011_discovery_views.sql', '012_staff_authority.sql', '013_staff_app_binding.sql', '014_staff_review_reads.sql', '015_listener_review_decisions.sql', '016_bounded_matching.sql', '017_android_call_push.sql', '018_rate_version_integrity.sql', '019_posted_journal_integrity.sql', '020_profile_portrait_avatars.sql',
   ]);
   const id = await purchase();
   await assert.rejects(db.pool.query('UPDATE purchases SET test_only=false WHERE id=$1', [id]), code('23514'));

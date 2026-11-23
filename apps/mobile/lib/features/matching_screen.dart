@@ -13,6 +13,82 @@ class MatchingScreen extends ConsumerStatefulWidget {
   ConsumerState<MatchingScreen> createState() => _MatchingScreenState();
 }
 
+/// Unknown candidates remain neutral. A portrait is shown only after the
+/// matching request identifies an actual call with a selected avatar code.
+class _MatchingPortraitRail extends StatelessWidget {
+  const _MatchingPortraitRail({this.avatarCode});
+  final String? avatarCode;
+  @override
+  Widget build(BuildContext context) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 28),
+      child: SizedBox(
+          height: 266,
+          child: Stack(alignment: Alignment.center, children: [
+            Positioned(
+                left: 4,
+                top: 34,
+                child: Transform.rotate(
+                    angle: -.12,
+                    child: Opacity(
+                        opacity: .36,
+                        child: _candidate(width: 122, height: 196)))),
+            Positioned(
+                right: 4,
+                top: 34,
+                child: Transform.rotate(
+                    angle: .12,
+                    child: Opacity(
+                        opacity: .36,
+                        child: _candidate(width: 122, height: 196)))),
+            Container(
+                width: 186,
+                height: 252,
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: NsColors.cyan, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                          color: NsColors.cyan.withValues(alpha: .13),
+                          blurRadius: 36)
+                    ]),
+                child: ClipRRect(
+                    borderRadius: BorderRadius.circular(26),
+                    child: Stack(fit: StackFit.expand, children: [
+                      if (avatarAssetPath(avatarCode) case final asset?)
+                        AvatarPortrait(
+                            assetPath: asset, borderRadius: BorderRadius.zero)
+                      else
+                        _candidate(width: 180, height: 246),
+                      Align(
+                          alignment: const Alignment(0, .35),
+                          child: Container(
+                              height: 2,
+                              decoration: const BoxDecoration(
+                                  color: NsColors.cyan,
+                                  boxShadow: [
+                                    BoxShadow(
+                                        color: NsColors.cyan,
+                                        blurRadius: 14,
+                                        spreadRadius: 2)
+                                  ]))),
+                    ]))),
+          ])));
+
+  Widget _candidate({required double width, required double height}) =>
+      Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: Colors.white12),
+              gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF394565), Color(0xFF151B32)])),
+          child: const Center(child: NightshiftAvatar(name: '', size: 76)));
+}
+
 class _MatchingScreenState extends ConsumerState<MatchingScreen> {
   bool consent = false, reviewNewSearch = false;
   String? selectedLanguage, seenRequestId;
@@ -58,6 +134,15 @@ class _MatchingScreenState extends ConsumerState<MatchingScreen> {
                         onPressed: matching.dismiss,
                         icon: const Icon(Icons.close))
                 ]),
+            bottomNavigationBar: request?.active == true
+                ? SafeArea(
+                    minimum: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                    child: FilledButton.tonal(
+                        onPressed:
+                            busy || pending != null ? null : matching.cancel,
+                        child: Text(
+                            state.text('Cancel search', 'தேடலை ரத்து செய்'))))
+                : null,
             body: PageBody(children: [
               const ErrorNotice(),
               if (matching.loading || busy)
@@ -66,43 +151,11 @@ class _MatchingScreenState extends ConsumerState<MatchingScreen> {
                         'தேடல் நிலையை புதுப்பிக்கிறது')),
               if (request != null) ...[
                 if (request.active)
-                  Center(
-                      child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 28),
-                          child: Container(
-                              width: 188,
-                              height: 220,
-                              padding: const EdgeInsets.all(18),
-                              decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(36),
-                                  border: Border.all(
-                                      color:
-                                          NsColors.cyan.withValues(alpha: .5)),
-                                  gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        NsColors.violet.withValues(alpha: .38),
-                                        NsColors.surface
-                                      ]),
-                                  boxShadow: [
-                                    BoxShadow(
-                                        color: NsColors.violet
-                                            .withValues(alpha: .2),
-                                        blurRadius: 40)
-                                  ]),
-                              child: const Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.people_outline,
-                                        color: NsColors.cyan, size: 70),
-                                    SizedBox(height: 30),
-                                    SizedBox(
-                                        height: 3,
-                                        width: 120,
-                                        child:
-                                            ColoredBox(color: NsColors.cyan)),
-                                  ])))),
+                  _MatchingPortraitRail(
+                      avatarCode: request.callId != null &&
+                              state.activeCall?.id == request.callId
+                          ? state.activeCall?.listenerAvatarCode
+                          : null),
                 Text(_title(state, request),
                     textAlign: request.active ? TextAlign.center : null,
                     style: Theme.of(context).textTheme.headlineSmall),
@@ -132,11 +185,6 @@ class _MatchingScreenState extends ConsumerState<MatchingScreen> {
                         'Selected for language, current availability and fair rotation.',
                         'மொழி, தற்போதைய கிடைக்கும் நிலை மற்றும் சமமான வாய்ப்பு அடிப்படையில் தேர்வு.')),
                   const SizedBox(height: 16),
-                  FilledButton.tonal(
-                      onPressed:
-                          busy || pending != null ? null : matching.cancel,
-                      child: Text(
-                          state.text('Cancel search', 'தேடலை ரத்து செய்'))),
                 ] else ...[
                   const SizedBox(height: 12),
                   Text(_outcome(state, request)),

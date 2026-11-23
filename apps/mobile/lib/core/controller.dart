@@ -313,7 +313,11 @@ class AppController extends ChangeNotifier {
   int _availabilityIntent = 0;
   Future<void> _availabilityWork = Future<void>.value();
   int balance = 0, held = 0;
-  bool initializing = true, busy = false, offline = false, foreground = true;
+  bool initializing = true, offline = false, foreground = true;
+  bool _busy = false;
+  bool Function()? _busyScope;
+  Object? _busyOperation;
+  bool get busy => _busy && (_busyScope?.call() ?? true);
   String locale = 'en', language = 'ta', lastPath = '/home';
   String? error, errorCode, diagnosticId;
   bool _errorFromSnapshot = false;
@@ -853,45 +857,46 @@ class AppController extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> completeOnboarding(Json profile) => perform(() async {
-        final identity = _identityRevision,
-            owner = user?.id,
-            origin = api.baseUrl;
-        bool current() =>
-            !_disposed &&
-            identity == _identityRevision &&
-            user?.id == owner &&
-            api.baseUrl == origin;
-        final birth = profile['dateOfBirth'];
-        final parsed = birth is String ? DateTime.tryParse(birth) : null;
-        if (birth is! String ||
-            !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(birth) ||
-            parsed == null ||
-            parsed.toIso8601String().substring(0, 10) != birth) {
-          throw const ApiFailure(
-              'INVALID_BIRTH_DATE', 'Enter a valid date of birth.');
+  Future<void> completeOnboarding(Json profile) {
+    final identity = _identityRevision, owner = user?.id, origin = api.baseUrl;
+    bool current() =>
+        !_disposed &&
+        identity == _identityRevision &&
+        user?.id == owner &&
+        api.baseUrl == origin;
+    return perform(() async {
+      final birth = profile['dateOfBirth'];
+      final parsed = birth is String ? DateTime.tryParse(birth) : null;
+      if (birth is! String ||
+          !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(birth) ||
+          parsed == null ||
+          parsed.toIso8601String().substring(0, 10) != birth) {
+        throw const ApiFailure(
+            'INVALID_BIRTH_DATE', 'Enter a valid date of birth.');
+      }
+      Json result;
+      try {
+        result = await api.privateRequest('PUT', '/me/onboarding',
+            origin: origin,
+            isCurrent: current,
+            body: {...profile, 'consentVersion': 'adult-onboarding-v1'});
+      } on ApiFailure catch (e) {
+        if (current() && ['ADULT_ONLY', 'DOB_IMMUTABLE'].contains(e.code)) {
+          try {
+            await loadOnboarding();
+          } catch (_) {/* Preserve the age-gate error. */}
         }
-        Json result;
-        try {
-          result = await api.privateRequest('PUT', '/me/onboarding',
-              origin: origin,
-              isCurrent: current,
-              body: {...profile, 'consentVersion': 'adult-onboarding-v1'});
-        } on ApiFailure catch (e) {
-          if (current() && ['ADULT_ONLY', 'DOB_IMMUTABLE'].contains(e.code)) {
-            try {
-              await loadOnboarding();
-            } catch (_) {/* Preserve the age-gate error. */}
-          }
-          rethrow;
-        }
-        if (!current()) return;
-        onboardingProfile = result['profile'] as Json;
-        needsOnboarding = result['required'] == true;
-        if (needsOnboarding) return;
-        await setLocale(profile['interfaceLanguage'] as String);
-        await refresh();
-      });
+        rethrow;
+      }
+      if (!current()) return;
+      onboardingProfile = result['profile'] as Json;
+      needsOnboarding = result['required'] == true;
+      if (needsOnboarding) return;
+      await setLocale(profile['interfaceLanguage'] as String);
+      if (!current()) return;
+      await refresh();
+    }, isCurrent: current);
+  }
 
   Future<void> refresh() async {
     if (api.token == null ||
@@ -1869,9 +1874,13 @@ class AppController extends ChangeNotifier {
     _historyRetryAppend = false;
   }
 
-  Future<void> perform(Future<void> Function() operation) async {
-    if (busy) return;
-    busy = true;
+  Future<void> perform(Future<void> Function() operation,
+      {bool Function()? isCurrent}) async {
+    if (busy || isCurrent?.call() == false) return;
+    final ticket = Object();
+    _busyOperation = ticket;
+    _busyScope = isCurrent;
+    _busy = true;
     error = null;
     errorCode = null;
     _errorFromSnapshot = false;
@@ -1880,11 +1889,18 @@ class AppController extends ChangeNotifier {
     try {
       await operation();
     } catch (e) {
+      if (isCurrent?.call() == false) return;
       _showError(e);
       await refresh();
     } finally {
-      busy = false;
-      _notify();
+      // A guarded operation belongs to its captured account/origin. A later
+      // operation may already own busy after that scope became invalid.
+      if (isCurrent?.call() != false && identical(_busyOperation, ticket)) {
+        _busy = false;
+        _busyScope = null;
+        _busyOperation = null;
+        _notify();
+      }
     }
   }
 

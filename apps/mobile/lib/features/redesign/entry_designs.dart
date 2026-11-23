@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../core/controller.dart';
 import '../account_screens.dart';
 import 'design_system.dart';
+import 'home_designs.dart';
 
 /// Only an explicit tap reaches the OS. Previews never invoke this provider.
 final entryPermissionRequestProvider =
@@ -71,7 +73,21 @@ class NightshiftSplashScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final app = ref.watch(appControllerProvider);
     return Scaffold(
-        body: NightshiftBackdrop(
+        body: DecoratedBox(
+            decoration: const BoxDecoration(
+                gradient: RadialGradient(
+                    center: Alignment(0, -.28),
+                    radius: 1.1,
+                    colors: [
+                  Color(0xff201357),
+                  Color(0xff110931),
+                  Color(0xff070414)
+                ],
+                    stops: [
+                  0,
+                  .45,
+                  1
+                ])),
             child: SafeArea(
                 child: Center(
                     child: SingleChildScrollView(
@@ -79,22 +95,40 @@ class NightshiftSplashScreen extends ConsumerWidget {
                         child:
                             Column(mainAxisSize: MainAxisSize.min, children: [
                           const SizedBox(
-                              width: 190,
-                              height: 190,
+                              width: 142,
+                              height: 142,
                               child: CustomPaint(
                                   painter: NightshiftMascotPainter())),
-                          const SizedBox(height: 28),
-                          const NightshiftBrand(size: 38),
+                          const SizedBox(height: 22),
+                          const Text.rich(
+                              TextSpan(children: [
+                                TextSpan(
+                                    text: 'night',
+                                    style: TextStyle(color: Colors.white)),
+                                TextSpan(
+                                    text: 'shift',
+                                    style: TextStyle(color: NsColors.cyan)),
+                              ]),
+                              style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 52,
+                                  fontWeight: FontWeight.w800,
+                                  fontVariations: [ui.FontVariation('wght', 800)],
+                                  letterSpacing: -2)),
                           const SizedBox(height: 16),
                           Text(
                               app.text('A little time to talk.',
                                   'பேசுவதற்கு சிறிது நேரம்.'),
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: NsColors.muted)),
+                              style: const TextStyle(
+                                  color: Color(0xffbcb3d9),
+                                  fontSize: 14,
+                                  letterSpacing: 1.2)),
                           const SizedBox(height: 48),
                           SizedBox(
-                              width: 160,
+                              width: 104,
                               child: LinearProgressIndicator(
+                                  minHeight: 3,
                                   color: NsColors.cyan,
                                   backgroundColor:
                                       NsColors.violet.withAlpha(50),
@@ -119,6 +153,7 @@ class EntryDesignScreen extends ConsumerWidget {
       return _PermissionDesign(id: designId, preview: preview);
     }
     if (designId == 30 || designId == 27) {
+      if (preview) return _PhonePreview(code: designId == 27);
       return PhoneLoginScreen(preview: preview, previewCode: designId == 27);
     }
     if (designId == 3) return _Introduction(preview: preview);
@@ -156,8 +191,40 @@ class EntryDesignScreen extends ConsumerWidget {
       ] else if (training) ...[
         NightshiftSurface(
             child: Column(children: [
-          const _EntryEmblem(
-              icon: Icons.play_circle_outline_rounded, size: 108),
+          ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: SizedBox(
+                  height: 190,
+                  child: Stack(fit: StackFit.expand, children: [
+                    const AvatarPortrait(
+                        assetPath: 'assets/avatars/female/avatar_06.png',
+                        alignment: Alignment(0, -.6),
+                        borderRadius: BorderRadius.zero),
+                    const DecoratedBox(
+                        decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                          Color(0x2220103a),
+                          Color(0xdd160e2a)
+                        ]))),
+                    const Center(
+                        child: Icon(Icons.play_circle_fill_rounded,
+                            size: 58, color: Colors.white)),
+                    Positioned(
+                        left: 14,
+                        bottom: 14,
+                        right: 14,
+                        child: Text(
+                            app.text('Welcome to your Listener journey',
+                                'உங்கள் கேட்பவர் பயணத்திற்கு வரவேற்கிறோம்'),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15))),
+                  ]))),
+          const SizedBox(height: 20),
           Text(app.text('Listener orientation', 'கேட்பவர் அறிமுகம்'),
               style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
@@ -192,7 +259,7 @@ class EntryDesignScreen extends ConsumerWidget {
       ] else if (voice) ...[
         _VoiceDesign(preview: preview),
       ] else ...[
-        const _EntryEmblem(icon: Icons.headset_mic_rounded, size: 132),
+        const _PortraitScene(),
         Text(
             app.text('Make room for a conversation.',
                 'உரையாடலுக்கு நேரம் ஒதுக்குங்கள்.'),
@@ -265,10 +332,10 @@ class _EntryPage extends StatelessWidget {
                   child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 560),
                       child: ListView(
-                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 36),
+                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
                           children: [
                             const Center(child: NightshiftBrand()),
-                            const SizedBox(height: 32),
+                            const SizedBox(height: 24),
                             Text(title,
                                 textAlign: TextAlign.center,
                                 style:
@@ -279,9 +346,9 @@ class _EntryPage extends StatelessWidget {
 }
 
 class _EntryEmblem extends StatelessWidget {
-  const _EntryEmblem({required this.icon, this.size = 112});
+  const _EntryEmblem({required this.icon});
   final IconData icon;
-  final double size;
+  final double size = 112;
   @override
   Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 24),
@@ -301,6 +368,350 @@ class _EntryEmblem extends StatelessWidget {
               child: Icon(icon, size: size * .45, color: NsColors.cyan))));
 }
 
+class _PortraitScene extends StatelessWidget {
+  const _PortraitScene();
+  @override
+  Widget build(BuildContext context) => SizedBox(
+      height: 276,
+      child: LayoutBuilder(
+          builder: (_, box) => Stack(alignment: Alignment.center, children: [
+                Container(
+                    width: 240,
+                    height: 240,
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(colors: [
+                          NsColors.violet.withAlpha(80),
+                          Colors.transparent
+                        ]))),
+                Positioned(
+                    left: 4,
+                    top: 54,
+                    child: Transform.rotate(
+                        angle: -.13,
+                        child: const AvatarPortrait(
+                            assetPath: 'assets/avatars/male/avatar_07.png',
+                            width: 108,
+                            height: 152))),
+                Positioned(
+                    right: 4,
+                    top: 34,
+                    child: Transform.rotate(
+                        angle: .12,
+                        child: const AvatarPortrait(
+                            assetPath: 'assets/avatars/female/avatar_15.png',
+                            width: 108,
+                            height: 158))),
+                Positioned(
+                    top: 72,
+                    child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                            color: NsColors.background,
+                            borderRadius: BorderRadius.circular(30),
+                            border:
+                                Border.all(color: NsColors.cyan.withAlpha(140)),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: NsColors.violet.withAlpha(75),
+                                  blurRadius: 28)
+                            ]),
+                        child: const AvatarPortrait(
+                            assetPath: 'assets/avatars/female/avatar_03.png',
+                            width: 134,
+                            height: 170))),
+                Positioned(
+                    top: 12,
+                    left: box.maxWidth * .4,
+                    child:
+                        _sceneIcon(Icons.nights_stay_rounded, NsColors.gold)),
+                Positioned(
+                    bottom: 11,
+                    left: 20,
+                    child: _sceneIcon(Icons.headphones_rounded, NsColors.cyan)),
+                Positioned(
+                    bottom: 24,
+                    right: 22,
+                    child: _sceneIcon(
+                        Icons.favorite_rounded, const Color(0xfff472b6))),
+              ])));
+  Widget _sceneIcon(IconData icon, Color color) => Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+          color: const Color(0xff1d1735),
+          shape: BoxShape.circle,
+          border: Border.all(color: color.withAlpha(70))),
+      child: Icon(icon, size: 23, color: color));
+}
+
+final _phonePreviewChoice = StateProvider.autoDispose<int>((ref) => 0);
+
+class _PhonePreview extends ConsumerWidget {
+  const _PhonePreview({required this.code});
+  final bool code;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(_phonePreviewChoice);
+    return Scaffold(
+        backgroundColor: NsColors.background,
+        body: SafeArea(
+          child: LayoutBuilder(
+              builder: (context, box) => SingleChildScrollView(
+                    child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: box.maxHeight),
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(24, 24, 24, 28),
+                                  child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const NightshiftBrand(size: 23),
+                                        const SizedBox(height: 34),
+                                        Text('Login to get started',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .headlineMedium),
+                                        const SizedBox(height: 8),
+                                        const Text(
+                                            'A familiar voice. A better night.',
+                                            style: TextStyle(
+                                                color: NsColors.muted)),
+                                      ])),
+                              Container(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(20, 12, 20, 26),
+                                  decoration: const BoxDecoration(
+                                      color: Color(0xff0e1422),
+                                      borderRadius: BorderRadius.vertical(
+                                          top: Radius.circular(30)),
+                                      border: Border(
+                                          top: BorderSide(
+                                              color: Color(0xff354057)))),
+                                  child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        Center(
+                                            child: Container(
+                                                width: 44,
+                                                height: 4,
+                                                decoration: BoxDecoration(
+                                                    color:
+                                                        const Color(0xff3e495b),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            4)))),
+                                        const SizedBox(height: 22),
+                                        Row(children: [
+                                          Expanded(
+                                              child: Text(
+                                                  code
+                                                      ? 'Enter your code'
+                                                      : 'Instant profile login',
+                                                  style: const TextStyle(
+                                                      fontSize: 20,
+                                                      fontWeight:
+                                                          FontWeight.w700))),
+                                          const SizedBox(width: 8),
+                                          const Chip(
+                                              label: Text('Preview',
+                                                  style:
+                                                      TextStyle(fontSize: 10)))
+                                        ]),
+                                        const SizedBox(height: 5),
+                                        Text(
+                                            code
+                                                ? 'Example verification screen. No SMS is sent.'
+                                                : 'Sample profiles · choose a look to preview',
+                                            style: const TextStyle(
+                                                color: NsColors.muted,
+                                                fontSize: 12)),
+                                        const SizedBox(height: 20),
+                                        if (code) ...[
+                                          const Center(
+                                              child: NightshiftAvatar(
+                                                  name: 'Sample profile',
+                                                  size: 80,
+                                                  assetPath:
+                                                      'assets/avatars/male/avatar_01.png')),
+                                          const SizedBox(height: 20),
+                                          const Text(
+                                              'OTP sent to +91 ••••• •••••',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                  color: NsColors.muted,
+                                                  fontSize: 13)),
+                                          const SizedBox(height: 22),
+                                          Container(
+                                              key: const Key('phone-code'),
+                                              child: Row(children: [
+                                                for (var i = 0; i < 6; i++) ...[
+                                                  if (i > 0)
+                                                    const SizedBox(width: 7),
+                                                  Expanded(
+                                                      child: AspectRatio(
+                                                          aspectRatio: .82,
+                                                          child: Container(
+                                                              alignment:
+                                                                  Alignment
+                                                                      .center,
+                                                              decoration: BoxDecoration(
+                                                                  color:
+                                                                      NsColors
+                                                                          .card,
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                          12),
+                                                                  border: Border.all(
+                                                                      color: i == 3
+                                                                          ? NsColors
+                                                                              .cyan
+                                                                          : const Color(
+                                                                              0xff354057))),
+                                                              child: Text(i < 3 ? '•' : '',
+                                                                  style: const TextStyle(
+                                                                      fontSize:
+                                                                          26))))),
+                                                ]
+                                              ])),
+                                          const SizedBox(height: 20),
+                                          const Center(
+                                              child: Text(
+                                                  'Waiting for your six-digit code',
+                                                  style: TextStyle(
+                                                      color: NsColors.cyan,
+                                                      fontSize: 12))),
+                                          const SizedBox(height: 30),
+                                        ] else ...[
+                                          for (var i = 0; i < 2; i++)
+                                            Padding(
+                                                padding: const EdgeInsets.only(
+                                                    bottom: 12),
+                                                child: InkWell(
+                                                    onTap: () =>
+                                                        ref.read(_phonePreviewChoice.notifier).state =
+                                                            i,
+                                                    borderRadius: BorderRadius.circular(
+                                                        18),
+                                                    child: Container(
+                                                        padding:
+                                                            const EdgeInsets.all(
+                                                                12),
+                                                        decoration: BoxDecoration(
+                                                            color: selected == i
+                                                                ? const Color(
+                                                                    0xff0a1d2c)
+                                                                : const Color(
+                                                                    0xff111827),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                    18),
+                                                            border: Border.all(
+                                                                color: selected == i
+                                                                    ? NsColors.cyan
+                                                                    : const Color(0xff303b50),
+                                                                width: selected == i ? 1.5 : 1)),
+                                                        child: Row(children: [
+                                                          NightshiftAvatar(
+                                                              name:
+                                                                  'Sample ${i + 1}',
+                                                              size: 48,
+                                                              assetPath:
+                                                                  'assets/avatars/${i == 0 ? 'male' : 'female'}/avatar_01.png'),
+                                                          const SizedBox(
+                                                              width: 12),
+                                                          Expanded(
+                                                              child: Column(
+                                                                  crossAxisAlignment:
+                                                                      CrossAxisAlignment
+                                                                          .start,
+                                                                  children: [
+                                                                Text(
+                                                                    i == 0
+                                                                        ? 'Personal profile'
+                                                                        : 'Another profile',
+                                                                    style: const TextStyle(
+                                                                        fontWeight:
+                                                                            FontWeight
+                                                                                .w700,
+                                                                        fontSize:
+                                                                            13)),
+                                                                const SizedBox(
+                                                                    height: 5),
+                                                                const Text(
+                                                                    '+91 ••••• •••••',
+                                                                    style: TextStyle(
+                                                                        color: NsColors
+                                                                            .muted,
+                                                                        fontSize:
+                                                                            12))
+                                                              ])),
+                                                          Icon(
+                                                              selected == i
+                                                                  ? Icons
+                                                                      .radio_button_checked
+                                                                  : Icons
+                                                                      .radio_button_off,
+                                                              color: selected ==
+                                                                      i
+                                                                  ? NsColors
+                                                                      .cyan
+                                                                  : NsColors
+                                                                      .muted,
+                                                              size: 21),
+                                                        ])))),
+                                          Container(
+                                              padding: const EdgeInsets.all(16),
+                                              decoration: BoxDecoration(
+                                                  border: Border.all(
+                                                      color: const Color(
+                                                          0xff303b50)),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          18)),
+                                              child: const Row(children: [
+                                                Icon(Icons.add_circle_outline,
+                                                    color: NsColors.cyan),
+                                                SizedBox(width: 12),
+                                                Expanded(
+                                                    child: Text(
+                                                        'Use another mobile number',
+                                                        style: TextStyle(
+                                                            fontSize: 13))),
+                                                Icon(Icons.arrow_forward,
+                                                    size: 18)
+                                              ])),
+                                          const SizedBox(height: 22),
+                                        ],
+                                        FilledButton(
+                                            onPressed: null,
+                                            style: FilledButton.styleFrom(
+                                                disabledBackgroundColor:
+                                                    const Color(0xff7c3aed),
+                                                disabledForegroundColor:
+                                                    Colors.white),
+                                            child: Text(code
+                                                ? 'Verify and continue'
+                                                : 'Continue with selected profile')),
+                                        const SizedBox(height: 18),
+                                        const Text(
+                                            'Design preview only. Sign in from the app to verify your own number.',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                                color: NsColors.muted,
+                                                fontSize: 11,
+                                                height: 1.6)),
+                                      ])),
+                            ])),
+                  )),
+        ));
+  }
+}
+
 class _EntryButton extends StatelessWidget {
   const _EntryButton({required this.label, this.onPressed});
   final String label;
@@ -311,8 +722,8 @@ class _EntryButton extends StatelessWidget {
       child: FilledButton(
           onPressed: onPressed,
           style: FilledButton.styleFrom(
-              backgroundColor: NsColors.cyan,
-              foregroundColor: NsColors.background),
+              backgroundColor: const Color(0xff7c3aed),
+              foregroundColor: Colors.white),
           child: Text(label, textAlign: TextAlign.center)));
 }
 
@@ -369,24 +780,13 @@ class _Introduction extends ConsumerWidget {
             ref.read(_introPageProvider.notifier).state =
                 (index + delta).clamp(0, 2);
           },
-          child: NightshiftSurface(
-              child: Column(children: [
-            _EntryEmblem(
-                icon: [
-                  Icons.headphones_rounded,
-                  Icons.shield_outlined,
-                  Icons.forum_outlined
-                ][index],
-                size: 164),
+          child: Column(children: [
+            const _PortraitScene(),
+            const SizedBox(height: 10),
             Text(details[index],
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 24),
-            Wrap(alignment: WrapAlignment.center, spacing: 12, children: const [
-              NightshiftAvatar(name: 'Customer', size: 64),
-              NightshiftAvatar(name: 'Listener', size: 64, listener: true),
-            ]),
-          ]))),
+          ])),
       const SizedBox(height: 32),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         for (var i = 0; i < 3; i++)
@@ -503,8 +903,26 @@ class _VoiceDesign extends ConsumerWidget {
                 : '“Hello. It is good to talk with you.”',
             textAlign: TextAlign.center),
         const SizedBox(height: 24),
-        const Icon(Icons.multitrack_audio_rounded,
-            size: 80, color: NsColors.cyan),
+        Semantics(
+            label: app.text('Example waveform', 'மாதிரி ஒலி அலை'),
+            child: SizedBox(
+                height: 72,
+                child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: List.generate(
+                        28,
+                        (i) => Expanded(
+                            child: Container(
+                                margin:
+                                    const EdgeInsets.symmetric(horizontal: 2),
+                                height: 10.0 + (i * 13 % 54),
+                                decoration: BoxDecoration(
+                                    color: i < 17
+                                        ? NsColors.cyan
+                                        : NsColors.violet,
+                                    borderRadius:
+                                        BorderRadius.circular(4)))))))),
+        const SizedBox(height: 18),
         Text(app.text('2–60 seconds · WAV', '2–60 விநாடிகள் · WAV')),
       ])),
       const SizedBox(height: 24),
@@ -580,103 +998,136 @@ class _PermissionDesign extends ConsumerWidget {
                 : app.text(
                     'Choose permission in the Android dialog. Video only starts after the separate call preview and consent.',
                     'Android உரையாடலில் அனுமதியை தேர்ந்தெடுக்கவும். தனியான அழைப்பு முன்னோட்டம் மற்றும் ஒப்புதலுக்குப் பிறகே வீடியோ தொடங்கும்.');
-    return _EntryPage(title: title, children: [
-      if (!notification) ...[
-        Opacity(
-            opacity: .7,
-            child: NightshiftSurface(
-                child: Column(children: [
-              Row(children: [
-                Icon(listener ? Icons.headset_mic : Icons.explore_outlined,
-                    color: NsColors.violet),
-                const SizedBox(width: 12),
-                Expanded(
-                    child: Text(
-                        listener
-                            ? app.text('Listener availability',
-                                'கேட்பவர் கிடைக்கும் நிலை')
-                            : app.text(
-                                'Your conversations', 'உங்கள் உரையாடல்கள்'),
-                        style: Theme.of(context).textTheme.titleMedium))
-              ]),
-              const SizedBox(height: 16),
-              const NightshiftAvatar(name: 'Nightshift', size: 64),
-              const SizedBox(height: 12),
+    return _PermissionStage(
+        title: title,
+        listener: listener,
+        notification: notification,
+        child: NightshiftSurface(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+              Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 20),
+                  child: Icon(icon, size: 34, color: const Color(0xffd1e4bd))),
               Text(
-                  app.text('You control when to connect',
-                      'எப்போது இணைவது உங்கள் கட்டுப்பாட்டில்'),
-                  textAlign: TextAlign.center),
-            ]))),
-        const SizedBox(height: 24),
-      ],
-      NightshiftSurface(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        _EntryEmblem(icon: icon, size: 80),
-        Text(
-            notification
-                ? app.text('Allow Nightshift notifications?',
-                    'Nightshift அறிவிப்புகளை அனுமதிக்கவா?')
-                : bluetooth
-                    ? app.text('Allow nearby audio devices?',
-                        'அருகிலுள்ள ஒலி சாதனங்களை அனுமதிக்கவா?')
-                    : audio
-                        ? app.text('Allow microphone access?',
-                            'ஒலிவாங்கி அணுகலை அனுமதிக்கவா?')
-                        : both
-                            ? app.text('Allow camera and microphone access?',
-                                'கேமரா மற்றும் ஒலிவாங்கி அணுகலை அனுமதிக்கவா?')
-                            : app.text('Allow camera access?',
-                                'கேமரா அணுகலை அனுமதிக்கவா?'),
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 16),
-        Text(explanation, textAlign: TextAlign.center),
-        const SizedBox(height: 24),
-        FilledButton(
-            key: ValueKey('entry-permission-$id'),
-            onPressed: preview || !supported || state.busy
-                ? null
-                : () => ref
-                    .read(entryPermissionProvider(id).notifier)
-                    .request(permissions),
-            child: Text(
-                state.busy
-                    ? app.text('Waiting for Android…',
-                        'Android பதிலுக்காக காத்திருக்கிறது…')
-                    : app.text('Continue to Android permission',
-                        'Android அனுமதிக்கு தொடரவும்'),
-                textAlign: TextAlign.center)),
-        if (preview)
-          Text(
-              app.text('Design preview · no permission requested',
-                  'வடிவமைப்பு முன்னோட்டம் · அனுமதி கோரப்படவில்லை'),
-              textAlign: TextAlign.center)
-        else if (!supported)
-          Text(
-              app.text('This permission flow is available on Android.',
-                  'இந்த அனுமதி Android இல் கிடைக்கும்.'),
-              textAlign: TextAlign.center),
-        if (state.result != null)
-          Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Text(
-                  switch (state.result) {
-                    'granted' => app.text(
-                        'Android permission granted. No call has started.',
-                        'Android அனுமதி வழங்கப்பட்டது. எந்த அழைப்பும் தொடங்கவில்லை.'),
-                    'restricted' => app.text(
-                        'Permission is restricted. You can review it in Android settings.',
-                        'அனுமதி கட்டுப்படுத்தப்பட்டுள்ளது. Android அமைப்பில் சரிபார்க்கலாம்.'),
-                    'denied' => app.text('Permission was not granted.',
-                        'அனுமதி வழங்கப்படவில்லை.'),
-                    _ => app.text(
-                        'Permission could not be requested on this device.',
-                        'இந்த சாதனத்தில் அனுமதியை கோர முடியவில்லை.'),
-                  },
-                  key: ValueKey('entry-permission-result-$id'),
-                  textAlign: TextAlign.center)),
-      ])),
-    ]);
+                  notification
+                      ? app.text('Allow Nightshift notifications?',
+                          'Nightshift அறிவிப்புகளை அனுமதிக்கவா?')
+                      : bluetooth
+                          ? app.text('Allow nearby audio devices?',
+                              'அருகிலுள்ள ஒலி சாதனங்களை அனுமதிக்கவா?')
+                          : audio
+                              ? app.text('Allow microphone access?',
+                                  'ஒலிவாங்கி அணுகலை அனுமதிக்கவா?')
+                              : both
+                                  ? app.text(
+                                      'Allow camera and microphone access?',
+                                      'கேமரா மற்றும் ஒலிவாங்கி அணுகலை அனுமதிக்கவா?')
+                                  : app.text('Allow camera access?',
+                                      'கேமரா அணுகலை அனுமதிக்கவா?'),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 16),
+              Text(explanation,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      color: NsColors.muted, fontSize: 12, height: 1.6)),
+              const SizedBox(height: 24),
+              FilledButton(
+                  key: ValueKey('entry-permission-$id'),
+                  style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xffc5e7ae),
+                      foregroundColor: const Color(0xff1c2c15),
+                      disabledBackgroundColor: const Color(0xff34402c),
+                      disabledForegroundColor: const Color(0xffc5e7ae)),
+                  onPressed: preview || !supported || state.busy
+                      ? null
+                      : () => ref
+                          .read(entryPermissionProvider(id).notifier)
+                          .request(permissions),
+                  child: Text(
+                      state.busy
+                          ? app.text('Waiting for Android…',
+                              'Android பதிலுக்காக காத்திருக்கிறது…')
+                          : app.text('Continue to Android permission',
+                              'Android அனுமதிக்கு தொடரவும்'),
+                      textAlign: TextAlign.center)),
+              if (preview)
+                Text(
+                    app.text('Design preview · no permission requested',
+                        'வடிவமைப்பு முன்னோட்டம் · அனுமதி கோரப்படவில்லை'),
+                    textAlign: TextAlign.center)
+              else if (!supported)
+                Text(
+                    app.text('This permission flow is available on Android.',
+                        'இந்த அனுமதி Android இல் கிடைக்கும்.'),
+                    textAlign: TextAlign.center),
+              if (state.result != null)
+                Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: Text(
+                        switch (state.result) {
+                          'granted' => app.text(
+                              'Android permission granted. No call has started.',
+                              'Android அனுமதி வழங்கப்பட்டது. எந்த அழைப்பும் தொடங்கவில்லை.'),
+                          'restricted' => app.text(
+                              'Permission is restricted. You can review it in Android settings.',
+                              'அனுமதி கட்டுப்படுத்தப்பட்டுள்ளது. Android அமைப்பில் சரிபார்க்கலாம்.'),
+                          'denied' => app.text('Permission was not granted.',
+                              'அனுமதி வழங்கப்படவில்லை.'),
+                          _ => app.text(
+                              'Permission could not be requested on this device.',
+                              'இந்த சாதனத்தில் அனுமதியை கோர முடியவில்லை.'),
+                        },
+                        key: ValueKey('entry-permission-result-$id'),
+                        textAlign: TextAlign.center)),
+            ])));
   }
+}
+
+class _PermissionStage extends StatelessWidget {
+  const _PermissionStage(
+      {required this.title,
+      required this.listener,
+      required this.notification,
+      required this.child});
+  final String title;
+  final bool listener, notification;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) => Scaffold(
+          body: Stack(fit: StackFit.expand, children: [
+        if (!notification)
+          ExcludeSemantics(
+              child: IgnorePointer(
+                  child: ImageFiltered(
+                      imageFilter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                      child: HomeDesignScreen(designId: listener ? 29 : 6))))
+        else
+          const ColoredBox(color: Color(0xff11101b)),
+        ColoredBox(color: Colors.black.withAlpha(notification ? 45 : 155)),
+        SafeArea(
+            child: LayoutBuilder(
+                builder: (_, box) => SingleChildScrollView(
+                      child: ConstrainedBox(
+                          constraints: BoxConstraints(minHeight: box.maxHeight),
+                          child: Center(
+                              child: Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: ConstrainedBox(
+                                      constraints:
+                                          const BoxConstraints(maxWidth: 360),
+                                      child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(title,
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Color(0xffb7b2ca))),
+                                            const SizedBox(height: 14),
+                                            child,
+                                          ]))))),
+                    ))),
+      ]));
 }

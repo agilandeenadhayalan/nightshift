@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -380,20 +381,30 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('அழைப்பை முடி').hitTestable(), findsOneWidget);
     expect(find.text('புகாரளி அல்லது தடு').hitTestable(), findsOneWidget);
-    controller.busy = true;
-    video.onChanged?.call();
-    await tester.pump();
-    final endButton = tester.widget<FilledButton>(find.ancestor(
-        of: find.text('அழைப்பை முடி'),
-        matching: find.byWidgetPredicate((widget) => widget is FilledButton)));
-    expect(endButton.onPressed, isNotNull,
-        reason: 'A pending camera operation cannot disable End.');
-    await tester.tap(find.text('அழைப்பை முடி'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(api.requests.where((r) => r['path'] == '/calls/call-id/end'),
-        hasLength(1));
-    controller.busy = false;
+    final busyGate = Completer<void>();
+    final pendingOperation = controller.perform(() => busyGate.future);
+    try {
+      expect(controller.busy, isTrue);
+      video.onChanged?.call();
+      await tester.pump();
+      final endButton = tester.widget<FilledButton>(find.ancestor(
+          of: find.text('அழைப்பை முடி'),
+          matching:
+              find.byWidgetPredicate((widget) => widget is FilledButton)));
+      expect(endButton.onPressed, isNotNull,
+          reason: 'A pending camera operation cannot disable End.');
+      await tester.tap(find.text('அழைப்பை முடி'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(api.requests.where((r) => r['path'] == '/calls/call-id/end'),
+          hasLength(1));
+    } finally {
+      busyGate.complete();
+      // Flush the fake-async microtasks before awaiting the held operation.
+      await tester.pump();
+      await pendingOperation;
+    }
+    expect(controller.busy, isFalse);
     video.onChanged?.call();
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'design_system.dart';
@@ -83,7 +85,6 @@ class CallDesignScreen extends ConsumerWidget {
       {super.key, required this.designId, this.preview = true});
   final int designId;
   final bool preview;
-
   static const designIds = <int>{
     18,
     33,
@@ -99,185 +100,203 @@ class CallDesignScreen extends ConsumerWidget {
     52,
     54
   };
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(callDesignProvider(designId));
     final controller = ref.read(callDesignProvider(designId).notifier);
     final listener = {38, 40, 46, 48, 49}.contains(designId);
-    final game = {33, 40, 51}.contains(designId) ||
-        (designId == 49 && state.invitationAccepted);
-    final video = {33, 36, 38, 40, 46, 51, 52}.contains(designId);
+    final invitation = {49, 51}.contains(designId) && !state.invitationAccepted;
+    final board = {33, 40}.contains(designId) ||
+        ({49, 51}.contains(designId) && state.invitationAccepted);
+    final video = !board && {36, 38, 46, 49, 51, 52}.contains(designId);
     final connecting = designId == 37 || designId == 54;
+    final peer = listener ? 'rahul_92' : 'mannat_046';
+    final portrait = listener ? _sampleMan : _sampleWoman;
     return Scaffold(
-      backgroundColor: NsColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        title: const NightshiftBrand(size: 23),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: _DesignPill(
-                icon: listener ? Icons.diamond_outlined : Icons.toll,
-                text: '—',
-                color: listener ? NsColors.cyan : NsColors.gold),
-          )
-        ],
-      ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(22, 10, 22, 24),
-              children: [
-                _PreviewNotice(
-                    message: preview
-                        ? 'Design preview · no live call or payment'
-                        : 'This call layout is not connected to a live session'),
-                const SizedBox(height: 22),
-                if (state.ended)
-                  _EndedPreview(onBack: () => Navigator.maybePop(context))
-                else if (designId == 18)
-                  _RatingDesign(state: state, controller: controller)
-                else ...[
-                  if (connecting)
-                    const _ConnectingDesign()
-                  else if (game) ...[
-                    Row(children: [
-                      const NightshiftAvatar(
-                          name: 'Listener', size: 42, listener: true),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                          child: Text('Ludo together',
-                              style: TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.w700))),
-                      const _DesignPill(
-                          icon: Icons.sports_esports_outlined,
-                          text: 'Local',
-                          color: NsColors.cyan),
-                    ]),
-                    const SizedBox(height: 18),
-                    if (video && designId == 51) ...[
-                      _VideoDesign(
-                          camera: state.camera,
-                          hiddenFace: false,
-                          faceBox: false,
-                          compact: true),
-                      const SizedBox(height: 18),
-                    ],
-                    _LudoDesign(state: state, controller: controller),
-                  ] else if (video)
-                    _VideoDesign(
-                        camera: state.camera,
-                        hiddenFace: designId == 38,
-                        faceBox: designId == 36,
-                        compact: false)
-                  else
-                    _AudioDesign(listener: listener),
-                  if (!connecting) ...[
-                    const SizedBox(height: 20),
-                    const Text('— : —',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            fontSize: 30,
-                            letterSpacing: 3,
-                            fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 5),
-                    Text(
-                        listener
-                            ? 'Test earnings appear only during a real call'
-                            : 'Connected time appears only during a real call',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            color: NsColors.muted, fontSize: 12)),
-                  ],
-                  if (designId == 37) ...[
-                    const SizedBox(height: 22),
-                    NightshiftSurface(
-                      child: Column(children: [
-                        const Icon(Icons.call_end_rounded,
-                            color: Color(0xFFFB7185), size: 34),
-                        const SizedBox(height: 16),
-                        const Text('End this call preview?',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                fontSize: 21, fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 8),
-                        const Text(
-                            'This is a local design. No active call will be changed.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: NsColors.muted)),
-                        const SizedBox(height: 20),
-                        Wrap(spacing: 12, runSpacing: 8, children: [
-                          OutlinedButton(
-                              onPressed: () => Navigator.maybePop(context),
-                              child: const Text('Keep preview')),
-                          FilledButton(
-                              onPressed: controller.endPreview,
-                              child: const Text('End preview')),
-                        ]),
-                      ]),
-                    ),
-                  ] else if (designId == 49 && !state.invitationAccepted) ...[
-                    const SizedBox(height: 24),
-                    NightshiftSurface(
-                      child: Column(children: [
-                        const Icon(Icons.casino_outlined,
-                            size: 48, color: NsColors.gold),
-                        const SizedBox(height: 12),
-                        const Text('A little friendly competition?',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                fontSize: 22, fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 10),
-                        const Text(
-                            'Explore the local Ludo board. No invitation is sent and there are no winnings.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: NsColors.muted)),
-                        const SizedBox(height: 20),
-                        FilledButton.icon(
-                            onPressed: controller.acceptInvitation,
-                            icon: const Icon(Icons.casino),
-                            label: const Text('Try local board')),
-                      ]),
-                    ),
-                  ],
-                  const SizedBox(height: 28),
-                  if (connecting && designId != 37)
-                    Center(
-                      child: OutlinedButton.icon(
-                          onPressed: controller.endPreview,
-                          icon: const Icon(Icons.close),
-                          label: const Text('Cancel preview')),
-                    )
-                  else if (designId != 37)
-                    _PreviewControls(
-                        state: state, controller: controller, video: video),
-                  const SizedBox(height: 16),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+        backgroundColor: const Color(0xFF0C1220),
+        body: Stack(fit: StackFit.expand, children: [
+          if (video && !state.ended && preview)
+            _VideoBackdrop(asset: portrait, hidden: designId == 38)
+          else
+            const DecoratedBox(
+                decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                  Color(0xFF192B47),
+                  Color(0xFF11172D),
+                  Color(0xFF080C18)
+                ]))),
+          SafeArea(
+              child: LayoutBuilder(
+                  builder: (context, constraints) => ListView(
+                          padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
+                          children: [
+                            _CallHeader(
+                                preview: preview,
+                                listener: listener,
+                                connecting: connecting || designId == 18),
+                            if (state.ended)
+                              _EndedPreview(
+                                  onBack: () => Navigator.maybePop(context))
+                            else if (designId == 18)
+                              _RatingDesign(
+                                  state: state, controller: controller)
+                            else if (connecting) ...[
+                              const SizedBox(height: 24),
+                              if (designId == 37)
+                                SizedBox(
+                                    height: (constraints.maxHeight - 120)
+                                        .clamp(600, 900),
+                                    child: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          const Positioned.fill(
+                                              child: IgnorePointer(
+                                                  child: Opacity(
+                                                      opacity: .22,
+                                                      child: SingleChildScrollView(
+                                                          child:
+                                                              _ConnectingDesign())))),
+                                          _ConflictCard(controller: controller),
+                                        ]))
+                              else ...[
+                                const _ConnectingDesign(),
+                                const SizedBox(height: 36),
+                                Center(
+                                    child: OutlinedButton.icon(
+                                        onPressed: controller.endPreview,
+                                        icon: const Icon(Icons.close, size: 18),
+                                        label: const Text('Cancel preview')))
+                              ],
+                            ] else if (board) ...[
+                              const SizedBox(height: 20),
+                              _PlayerStrip(
+                                  name: peer,
+                                  asset: portrait,
+                                  caption: listener
+                                      ? 'Red · Customer'
+                                      : 'Yellow · Listener',
+                                  color: listener ? _red : _yellow,
+                                  trailing: '09:42'),
+                              const SizedBox(height: 18),
+                              _LudoDesign(
+                                  state: state,
+                                  controller: controller,
+                                  listener: listener),
+                              const SizedBox(height: 22),
+                              _PreviewControls(
+                                  state: state,
+                                  controller: controller,
+                                  video: true),
+                            ] else if (video) ...[
+                              _VideoStage(
+                                  height: invitation
+                                      ? 185
+                                      : (constraints.maxHeight * .49)
+                                          .clamp(280, 460),
+                                  camera: state.camera,
+                                  localAsset:
+                                      listener ? _sampleWoman : _sampleMan,
+                                  faceBox: designId == 36,
+                                  hidden: designId == 38),
+                              _PeerHeading(
+                                  name: preview ? peer : 'Not connected',
+                                  caption:
+                                      listener ? 'Customer' : 'Your companion',
+                                  centered: false),
+                              if (invitation) ...[
+                                const SizedBox(height: 18),
+                                _GameInvitation(
+                                    controller: controller, listener: listener)
+                              ],
+                              const SizedBox(height: 28),
+                              _PreviewControls(
+                                  state: state,
+                                  controller: controller,
+                                  video: true),
+                            ] else ...[
+                              SizedBox(
+                                  height: (constraints.maxHeight * .09)
+                                      .clamp(24, 80)),
+                              _AudioDesign(
+                                  listener: listener, preview: preview),
+                              const SizedBox(height: 38),
+                              _PreviewControls(
+                                  state: state,
+                                  controller: controller,
+                                  video: false),
+                              const SizedBox(height: 26),
+                              Center(
+                                  child: TextButton.icon(
+                                      onPressed: null,
+                                      icon: const Icon(Icons.shield_outlined,
+                                          size: 17),
+                                      label: const Text('Report or block'))),
+                            ],
+                          ]))),
+        ]));
   }
 }
 
-class _PreviewNotice extends StatelessWidget {
-  const _PreviewNotice({required this.message});
-  final String message;
+const _sampleWoman = 'assets/avatars/female/avatar_01.png';
+const _sampleMan = 'assets/avatars/male/avatar_01.png';
+const _green = Color(0xFF36BD85), _yellow = Color(0xFFF5C84C);
+const _red = Color(0xFFF16B79), _blue = Color(0xFF579BED);
+
+class _CallHeader extends StatelessWidget {
+  const _CallHeader(
+      {required this.preview,
+      required this.listener,
+      required this.connecting});
+  final bool preview, listener, connecting;
   @override
-  Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          color: NsColors.violet.withValues(alpha: .12),
-          border: Border.all(color: NsColors.violet.withValues(alpha: .25))),
-      child: Text(message,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 12, color: NsColors.muted)));
+  Widget build(BuildContext context) => Column(children: [
+        Row(children: [
+          if (connecting)
+            const Expanded(child: NightshiftBrand(size: 23))
+          else
+            Expanded(
+                child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _DesignPill(
+                        icon: listener
+                            ? Icons.diamond_rounded
+                            : Icons.add_circle_rounded,
+                        text: listener ? (preview ? '28' : '—') : 'Add coins',
+                        color: listener ? NsColors.cyan : NsColors.gold))),
+          Semantics(
+              label: 'Design preview. No live call, payment or earnings.',
+              child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                  decoration: BoxDecoration(
+                      color: Colors.black45,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white24)),
+                  child: Text(preview ? 'Preview' : 'Not connected',
+                      style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.white70,
+                          letterSpacing: .5)))),
+          if (!connecting) ...[
+            const SizedBox(width: 8),
+            _DesignPill(
+                icon: Icons.graphic_eq,
+                text: preview ? '09:34' : '— : —',
+                color: const Color(0xFFF5B4DB))
+          ],
+        ]),
+        if (!connecting) ...[
+          const SizedBox(height: 12),
+          const Align(
+              alignment: Alignment.centerRight,
+              child: Text('Secure connection',
+                  style: TextStyle(
+                      fontSize: 10, color: Colors.white70, letterSpacing: .4)))
+        ],
+      ]);
 }
 
 class _DesignPill extends StatelessWidget {
@@ -288,58 +307,245 @@ class _DesignPill extends StatelessWidget {
   final Color color;
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
-          color: color.withValues(alpha: .1),
-          border: Border.all(color: color.withValues(alpha: .3)),
+          color: const Color(0xD91C2435),
+          border: Border.all(color: color.withValues(alpha: .5)),
           borderRadius: BorderRadius.circular(40)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 17, color: color),
+        Icon(icon, size: 16, color: color),
         const SizedBox(width: 6),
         Flexible(
             child: Text(text,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: color, fontSize: 12))),
+                style: TextStyle(
+                    color: color, fontSize: 11, fontWeight: FontWeight.w700))),
       ]));
 }
 
+class _PeerHeading extends StatelessWidget {
+  const _PeerHeading(
+      {required this.name, required this.caption, this.centered = true});
+  final String name, caption;
+  final bool centered;
+  @override
+  Widget build(BuildContext context) => Column(
+          crossAxisAlignment:
+              centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+          children: [
+            Text(name,
+                textAlign: centered ? TextAlign.center : TextAlign.start,
+                style: const TextStyle(
+                    fontSize: 29,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -.8,
+                    color: Colors.white)),
+            const SizedBox(height: 8),
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.verified_rounded,
+                  size: 15, color: NsColors.cyan),
+              const SizedBox(width: 6),
+              Flexible(
+                  child: Text(caption,
+                      style: const TextStyle(
+                          color: Color(0xFFCFD5E9), fontSize: 12))),
+            ]),
+          ]);
+}
+
 class _AudioDesign extends StatelessWidget {
-  const _AudioDesign({required this.listener});
-  final bool listener;
+  const _AudioDesign({required this.listener, required this.preview});
+  final bool listener, preview;
   @override
   Widget build(BuildContext context) => Column(children: [
-        const SizedBox(height: 20),
         Container(
-          padding: const EdgeInsets.all(22),
-          decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: NsColors.violet.withValues(alpha: .2)),
-              gradient: RadialGradient(colors: [
-                NsColors.violet.withValues(alpha: .3),
-                NsColors.background,
-              ])),
-          child: Container(
-              padding: const EdgeInsets.all(11),
-              decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: NsColors.cyan, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                        color: NsColors.violet.withValues(alpha: .23),
-                        blurRadius: 40)
-                  ]),
-              child: NightshiftAvatar(
-                  name: listener ? 'Customer' : 'Listener',
-                  listener: !listener,
-                  size: 134)),
-        ),
-        const SizedBox(height: 26),
-        Text(listener ? 'Customer' : 'Your Listener',
-            style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w700)),
+            width: 278,
+            height: 278,
+            padding: const EdgeInsets.all(23),
+            decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border:
+                    Border.all(color: NsColors.violet.withValues(alpha: .14)),
+                gradient: RadialGradient(colors: [
+                  NsColors.violet.withValues(alpha: .25),
+                  NsColors.violet.withValues(alpha: .025)
+                ])),
+            child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                        color: NsColors.violet.withValues(alpha: .4))),
+                child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: const Color(0xFFB999FF), width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                              color: NsColors.violet.withValues(alpha: .4),
+                              blurRadius: 38,
+                              spreadRadius: 2)
+                        ]),
+                    child: NightshiftAvatar(
+                        name: 'Companion',
+                        size: 180,
+                        assetPath: preview
+                            ? (listener ? _sampleMan : _sampleWoman)
+                            : null)))),
+        const SizedBox(height: 22),
+        _PeerHeading(
+            name: preview
+                ? (listener ? 'rahul_92' : 'mannat_046')
+                : 'Not connected',
+            caption: listener ? 'Customer · English' : 'Listener · English'),
+        const SizedBox(height: 20),
+        const _AudioBars(),
         const SizedBox(height: 12),
-        const _DesignPill(
-            icon: Icons.graphic_eq, text: 'Audio layout', color: NsColors.cyan),
+        const Text('A little company, a better night.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: NsColors.muted, fontSize: 12)),
       ]);
+}
+
+class _AudioBars extends StatelessWidget {
+  const _AudioBars();
+  @override
+  Widget build(BuildContext context) => Semantics(
+      label: 'Audio waveform illustration',
+      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        for (final h in [
+          7.0,
+          12.0,
+          23.0,
+          15.0,
+          31.0,
+          20.0,
+          10.0,
+          18.0,
+          27.0,
+          12.0,
+          6.0
+        ])
+          Container(
+              width: 3,
+              height: h,
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              decoration: BoxDecoration(
+                  color: NsColors.cyan.withValues(alpha: .8),
+                  borderRadius: BorderRadius.circular(4))),
+      ]));
+}
+
+class _VideoBackdrop extends StatelessWidget {
+  const _VideoBackdrop({required this.asset, required this.hidden});
+  final String asset;
+  final bool hidden;
+  @override
+  Widget build(BuildContext context) => Stack(fit: StackFit.expand, children: [
+        ImageFiltered(
+            imageFilter: ImageFilter.blur(
+                sigmaX: hidden ? 22 : 0, sigmaY: hidden ? 22 : 0),
+            child: AvatarPortrait(
+                assetPath: asset, borderRadius: BorderRadius.zero)),
+        const DecoratedBox(
+            decoration: BoxDecoration(
+                gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [
+              0,
+              .25,
+              .55,
+              1
+            ],
+                    colors: [
+              Color(0x99040B16),
+              Color(0x08040B16),
+              Color(0x22040B16),
+              Color(0xF2070C19)
+            ]))),
+      ]);
+}
+
+class _VideoStage extends StatelessWidget {
+  const _VideoStage(
+      {required this.height,
+      required this.camera,
+      required this.localAsset,
+      required this.faceBox,
+      required this.hidden});
+  final double height;
+  final bool camera, faceBox, hidden;
+  final String localAsset;
+  @override
+  Widget build(BuildContext context) => SizedBox(
+      height: height,
+      child: Stack(children: [
+        if (faceBox || hidden)
+          Align(
+              alignment: const Alignment(-.22, -.12),
+              child: Container(
+                  width: 178,
+                  height: 195,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                      color: hidden
+                          ? const Color(0x9C162234)
+                          : const Color(0x400A1425),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                          color: hidden ? Colors.white24 : NsColors.cyan,
+                          width: 1.5)),
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                            hidden
+                                ? Icons.visibility_off_outlined
+                                : Icons.face_retouching_off,
+                            size: 35,
+                            color: Colors.white70),
+                        const SizedBox(height: 12),
+                        Flexible(
+                            child: Text(
+                                hidden ? 'Camera hidden' : 'Face not visible',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(fontSize: 12))),
+                      ]))),
+        Positioned(
+            right: 0,
+            top: 26,
+            child: Container(
+                width: 88,
+                height: 126,
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white70, width: 1.5),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black38, blurRadius: 20)
+                    ]),
+                child: ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: Stack(fit: StackFit.expand, children: [
+                      if (camera)
+                        AvatarPortrait(
+                            assetPath: localAsset,
+                            borderRadius: BorderRadius.zero)
+                      else
+                        const ColoredBox(
+                            color: NsColors.surface,
+                            child: Icon(Icons.videocam_off_outlined,
+                                color: NsColors.muted)),
+                      const Positioned(
+                          left: 8,
+                          bottom: 7,
+                          child: Text('You',
+                              style: TextStyle(fontSize: 10, shadows: [
+                                Shadow(color: Colors.black, blurRadius: 6)
+                              ]))),
+                    ])))),
+      ]));
 }
 
 class _ConnectingDesign extends StatelessWidget {
@@ -348,142 +554,125 @@ class _ConnectingDesign extends StatelessWidget {
   Widget build(BuildContext context) => Column(children: [
         const _DesignPill(
             icon: Icons.info_outline,
-            text: 'Matching screen preview',
+            text: 'Keep this screen open while connecting',
             color: NsColors.gold),
-        const SizedBox(height: 38),
-        Container(
-          width: 190,
-          height: 230,
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(36),
-              border: Border.all(color: NsColors.cyan, width: 2),
-              gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF432063), Color(0xFF171227)]),
-              boxShadow: [
-                BoxShadow(
-                    color: NsColors.violet.withValues(alpha: .26),
-                    blurRadius: 45)
-              ]),
-          child: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                NightshiftAvatar(name: 'Listener', listener: true, size: 112),
-                SizedBox(height: 25),
-                SizedBox(
-                    width: 124,
-                    child: LinearProgressIndicator(
-                        value: .6,
-                        color: NsColors.cyan,
-                        backgroundColor: Colors.white12)),
-              ]),
-        ),
-        const SizedBox(height: 36),
-        const Text('Finding a Listener\nfor you…',
+        const SizedBox(height: 35),
+        SizedBox(
+            height: 270,
+            child: Stack(alignment: Alignment.center, children: [
+              Positioned(
+                  left: 0,
+                  top: 35,
+                  child: Transform.rotate(
+                      angle: -.12,
+                      child: const Opacity(
+                          opacity: .4,
+                          child: AvatarPortrait(
+                              assetPath: 'assets/avatars/female/avatar_03.png',
+                              width: 132,
+                              height: 204)))),
+              Positioned(
+                  right: 0,
+                  top: 35,
+                  child: Transform.rotate(
+                      angle: .12,
+                      child: const Opacity(
+                          opacity: .4,
+                          child: AvatarPortrait(
+                              assetPath: 'assets/avatars/female/avatar_04.png',
+                              width: 132,
+                              height: 204)))),
+              Container(
+                  width: 186,
+                  height: 253,
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: NsColors.cyan, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                            color: NsColors.cyan.withValues(alpha: .2),
+                            blurRadius: 32)
+                      ]),
+                  child: Stack(fit: StackFit.expand, children: [
+                    const AvatarPortrait(assetPath: _sampleWoman),
+                    Align(
+                        alignment: const Alignment(0, .35),
+                        child: Container(
+                            height: 2,
+                            decoration: const BoxDecoration(
+                                color: NsColors.cyan,
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: NsColors.cyan,
+                                      blurRadius: 14,
+                                      spreadRadius: 3)
+                                ]))),
+                  ])),
+            ])),
+        const SizedBox(height: 28),
+        const Text('Finding your\nnext conversation',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 12),
-        const Text('No search is sent from this design preview.',
+            style: TextStyle(
+                fontSize: 30,
+                height: 1.15,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -.8)),
+        const SizedBox(height: 16),
+        const Text('A familiar language. A fresh connection.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: NsColors.muted)),
+            style: TextStyle(color: NsColors.muted, fontSize: 12)),
+        const SizedBox(height: 22),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          for (var i = 0; i < 3; i++)
+            Container(
+                width: 6,
+                height: 6,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: NsColors.cyan.withValues(alpha: 1 - i * .3))),
+        ]),
       ]);
 }
 
-class _VideoDesign extends StatelessWidget {
-  const _VideoDesign({
-    required this.camera,
-    required this.hiddenFace,
-    required this.faceBox,
-    required this.compact,
-  });
-  final bool camera, hiddenFace, faceBox, compact;
+class _ConflictCard extends StatelessWidget {
+  const _ConflictCard({required this.controller});
+  final CallDesignController controller;
   @override
   Widget build(BuildContext context) => Container(
-        height: compact ? 210 : 390,
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30),
-            gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF3F2458), Color(0xFF15142D)]),
-            border: Border.all(color: Colors.white12)),
-        child: Stack(children: [
-          Center(
-              child: hiddenFace
-                  ? Container(
-                      width: 150,
-                      height: 190,
-                      decoration: BoxDecoration(
-                          color: NsColors.background,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: NsColors.cyan)),
-                      child: const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.visibility_off_outlined,
-                                color: NsColors.cyan, size: 38),
-                            SizedBox(height: 14),
-                            Flexible(
-                                child: Text('Hidden in\nthis preview',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(fontSize: 12))),
-                          ]))
-                  : Container(
-                      padding: EdgeInsets.all(faceBox ? 15 : 0),
-                      decoration: faceBox
-                          ? BoxDecoration(
-                              borderRadius: BorderRadius.circular(24),
-                              border:
-                                  Border.all(color: NsColors.cyan, width: 2))
-                          : null,
-                      child: NightshiftAvatar(
-                          name: 'Listener',
-                          listener: true,
-                          size: compact ? 92 : 150))),
-          const Positioned(
-              top: 14,
-              left: 14,
-              child: _DesignPill(
-                  icon: Icons.videocam_outlined,
-                  text: 'Video layout',
-                  color: NsColors.cyan)),
-          Positioned(
-              right: 12,
-              bottom: 12,
-              child: Container(
-                width: compact ? 75 : 104,
-                height: compact ? 95 : 138,
-                decoration: BoxDecoration(
-                    color: NsColors.card,
-                    borderRadius: BorderRadius.circular(19),
-                    border: Border.all(color: NsColors.cyan, width: 2)),
-                child: Stack(children: [
-                  Align(
-                      alignment: const Alignment(0, -.35),
-                      child: camera
-                          ? NightshiftAvatar(
-                              name: 'You', size: compact ? 43 : 62)
-                          : const Icon(Icons.videocam_off_outlined,
-                              color: NsColors.muted, size: 30)),
-                  Positioned(
-                      bottom: 6,
-                      left: 4,
-                      right: 4,
-                      child: Text(camera ? 'You' : 'Off',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 10))),
-                ]),
-              )),
-          if (faceBox)
-            const Positioned(
-                left: 14,
-                bottom: 14,
-                child: Text('Layout overlay\nNo face detection',
-                    style: TextStyle(fontSize: 11, color: NsColors.muted))),
-        ]),
-      );
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+          color: const Color(0xFFF5F1FC),
+          borderRadius: BorderRadius.circular(26),
+          boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 24)]),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.call_end_rounded, color: Color(0xFF7842C5), size: 35),
+        const SizedBox(height: 14),
+        const Text('End this call?',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontSize: 23,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF241633))),
+        const SizedBox(height: 8),
+        const Text('Starting another call will end this conversation.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: Color(0xFF695D7B))),
+        const SizedBox(height: 20),
+        Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              TextButton(
+                  onPressed: () => Navigator.maybePop(context),
+                  child: const Text('Keep preview')),
+              FilledButton(
+                  onPressed: controller.endPreview,
+                  child: const Text('End preview')),
+            ]),
+      ]));
 }
 
 class _RatingDesign extends StatelessWidget {
@@ -492,33 +681,54 @@ class _RatingDesign extends StatelessWidget {
   final CallDesignController controller;
   @override
   Widget build(BuildContext context) => Column(children: [
-        const SizedBox(height: 16),
-        const NightshiftAvatar(name: 'Listener', listener: true, size: 106),
-        const SizedBox(height: 22),
-        const Text('How was your conversation?',
+        const SizedBox(height: 48),
+        const NightshiftAvatar(
+            name: 'Mannat', assetPath: _sampleWoman, size: 110),
+        const SizedBox(height: 24),
+        const Text('How was your\nconversation?',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 27, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 10),
-        const Text('Your feedback helps shape a better experience.',
+            style: TextStyle(
+                fontSize: 31,
+                fontWeight: FontWeight.w800,
+                height: 1.2,
+                letterSpacing: -.7)),
+        const SizedBox(height: 14),
+        const Text('A little feedback goes a long way.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: NsColors.muted)),
+            style: TextStyle(color: NsColors.muted, fontSize: 13)),
         const SizedBox(height: 26),
         Wrap(alignment: WrapAlignment.center, children: [
           for (var star = 1; star <= 5; star++)
             IconButton(
                 key: ValueKey('rating-$star'),
-                tooltip: '$star ${star == 1 ? 'star' : 'stars'}',
+                tooltip: '$star stars',
                 onPressed: () => controller.rate(star),
-                iconSize: 37,
-                color: star <= state.rating ? NsColors.gold : NsColors.muted,
+                iconSize: 36,
+                color: star <= state.rating
+                    ? NsColors.gold
+                    : const Color(0xFFAFA8C8),
                 icon: Icon(star <= state.rating
                     ? Icons.star_rounded
                     : Icons.star_outline_rounded)),
         ]),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
+        Text(
+            state.rating == 0
+                ? 'Tap a star to rate'
+                : [
+                    '',
+                    'Could be better',
+                    'It was okay',
+                    'Good call',
+                    'Great conversation!',
+                    'An outstanding match!'
+                  ][state.rating],
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: NsColors.gold, fontSize: 13)),
+        const SizedBox(height: 28),
         Wrap(
             spacing: 8,
-            runSpacing: 8,
+            runSpacing: 10,
             alignment: WrapAlignment.center,
             children: [
               for (final tag in [
@@ -532,25 +742,66 @@ class _RatingDesign extends StatelessWidget {
                     selected: state.tags.contains(tag),
                     onSelected: (_) => controller.toggleTag(tag)),
             ]),
-        const SizedBox(height: 28),
-        NightshiftSurface(
-            child: Column(children: [
-          const Icon(Icons.favorite_outline, color: NsColors.cyan),
-          const SizedBox(height: 12),
-          Text(
-              state.ratingSelected
-                  ? 'Rating selected locally. Nothing was submitted.'
-                  : 'Ratings are not connected yet. Try selecting stars and feedback tags in this preview.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: NsColors.muted)),
-        ])),
-        const SizedBox(height: 24),
+        const SizedBox(height: 38),
         SizedBox(
             width: double.infinity,
             child: FilledButton(
                 onPressed: state.rating > 0 ? controller.selectRating : null,
                 child: const Text('Keep preview rating'))),
+        const SizedBox(height: 16),
+        Text(
+            state.ratingSelected
+                ? 'Rating selected locally. Nothing was submitted.'
+                : 'Your rating stays in this preview.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: NsColors.muted, fontSize: 11)),
       ]);
+}
+
+class _GameInvitation extends StatelessWidget {
+  const _GameInvitation({required this.controller, required this.listener});
+  final CallDesignController controller;
+  final bool listener;
+  @override
+  Widget build(BuildContext context) => Container(
+      padding: const EdgeInsets.all(21),
+      decoration: BoxDecoration(
+          color: const Color(0xEE18152D),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: NsColors.violet.withValues(alpha: .6)),
+          boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 24)]),
+      child: Column(children: [
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                  color: NsColors.violet.withValues(alpha: .2),
+                  borderRadius: BorderRadius.circular(18)),
+              child: const Icon(Icons.casino_rounded,
+                  color: NsColors.gold, size: 38)),
+          const SizedBox(width: 16),
+          const Flexible(
+              child: Text('Let’s play Ludo!',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800))),
+        ]),
+        const SizedBox(height: 14),
+        const Text('A little friendly competition while you talk.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: NsColors.muted)),
+        const SizedBox(height: 16),
+        _DesignPill(
+            icon: listener ? Icons.diamond_rounded : Icons.toll,
+            text: listener
+                ? 'Sample prize · 100 diamonds'
+                : 'Sample prize · 500 coins',
+            color: NsColors.gold),
+        const SizedBox(height: 18),
+        SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+                onPressed: controller.acceptInvitation,
+                child: const Text('Try local board'))),
+      ]));
 }
 
 class _PreviewControls extends StatelessWidget {
@@ -561,102 +812,199 @@ class _PreviewControls extends StatelessWidget {
   final bool video;
   @override
   Widget build(BuildContext context) => Wrap(
-          spacing: 17,
-          runSpacing: 16,
+          spacing: 12,
+          runSpacing: 14,
           alignment: WrapAlignment.center,
           children: [
             _RoundControl(
                 label: state.speaker ? 'Speaker' : 'Earpiece',
-                icon: state.speaker ? Icons.volume_up : Icons.hearing,
+                icon: state.speaker ? Icons.volume_up_rounded : Icons.hearing,
                 onPressed: controller.toggleSpeaker),
             if (video)
               _RoundControl(
                   label: state.camera ? 'Camera on' : 'Camera off',
-                  icon: state.camera ? Icons.videocam : Icons.videocam_off,
+                  icon: state.camera
+                      ? Icons.videocam_rounded
+                      : Icons.videocam_off_rounded,
                   onPressed: controller.toggleCamera),
             _RoundControl(
                 label: state.muted ? 'Unmute' : 'Mute',
-                icon: state.muted ? Icons.mic_off : Icons.mic,
+                icon: state.muted ? Icons.mic_off_rounded : Icons.mic_rounded,
                 active: !state.muted,
                 onPressed: controller.toggleMute),
             _RoundControl(
                 label: 'End preview',
-                icon: Icons.call_end,
+                icon: Icons.call_end_rounded,
                 danger: true,
                 onPressed: controller.endPreview),
           ]);
 }
 
 class _RoundControl extends StatelessWidget {
-  const _RoundControl({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-    this.active = false,
-    this.danger = false,
-  });
+  const _RoundControl(
+      {required this.label,
+      required this.icon,
+      required this.onPressed,
+      this.active = false,
+      this.danger = false});
   final String label;
   final IconData icon;
   final VoidCallback onPressed;
   final bool active, danger;
   @override
   Widget build(BuildContext context) => SizedBox(
-      width: 72,
+      width: 70,
       child: Column(children: [
-        IconButton.filled(
-            tooltip: label,
-            onPressed: onPressed,
-            style: IconButton.styleFrom(
-                minimumSize: const Size(57, 57),
-                backgroundColor: danger
-                    ? const Color(0xFFE74365)
-                    : active
-                        ? Colors.white
-                        : NsColors.card,
-                foregroundColor: active ? NsColors.background : Colors.white),
-            icon: Icon(icon, size: 25)),
-        const SizedBox(height: 8),
+        Container(
+            decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: danger
+                    ? [
+                        BoxShadow(
+                            color:
+                                const Color(0xFFEB4163).withValues(alpha: .28),
+                            blurRadius: 18,
+                            offset: const Offset(0, 6))
+                      ]
+                    : null),
+            child: IconButton.filled(
+                tooltip: label,
+                onPressed: onPressed,
+                style: IconButton.styleFrom(
+                    minimumSize: const Size(58, 58),
+                    backgroundColor: danger
+                        ? const Color(0xFFEB4163)
+                        : active
+                            ? Colors.white
+                            : const Color(0xB32A3045),
+                    foregroundColor:
+                        active && !danger ? NsColors.background : Colors.white,
+                    side: BorderSide(
+                        color:
+                            danger ? const Color(0xFFFC849B) : Colors.white12)),
+                icon: Icon(icon, size: 25))),
+        const SizedBox(height: 9),
         Text(label,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: NsColors.muted, fontSize: 11)),
+            style: const TextStyle(color: Colors.white70, fontSize: 10)),
       ]));
 }
 
+class _PlayerStrip extends StatelessWidget {
+  const _PlayerStrip(
+      {required this.name,
+      required this.asset,
+      required this.caption,
+      required this.color,
+      required this.trailing});
+  final String name, asset, caption, trailing;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Row(children: [
+        Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: color, width: 2)),
+            child: NightshiftAvatar(name: name, assetPath: asset, size: 42)),
+        const SizedBox(width: 11),
+        Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(name,
+              style:
+                  const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+          const SizedBox(height: 4),
+          Text(caption, style: TextStyle(color: color, fontSize: 10)),
+        ])),
+        const SizedBox(width: 8),
+        Text(trailing,
+            style: const TextStyle(
+                fontSize: 13,
+                color: Colors.white70,
+                fontWeight: FontWeight.w600)),
+      ]);
+}
+
 class _LudoDesign extends StatelessWidget {
-  const _LudoDesign({required this.state, required this.controller});
+  const _LudoDesign(
+      {required this.state, required this.controller, required this.listener});
   final CallDesignState state;
   final CallDesignController controller;
+  final bool listener;
   @override
   Widget build(BuildContext context) => Column(children: [
-        Semantics(
-          label: 'Local Ludo board preview. No remote player or winnings.',
-          child: AspectRatio(
-            aspectRatio: 1,
-            child: CustomPaint(
-                painter: _LudoBoardPainter(state.moves),
-                child: const Center(
-                    child: Icon(Icons.star_rounded,
-                        color: NsColors.gold, size: 29))),
-          ),
-        ),
-        const SizedBox(height: 16),
-        NightshiftSurface(
-          padding: const EdgeInsets.all(14),
-          child: Row(children: [
-            const Expanded(
-                child: Text('Explore the board\nLocal moves only',
-                    style: TextStyle(color: NsColors.muted, fontSize: 12))),
-            FilledButton.icon(
-                key: const ValueKey('roll-preview-dice'),
-                onPressed: controller.rollPreviewDice,
-                icon: const Icon(Icons.casino_outlined),
-                label: Text('Roll · ${state.dice}')),
-          ]),
-        ),
-        const SizedBox(height: 10),
-        const Text('No online game, invitation, or earnings are created.',
+        Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+                color: const Color(0xFF24233B),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: Colors.white24),
+                boxShadow: const [
+                  BoxShadow(
+                      color: Colors.black38,
+                      blurRadius: 24,
+                      offset: Offset(0, 8))
+                ]),
+            child: Semantics(
+                label:
+                    'Local Ludo board preview. Four colored yards, home lanes, safe spaces and tokens.',
+                child: AspectRatio(
+                    aspectRatio: 1,
+                    child: ClipRRect(
+                        borderRadius: BorderRadius.circular(13),
+                        child: CustomPaint(
+                            key: const ValueKey('detailed-ludo-board'),
+                            painter: _LudoBoardPainter(state.moves)))))),
+        const SizedBox(height: 20),
+        _PlayerStrip(
+            name: 'You',
+            asset: listener ? _sampleWoman : _sampleMan,
+            caption: listener ? 'Yellow · Listener' : 'Red · Customer',
+            color: listener ? _yellow : _red,
+            trailing: '1 / 4 home'),
+        const SizedBox(height: 18),
+        Container(
+            padding: const EdgeInsets.all(13),
+            decoration: BoxDecoration(
+                color: const Color(0xFF20223B),
+                borderRadius: BorderRadius.circular(18),
+                border:
+                    Border.all(color: NsColors.violet.withValues(alpha: .4))),
+            child: Row(children: [
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    const Text('Your turn',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 5),
+                    Text(
+                        listener
+                            ? 'Sample prize · 100 diamonds'
+                            : 'Sample prize · 500 coins',
+                        style: const TextStyle(
+                            fontSize: 10, color: NsColors.gold)),
+                  ])),
+              const SizedBox(width: 10),
+              Semantics(
+                  label: 'Roll local preview dice',
+                  button: true,
+                  child: InkWell(
+                      key: const ValueKey('roll-preview-dice'),
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: controller.rollPreviewDice,
+                      child: SizedBox(
+                          width: 56,
+                          height: 56,
+                          child:
+                              CustomPaint(painter: _DicePainter(state.dice))))),
+            ])),
+        const SizedBox(height: 12),
+        const Text('Local moves only · no winnings',
             textAlign: TextAlign.center,
-            style: TextStyle(color: NsColors.muted, fontSize: 11)),
+            style: TextStyle(color: NsColors.muted, fontSize: 10)),
       ]);
 }
 
@@ -665,60 +1013,110 @@ class _LudoBoardPainter extends CustomPainter {
   final int moves;
   @override
   void paint(Canvas canvas, Size size) {
-    final unit = size.width / 15;
-    final fill = Paint()..style = PaintingStyle.fill;
-    final line = Paint()
+    final u = size.width / 15;
+    final fill = Paint();
+    final stroke = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = .7
-      ..color = Colors.white24;
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(20)),
-        fill..color = const Color(0xFF171426));
+      ..strokeWidth = .6
+      ..color = const Color(0x33FFFFFF);
+    canvas.drawRect(Offset.zero & size, fill..color = const Color(0xFF090614));
     for (var y = 0; y < 15; y++) {
       for (var x = 0; x < 15; x++) {
         if ((x >= 6 && x <= 8) || (y >= 6 && y <= 8)) {
-          final rect = Rect.fromLTWH(x * unit, y * unit, unit, unit);
-          var color = const Color(0xFF342C48);
-          if (y == 7 && x < 6) color = const Color(0xFF178663);
-          if (x == 7 && y < 6) color = const Color(0xFFCD9224);
-          if (x == 7 && y > 8) color = const Color(0xFFCE426A);
-          if (y == 7 && x > 8) color = const Color(0xFF3577CC);
-          canvas.drawRect(rect, fill..color = color);
-          canvas.drawRect(rect, line);
+          var color = const Color(0xFF191625);
+          if (y == 7 && x > 0 && x < 6) color = _green;
+          if (x == 7 && y > 0 && y < 6) color = _yellow;
+          if (y == 7 && x > 8 && x < 14) color = _blue;
+          if (x == 7 && y > 8 && y < 14) color = _red;
+          if (x == 1 && y == 6) color = _green;
+          if (x == 8 && y == 1) color = _yellow;
+          if (x == 13 && y == 8) color = _blue;
+          if (x == 6 && y == 13) color = _red;
+          final rect = Rect.fromLTWH(x * u, y * u, u, u);
+          canvas.drawRect(rect, fill..color = color.withValues(alpha: .7));
+          canvas.drawRect(rect, stroke);
         }
       }
     }
-    const corners = [
-      (0.0, 0.0, Color(0xFF139B72)),
-      (9.0, 0.0, Color(0xFFE6AA36)),
-      (0.0, 9.0, Color(0xFFE55578)),
-      (9.0, 9.0, Color(0xFF438DDF)),
-    ];
-    for (final (x, y, color) in corners) {
-      final base =
-          Rect.fromLTWH(x * unit + 4, y * unit + 4, unit * 6 - 8, unit * 6 - 8);
-      canvas.drawRRect(RRect.fromRectAndRadius(base, const Radius.circular(14)),
-          fill..color = color.withValues(alpha: .6));
+    void token(double x, double y, Color color) {
+      final c = Offset(x * u, y * u);
+      canvas.drawCircle(c + Offset(0, u * .1), u * .43,
+          fill..color = Colors.black.withValues(alpha: .2));
+      canvas.drawCircle(c, u * .4, fill..color = color);
+      canvas.drawCircle(
+          c,
+          u * .4,
+          Paint()
+            ..color = Colors.white
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.6);
+      canvas.drawCircle(c - Offset(u * .08, u * .08), u * .22,
+          fill..color = Colors.white.withValues(alpha: .45));
+    }
+
+    for (final (x, y, color) in [
+      (0.0, 0.0, _green),
+      (9.0, 0.0, _yellow),
+      (0.0, 9.0, _red),
+      (9.0, 9.0, _blue)
+    ]) {
+      final yard = Rect.fromLTWH(x * u, y * u, 6 * u, 6 * u);
+      canvas.drawRect(
+          yard,
+          Paint()
+            ..shader = LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color.lerp(color, Colors.black, .18)!,
+                  Color.lerp(color, Colors.black, .75)!
+                ]).createShader(yard));
       canvas.drawRRect(
           RRect.fromRectAndRadius(
-              base.deflate(unit * .7), const Radius.circular(10)),
-          fill..color = const Color(0xFF181425));
-      for (final dx in [1.9, 4.1]) {
-        for (final dy in [1.9, 4.1]) {
-          canvas.drawCircle(Offset((x + dx) * unit, (y + dy) * unit),
-              unit * .55, fill..color = color);
-          canvas.drawCircle(Offset((x + dx) * unit, (y + dy) * unit),
-              unit * .24, fill..color = Colors.white70);
+              Rect.fromLTWH((x + .8) * u, (y + .8) * u, 4.4 * u, 4.4 * u),
+              Radius.circular(u * .3)),
+          fill..color = const Color(0xB3090614));
+      for (final dx in [2.0, 4.0]) {
+        for (final dy in [2.0, 4.0]) {
+          canvas.drawCircle(Offset((x + dx) * u, (y + dy) * u), u * .67,
+              fill..color = color.withValues(alpha: .17));
+          if (!(x == 0 && y == 9 && dx == 2 && dy == 2)) {
+            token(x + dx, y + dy, color);
+          }
         }
       }
     }
-    if (moves > 0) {
-      final step = moves % 5;
-      canvas.drawCircle(Offset((step + .5) * unit, 6.5 * unit), unit * .43,
-          fill..color = NsColors.cyan);
+    final center = Offset(7.5 * u, 7.5 * u);
+    for (final (points, color) in [
+      ([Offset(6 * u, 6 * u), Offset(6 * u, 9 * u)], _green),
+      ([Offset(6 * u, 6 * u), Offset(9 * u, 6 * u)], _yellow),
+      ([Offset(9 * u, 6 * u), Offset(9 * u, 9 * u)], _blue),
+      ([Offset(6 * u, 9 * u), Offset(9 * u, 9 * u)], _red)
+    ]) {
+      canvas.drawPath(
+          Path()
+            ..moveTo(center.dx, center.dy)
+            ..lineTo(points[0].dx, points[0].dy)
+            ..lineTo(points[1].dx, points[1].dy)
+            ..close(),
+          fill..color = color);
     }
-    canvas.drawRect(Rect.fromLTWH(6 * unit, 6 * unit, 3 * unit, 3 * unit),
-        fill..color = NsColors.violet.withValues(alpha: .5));
+    for (final (x, y) in [(2.5, 8.5), (6.5, 2.5), (12.5, 6.5), (8.5, 12.5)]) {
+      final star = Path();
+      for (var i = 0; i < 10; i++) {
+        final a = -math.pi / 2 + i * math.pi / 5,
+            r = u * (i.isEven ? .32 : .14);
+        final p = Offset(x * u + math.cos(a) * r, y * u + math.sin(a) * r);
+        if (i == 0) {
+          star.moveTo(p.dx, p.dy);
+        } else {
+          star.lineTo(p.dx, p.dy);
+        }
+      }
+      canvas.drawPath(star..close(), fill..color = const Color(0xFFBCB3D9));
+    }
+    token(6.5, 13.5 - (moves % 5), _red);
+    token(8.5, 3.5, _yellow);
   }
 
   @override
@@ -726,12 +1124,43 @@ class _LudoBoardPainter extends CustomPainter {
       oldDelegate.moves != moves;
 }
 
+class _DicePainter extends CustomPainter {
+  const _DicePainter(this.value);
+  final int value;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = (Offset.zero & size).deflate(2);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(13)),
+        Paint()..color = const Color(0xFFF9F7FF));
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(13)),
+        Paint()
+          ..color = const Color(0xFFD6C8FC)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2);
+    final points = <Offset>[
+      if (value.isOdd) const Offset(.5, .5),
+      if (value >= 2) ...[const Offset(.28, .28), const Offset(.72, .72)],
+      if (value >= 4) ...[const Offset(.72, .28), const Offset(.28, .72)],
+      if (value == 6) ...[const Offset(.28, .5), const Offset(.72, .5)]
+    ];
+    for (final p in points) {
+      canvas.drawCircle(Offset(p.dx * size.width, p.dy * size.height), 3.8,
+          Paint()..color = const Color(0xFF613EAA));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DicePainter oldDelegate) =>
+      value != oldDelegate.value;
+}
+
 class _EndedPreview extends StatelessWidget {
   const _EndedPreview({required this.onBack});
   final VoidCallback onBack;
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 60),
+      padding: const EdgeInsets.symmetric(vertical: 100),
       child: Column(children: [
         const Icon(Icons.call_end_rounded, size: 64, color: Color(0xFFFB7185)),
         const SizedBox(height: 24),

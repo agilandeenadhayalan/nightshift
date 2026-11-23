@@ -110,7 +110,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             StatusCard(
                 title: '₹${(earned / 100).toStringAsFixed(2)}',
                 message: state.text(
-                    'Test earnings in the displayed history. No cash payouts. Rate and settlement are controlled by the backend.',
+                    'Test earnings in this history · No cash payouts.',
                     'காட்டப்பட்ட வரலாற்றின் சோதனை வருமானம். உண்மையான பணம் வழங்கப்படாது. விகிதமும் தீர்வும் சேவையகத்தால் கணக்கிடப்படும்.')),
           const SizedBox(height: 16),
           if (state.historyError != null)
@@ -156,28 +156,30 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             Card(
                 key: _recentKeys.putIfAbsent(call.id, GlobalKey.new),
                 child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(14),
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(children: [
                             NightshiftAvatar(
                                 name: call.otherName(state.user!.id),
-                                size: 54,
-                                listener: !state.isListener),
+                                size: 46,
+                                avatarCode: state.isListener
+                                    ? call.customerAvatarCode
+                                    : call.listenerAvatarCode),
                             const SizedBox(width: 14),
                             Expanded(
                                 child: Text(call.otherName(state.user!.id),
                                     style: Theme.of(context)
                                         .textTheme
-                                        .titleLarge)),
+                                        .titleMedium)),
                             Icon(
                                 call.isVideo
                                     ? Icons.videocam_outlined
                                     : Icons.call_outlined,
                                 color: NsColors.cyan),
                           ]),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
                           Text(call.isVideo
                               ? state.text('Video call', 'வீடியோ அழைப்பு')
                               : state.text('Audio call', 'ஆடியோ அழைப்பு')),
@@ -201,7 +203,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                           SelectableText(
                               state.text('Call ID: ${call.id}',
                                   'அழைப்பு எண்: ${call.id}'),
-                              style: Theme.of(context).textTheme.bodySmall),
+                              style: const TextStyle(
+                                  color: NsColors.muted, fontSize: 10)),
                           MediaDiagnosticsButton(state: state, callId: call.id),
                           TextButton.icon(
                               onPressed: state.busy

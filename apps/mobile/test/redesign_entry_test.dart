@@ -103,7 +103,7 @@ void main() {
     await tester.tap(button);
     expect(requested, [Permission.microphone]);
     result.complete(PermissionStatus.denied);
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('entry-permission-result-13')),
         findsOneWidget);
     expect(find.textContaining('not granted'), findsOneWidget);

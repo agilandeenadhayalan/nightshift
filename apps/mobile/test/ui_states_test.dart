@@ -6,6 +6,7 @@ import 'package:nightshift/app.dart';
 import 'package:nightshift/core/api.dart';
 import 'package:nightshift/core/controller.dart';
 import 'package:nightshift/core/models.dart';
+import 'package:nightshift/features/screens.dart';
 import 'fakes.dart';
 
 Future<AppController> mountApp(WidgetTester tester,
@@ -139,12 +140,40 @@ void main() {
       testWidgets(
           'restores $path with initialization before mount $beforeMount',
           (tester) async {
-        await mountApp(tester, path: path, initializeBeforeMount: beforeMount);
+        final state = await mountApp(tester,
+            path: path, initializeBeforeMount: beforeMount);
+        final container = ProviderScope.containerOf(
+            tester.element(find.byType(NightShiftApp)));
         expect(
-            find.text(path == '/history'
-                ? 'Your conversations'
-                : 'One account • Customer and Listener permissions'),
-            findsOneWidget);
+            container
+                .read(routerProvider)
+                .routeInformationProvider
+                .value
+                .uri
+                .path,
+            path);
+        expect(state.isListener, isFalse);
+        if (path == '/history') {
+          expect(find.text('Your conversations'), findsOneWidget);
+        } else {
+          final profile = find.byType(ProfileScreen);
+          expect(profile, findsOneWidget);
+          expect(
+              find.descendant(
+                  of: profile, matching: find.text(state.user!.name)),
+              findsOneWidget);
+          expect(find.descendant(of: profile, matching: find.text('Customer')),
+              findsOneWidget);
+          final edit = find.descendant(
+              of: profile, matching: find.byTooltip('Edit profile'));
+          expect(edit.hitTestable(), findsOneWidget);
+          expect(
+              tester
+                  .widget<IconButton>(find.ancestor(
+                      of: edit, matching: find.byType(IconButton)))
+                  .onPressed,
+              isNotNull);
+        }
         expect(
             tester
                 .widget<NavigationBar>(find.byType(NavigationBar))

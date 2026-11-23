@@ -87,10 +87,10 @@ export class NightShiftService {
   }
 
   async user(id: string, c: Query = this.db.pool) {
-    const { rows } = await c.query('SELECT * FROM users WHERE id=$1', [id]);
+    const { rows } = await c.query('SELECT u.*,p.avatar_code FROM users u LEFT JOIN profiles p ON p.user_id=u.id WHERE u.id=$1', [id]);
     requireThat(rows.length, 404, 'NOT_FOUND', 'Account not found');
     const u = rows[0];
-    return { id: u.id, displayName: u.display_name, languages: u.languages, mode: u.mode,
+    return { id: u.id, displayName: u.display_name, ...(u.avatar_code?{avatarCode:u.avatar_code as string}:{}), languages: u.languages, mode: u.mode,
       listenerApproved: u.listener_approved, online: (await this.reachable([id], c)).has(id) };
   }
   async wallet(id: string, c: Query = this.db.pool) {
@@ -187,10 +187,12 @@ export class NightShiftService {
       requireThat(shared.rows.length===2,403,'CALL_NOT_ELIGIBLE','The selected conversation language is no longer available.');}
   }
   private async view(c: Query, r: Row) {
-    const names=await c.query('SELECT id,display_name FROM users WHERE id=ANY($1::uuid[])',[[r.customer_id,r.listener_id]]);
+    const names=await c.query('SELECT u.id,u.display_name,p.avatar_code FROM users u LEFT JOIN profiles p ON p.user_id=u.id WHERE u.id=ANY($1::uuid[])',[[r.customer_id,r.listener_id]]);
+    const customer=names.rows.find(u=>u.id===r.customer_id),listener=names.rows.find(u=>u.id===r.listener_id);
     return { id:r.id,customerId:r.customer_id,listenerId:r.listener_id,mediaType:r.media_type??'audio',
-      customerName:names.rows.find(u=>u.id===r.customer_id)?.display_name,
-      listenerName:names.rows.find(u=>u.id===r.listener_id)?.display_name,state:r.state,version:r.version,
+      customerName:customer?.display_name,listenerName:listener?.display_name,
+      ...(customer?.avatar_code?{customerAvatarCode:customer.avatar_code as string}:{}),
+      ...(listener?.avatar_code?{listenerAvatarCode:listener.avatar_code as string}:{}),state:r.state,version:r.version,
       createdAt:iso(r.created_at),expiresAt:iso(r.expires_at),acceptedAt:iso(r.accepted_at),endedAt:iso(r.ended_at),reason:r.reason,
       connectedMs:Number(r.connected_ms),chargeMicrocredits:Number(r.charge_microcredits),earningPaise:Number(r.earning_paise),
       // The frozen 60..600-second development allowance includes free time.

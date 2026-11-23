@@ -164,7 +164,7 @@ for(const conflicting of [false,true])test(`forward upgrade preserves ${conflict
   assert.equal(checksums.length,17);
   await migrate(db);await migrate(db);assert.deepEqual(await snapshot(db),before);
   assert.deepEqual((await db.pool.query('SELECT name,checksum FROM schema_migrations ORDER BY name LIMIT 17')).rows,checksums);
-  assert.equal((await db.pool.query('SELECT count(*)::int count FROM schema_migrations')).rows[0].count,19);
+  assert.equal((await db.pool.query('SELECT count(*)::int count FROM schema_migrations')).rows[0].count,20);
   if(conflicting)await assert.rejects(seed(db),conflict);else await seed(db);
   assert.deepEqual(await snapshot(db),before);
   await assert.rejects(db.pool.query("UPDATE rate_versions SET policy='{}'::jsonb WHERE id=$1",[TEST_RATE.id]),{code:'23514'});

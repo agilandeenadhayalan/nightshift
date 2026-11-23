@@ -5,92 +5,155 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(appControllerProvider);
+    final isListener = state.isListener;
     return PageBody(children: [
       const ErrorNotice(),
-      const SizedBox(height: 20),
-      Center(
-          child: NightshiftAvatar(
-              name: state.user?.name ?? '',
-              size: 112,
-              listener: state.isListener)),
-      const SizedBox(height: 16),
-      Text(state.user?.name ?? '',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.headlineMedium),
-      const SizedBox(height: 8),
-      Text(
-          state.text('One account • Customer and Listener permissions',
-              'ஒரு கணக்கு • வாடிக்கையாளர் மற்றும் கேட்பவர் அனுமதிகள்'),
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: NsColors.muted)),
-      const SizedBox(height: 24),
+      Container(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
+          decoration: BoxDecoration(
+              color: const Color(0xFF171722),
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: Colors.white10)),
+          child: Column(children: [
+            Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                    tooltip: state.text('Edit profile', 'சுயவிவரத்தை திருத்து'),
+                    onPressed: state.busy || state.hasCall
+                        ? null
+                        : () => context.push('/edit-profile'),
+                    icon: const Icon(Icons.edit_outlined,
+                        color: NsColors.muted, size: 19))),
+            NightshiftAvatar(
+                name: state.user?.name ?? '',
+                size: 88,
+                avatarCode: state.user?.avatarCode),
+            const SizedBox(height: 12),
+            Text(state.user?.name ?? '',
+                textAlign: TextAlign.center,
+                style:
+                    const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
+            Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                    color: NsColors.violet.withAlpha(18),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: NsColors.violet.withAlpha(65))),
+                child: Text(
+                    isListener
+                        ? state.text('Listener', 'கேட்பவர்')
+                        : state.text('Customer', 'வாடிக்கையாளர்'),
+                    style: const TextStyle(
+                        color: Color(0xFFC4B5FD),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600))),
+            const SizedBox(height: 16),
+            Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                    color: const Color(0xFF22212A),
+                    borderRadius: BorderRadius.circular(17)),
+                child: Row(children: [
+                  const Icon(Icons.toll_rounded,
+                      color: NsColors.gold, size: 30),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        Text(state.text('TEST WALLET', 'சோதனை பணப்பை'),
+                            style: const TextStyle(
+                                color: NsColors.muted,
+                                fontSize: 10,
+                                letterSpacing: .7)),
+                        Text(
+                            '${creditAmount(state.balance)} ${state.text('test coins', 'சோதனை நாணயங்கள்')}',
+                            style: const TextStyle(
+                                color: NsColors.gold,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800)),
+                      ])),
+                  IconButton(
+                      tooltip: state.text('Open wallet', 'பணப்பையைத் திற'),
+                      onPressed: () => context.push('/wallet'),
+                      icon: const Icon(Icons.chevron_right,
+                          color: NsColors.gold)),
+                ])),
+            const SizedBox(height: 7),
+            Text(
+                state.text(
+                    '${creditAmount(state.held)} held for a call · Not cash',
+                    'அழைப்பிற்கு ${creditAmount(state.held)} ஒதுக்கப்பட்டது · பணம் அல்ல'),
+                style: const TextStyle(color: NsColors.muted, fontSize: 10)),
+          ])),
+      const SizedBox(height: 14),
       if (state.user?.listenerApproved == true)
-        FilledButton.tonal(
+        FilledButton.tonalIcon(
             onPressed: state.canSwitch
                 ? () async {
                     await state.switchMode();
                     if (context.mounted) context.go('/home');
                   }
                 : null,
-            child: Text(state.isListener
+            icon: const Icon(Icons.swap_horiz),
+            label: Text(isListener
                 ? state.text('Switch to Customer', 'வாடிக்கையாளராக மாறு')
                 : state.text('Switch to Listener', 'கேட்பவராக மாறு')))
       else
-        NightshiftSurface(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Icon(Icons.headset_mic_rounded, color: NsColors.cyan, size: 32),
-          const SizedBox(height: 12),
-          Text(
-              state.text('Listener approval required',
-                  'கேட்பவருக்கான அங்கீகாரம் தேவை'),
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Text(state.text(
-              'Only approved Listeners can go online. Apply privately below; staff review is separate.',
-              'அங்கீகரிக்கப்பட்ட கேட்பவர்கள் மட்டுமே ஆன்லைன் செல்லலாம். கீழே தனிப்பட்ட முறையில் விண்ணப்பிக்கலாம்; ஊழியர் ஆய்வு தனியானது.')),
-        ])),
-      const SizedBox(height: 18),
+        InkWell(
+            onTap: () => context.go('/listener-application'),
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    gradient: const LinearGradient(
+                        colors: [Color(0xFF311451), Color(0xFF17132E)]),
+                    border: Border.all(color: NsColors.violet.withAlpha(55))),
+                child: Row(children: [
+                  const Icon(Icons.headset_mic_outlined,
+                      color: Color(0xFFC4B5FD)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        Text(state.text('Become a Listener', 'கேட்பவராகுங்கள்'),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700, fontSize: 14)),
+                        const SizedBox(height: 4),
+                        Text(
+                            state.text('Listener approval required',
+                                'கேட்பவருக்கான அங்கீகாரம் தேவை'),
+                            style: const TextStyle(
+                                color: NsColors.muted, fontSize: 11)),
+                      ])),
+                  const Icon(Icons.chevron_right, size: 19)
+                ]))),
+      const SizedBox(height: 14),
       NightshiftSurface(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          const Icon(Icons.toll_rounded, color: NsColors.gold, size: 36),
-          const SizedBox(width: 14),
-          Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Text(state.text('Test wallet', 'சோதனை பணப்பை'),
-                    style: const TextStyle(color: NsColors.muted)),
-                Text(
-                    '${creditAmount(state.balance)} ${state.text('test coins', 'சோதனை நாணயங்கள்')}',
-                    style: Theme.of(context).textTheme.titleLarge),
-              ]))
-        ]),
-        const SizedBox(height: 12),
-        Text(
-            state.text(
-                '${creditAmount(state.held)} held for a call. Not redeemable or transferable.',
-                'அழைப்பிற்கு ${creditAmount(state.held)} ஒதுக்கப்பட்டது. பணமாக மாற்றவோ பரிமாற்றவோ முடியாது.'),
-            style: const TextStyle(color: NsColors.muted, fontSize: 12)),
-        const SizedBox(height: 14),
-        FilledButton.tonalIcon(
-            onPressed: () => context.push('/wallet'),
-            icon: const Icon(Icons.account_balance_wallet_outlined),
-            label: Text(state.text('Open wallet', 'பணப்பையைத் திற'))),
-      ])),
-      const SizedBox(height: 18),
-      const SizedBox(height: 18),
-      NightshiftSurface(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           child: Column(children: [
+            _ProfileMenuRow(
+                icon: Icons.account_balance_wallet_outlined,
+                title: state.text('Open wallet', 'பணப்பையைத் திற'),
+                onTap: () => context.push('/wallet')),
+            const Divider(height: 1),
+            _ProfileMenuRow(
+                icon: Icons.edit_outlined,
+                title: state.text('Edit profile', 'சுயவிவரத்தை திருத்து'),
+                onTap: state.busy || state.hasCall
+                    ? null
+                    : () => context.push('/edit-profile')),
+            const Divider(height: 1),
             _ProfileMenuRow(
                 icon: Icons.assignment_outlined,
                 title: state.text(
                     'Apply to be a Listener', 'கேட்பவராக விண்ணப்பிக்கவும்'),
                 onTap: () => context.go('/listener-application')),
-            if (state.isListener) ...[
+            if (isListener) ...[
               const Divider(height: 1),
               _ProfileMenuRow(
                   icon: Icons.diamond_outlined,
@@ -117,7 +180,7 @@ class ProfileScreen extends ConsumerWidget {
                     ? null
                     : () => context.go('/staff')),
           ])),
-      const SizedBox(height: 24),
+      const SizedBox(height: 14),
       DropdownButtonFormField<String>(
           value: state.locale,
           isExpanded: true,
@@ -131,25 +194,24 @@ class ProfileScreen extends ConsumerWidget {
           onChanged: (value) {
             if (value != null) state.setLocale(value);
           }),
-      if (state.isListener && state.user?.listenerApproved == true) ...[
-        const SizedBox(height: 20),
+      if (isListener && state.user?.listenerApproved == true) ...[
+        const SizedBox(height: 16),
         InvitationSettings(controller: state),
       ],
-      const SizedBox(height: 24),
-      Text(state.text('Privacy in this build', 'இந்த பதிப்பின் தனியுரிமை'),
-          style: Theme.of(context).textTheme.titleMedium),
-      const SizedBox(height: 8),
+      const SizedBox(height: 18),
       Text(
           state.text(
-              'Calls are not recorded. Your phone number and date of birth stay private. Review your consent history and the account deletion notice below. Production support and retention approvals remain release requirements.',
-              'அழைப்புகள் பதிவு செய்யப்படாது. உங்கள் தொலைபேசி எண் மற்றும் பிறந்த தேதி தனிப்பட்டதாக இருக்கும். ஒப்புதல் வரலாறு மற்றும் கணக்கு நீக்க அறிவிப்பை கீழே படிக்கவும். ஆதரவு மற்றும் தரவு தக்கவைப்பு அனுமதிகள் வெளியீட்டிற்கு தேவை.'),
-          style: const TextStyle(color: NsColors.muted, fontSize: 12)),
-      const SizedBox(height: 20),
+              'Calls are not recorded. Your phone number and date of birth stay private.',
+              'அழைப்புகள் பதிவு செய்யப்படாது. உங்கள் தொலைபேசி எண் மற்றும் பிறந்த தேதி தனிப்பட்டதாக இருக்கும்.'),
+          style: const TextStyle(color: NsColors.muted, fontSize: 11)),
+      const SizedBox(height: 14),
       OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFFFB7185)),
           onPressed: state.busy ? null : state.logout,
           icon: const Icon(Icons.logout),
           label: Text(state.text('Sign out', 'வெளியேறு'))),
-      const SizedBox(height: 16),
+      const SizedBox(height: 10),
       TextButton.icon(
           onPressed: () => context.push('/designs'),
           icon: const Icon(Icons.palette_outlined),
@@ -167,14 +229,16 @@ class _ProfileMenuRow extends StatelessWidget {
   final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        dense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
         leading: Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(11),
                 color: NsColors.violet.withAlpha(24)),
-            child: Icon(icon, color: NsColors.violet)),
-        title: Text(title),
+            child: Icon(icon, color: NsColors.muted, size: 19)),
+        title: Text(title,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
         trailing: const Icon(Icons.chevron_right, size: 20),
         enabled: onTap != null,
         onTap: onTap,

@@ -10,9 +10,11 @@ class VideoCameraPane extends StatelessWidget {
       required this.controller,
       required this.label,
       required this.placeholder,
+      this.avatarCode,
       this.aspectRatio = 16 / 9});
   final VideoViewController? controller;
   final String label, placeholder;
+  final String? avatarCode;
   final double aspectRatio;
 
   @override
@@ -30,21 +32,39 @@ class VideoCameraPane extends StatelessWidget {
                       AgoraVideoView(
                           key: ObjectKey(controller), controller: controller!)
                     else
-                      Center(
-                          child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.videocam_off_outlined,
-                                        color: NsColors.cyan, size: 38),
-                                    const SizedBox(height: 8),
-                                    Flexible(
-                                        child: Text(placeholder,
-                                            textAlign: TextAlign.center,
-                                            style: const TextStyle(
-                                                color: Colors.white))),
-                                  ]))),
+                      Stack(fit: StackFit.expand, children: [
+                        if (avatarAssetPath(avatarCode) case final asset?)
+                          Opacity(
+                              opacity: .35,
+                              child: AvatarPortrait(
+                                  assetPath: asset,
+                                  borderRadius: BorderRadius.zero))
+                        else
+                          const DecoratedBox(
+                              decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                Color(0xFF263855),
+                                Color(0xFF141627)
+                              ]))),
+                        Center(
+                            child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.videocam_off_outlined,
+                                          color: NsColors.cyan, size: 38),
+                                      const SizedBox(height: 8),
+                                      Flexible(
+                                          child: Text(placeholder,
+                                              textAlign: TextAlign.center,
+                                              style: const TextStyle(
+                                                  color: Colors.white))),
+                                    ]))),
+                      ]),
                     Align(
                         alignment: Alignment.topLeft,
                         child: Container(
@@ -68,31 +88,37 @@ class VideoCallView extends StatelessWidget {
       required this.remoteLabel,
       required this.localLabel,
       required this.waitingLabel,
-      required this.cameraOffLabel});
+      required this.cameraOffLabel,
+      this.remoteAvatarCode,
+      this.localAvatarCode});
   final CallVideo video;
   final String remoteLabel, localLabel, waitingLabel, cameraOffLabel;
+  final String? remoteAvatarCode, localAvatarCode;
 
   @override
   Widget build(BuildContext context) => Stack(children: [
         VideoCameraPane(
-            aspectRatio: 4 / 5,
+            aspectRatio: 3 / 4,
             controller: video.remoteVideo,
+            avatarCode: remoteAvatarCode,
             label: remoteLabel,
             placeholder: waitingLabel),
         Positioned(
             right: 12,
-            bottom: 12,
+            top: 52,
             child: Container(
-                width: 128,
+                width:
+                    MediaQuery.textScalerOf(context).scale(1) > 1.5 ? 120 : 100,
                 decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: NsColors.cyan, width: 2),
+                    border: Border.all(color: Colors.white70, width: 1.5),
                     boxShadow: const [
                       BoxShadow(color: Colors.black45, blurRadius: 20)
                     ]),
                 child: VideoCameraPane(
                     aspectRatio: 3 / 4,
                     controller: video.cameraEnabled ? video.localVideo : null,
+                    avatarCode: localAvatarCode,
                     label: localLabel,
                     placeholder:
                         video.cameraEnabled ? waitingLabel : cameraOffLabel))),

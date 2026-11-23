@@ -56,6 +56,8 @@ class HomeShell extends ConsumerWidget {
           Expanded(child: child),
         ])),
         bottomNavigationBar: NavigationBar(
+          height: 68,
+          indicatorColor: Colors.transparent,
           selectedIndex: index,
           onDestinationSelected: (next) {
             final location = ['/home', '/history', '/profile'][next];
@@ -131,129 +133,168 @@ class _ListenerDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final online = state.user?.online == true;
+    final earned = state.history
+        .where((call) => call.listenerId == state.user?.id)
+        .fold<int>(0, (sum, call) => sum + call.earningPaise);
     return RefreshIndicator(
         onRefresh: state.refresh,
         child: PageBody(children: [
           const ErrorNotice(),
           Row(children: [
             NightshiftAvatar(
-                name: state.user?.name ?? '', size: 62, listener: true),
-            const SizedBox(width: 16),
+                name: state.user?.name ?? '',
+                size: 46,
+                avatarCode: state.user?.avatarCode),
+            const SizedBox(width: 12),
             Expanded(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                   Text(state.user?.name ?? '',
-                      style: Theme.of(context).textTheme.titleLarge),
+                      style: const TextStyle(
+                          fontSize: 17, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 3),
                   Text(state.text('Listener workspace', 'கேட்பவர் பணியிடம்'),
-                      style: const TextStyle(color: NsColors.muted)),
+                      style:
+                          const TextStyle(color: NsColors.muted, fontSize: 10)),
                 ]))
           ]),
-          const SizedBox(height: 24),
-          Text(
-              state.text('Make room for a conversation.',
-                  'உரையாடலுக்கு நேரம் ஒதுக்குங்கள்.'),
-              style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 20),
+          const SizedBox(height: 14),
+          Container(
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+              decoration: BoxDecoration(
+                  color: NsColors.violet.withAlpha(17),
+                  borderRadius: BorderRadius.circular(13),
+                  border: Border.all(color: NsColors.violet.withAlpha(55))),
+              child: Row(children: [
+                Icon(
+                    online && !state.offline
+                        ? Icons.circle
+                        : Icons.pause_circle_outline,
+                    size: 13,
+                    color: online && !state.offline
+                        ? NsColors.cyan
+                        : NsColors.muted),
+                const SizedBox(width: 9),
+                Expanded(
+                    child: Text(
+                        state.offline
+                            ? state.text('Connection unavailable',
+                                'இணைப்பு கிடைக்கவில்லை')
+                            : online
+                                ? state.text('You are online',
+                                    'நீங்கள் ஆன்லைனில் உள்ளீர்கள்')
+                                : state.text('You are offline',
+                                    'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள்'),
+                        style: const TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w600)))
+              ])),
+          const SizedBox(height: 14),
           NightshiftSurface(
+              padding: const EdgeInsets.all(16),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                Row(children: [
-                  Icon(
-                      online
-                          ? Icons.radio_button_checked
-                          : Icons.pause_circle_outline,
-                      color: online ? NsColors.cyan : NsColors.muted),
-                  const SizedBox(width: 10),
-                  Expanded(
-                      child: Text(
-                          state.offline
-                              ? state.text('Connection unavailable',
-                                  'இணைப்பு கிடைக்கவில்லை')
-                              : online
-                                  ? state.text('You are online',
-                                      'நீங்கள் ஆன்லைனில் உள்ளீர்கள்')
-                                  : state.text('You are offline',
-                                      'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள்'),
-                          style: Theme.of(context).textTheme.titleMedium))
-                ]),
-                const SizedBox(height: 22),
-                FilledButton.icon(
-                    onPressed: state.busy || state.offline
-                        ? null
-                        : () => state.setOnline(!online),
-                    icon: Icon(online ? Icons.pause : Icons.headset_mic),
-                    label: Text(online
-                        ? state.text('Go offline', 'ஆஃப்லைன் செல்லவும்')
-                        : state.text('Go online', 'ஆன்லைன் செல்லவும்'))),
-                const SizedBox(height: 20),
-                LayoutBuilder(builder: (context, constraints) {
-                  final width = MediaQuery.textScalerOf(context).scale(16) > 24
-                      ? constraints.maxWidth
-                      : (constraints.maxWidth - 12) / 2;
-                  return Wrap(spacing: 12, runSpacing: 12, children: [
-                    SizedBox(
-                        width: width,
-                        child: _MediaAvailabilityTile(
-                            icon: Icons.headset_mic_outlined,
-                            title: state.text('Audio', 'ஆடியோ'),
-                            message: state.text(
-                                'Your voice, a real conversation',
-                                'உங்கள் குரல், உண்மையான உரையாடல்'))),
-                    SizedBox(
-                        width: width,
-                        child: _MediaAvailabilityTile(
-                            icon: Icons.videocam_outlined,
-                            title: state.text('Video', 'வீடியோ'),
-                            message: state.text('Camera consent for each call',
-                                'ஒவ்வொரு அழைப்பிற்கும் கேமரா ஒப்புதல்'))),
-                  ]);
-                }),
-                const SizedBox(height: 20),
-                const SizedBox(height: 12),
-                Text(
-                    state.text(
-                        'Keep the app open for live calls. Optional background audio invitations depend on your enabled invitation setting. Reconnect gaps do not earn test credits.',
-                        'நேரடி அழைப்புகளுக்கு செயலியைத் திறந்து வைத்திருங்கள். பின்னணி ஆடியோ அழைப்பிதழ்கள் உங்கள் அறிவிப்பு அமைப்பைப் பொறுத்தவை. மீண்டும் இணையும் இடைவெளிக்கு சோதனை வருமானம் இல்லை.'),
-                    style:
-                        const TextStyle(color: NsColors.muted, fontSize: 12)),
-              ])),
-          const SizedBox(height: 20),
-          NightshiftSurface(
+                    LayoutBuilder(builder: (context, constraints) {
+                      final width =
+                          MediaQuery.textScalerOf(context).scale(16) > 24
+                              ? constraints.maxWidth
+                              : (constraints.maxWidth - 12) / 2;
+                      return Wrap(spacing: 12, runSpacing: 12, children: [
+                        SizedBox(
+                            width: width,
+                            child: _MediaAvailabilityTile(
+                                icon: Icons.headset_mic_outlined,
+                                title: state.text('Audio', 'ஆடியோ'),
+                                message: state.text(
+                                    'Your voice, a real conversation',
+                                    'உங்கள் குரல், உண்மையான உரையாடல்'))),
+                        SizedBox(
+                            width: width,
+                            child: _MediaAvailabilityTile(
+                                icon: Icons.videocam_outlined,
+                                title: state.text('Video', 'வீடியோ'),
+                                message: state.text(
+                                    'Camera consent for each call',
+                                    'ஒவ்வொரு அழைப்பிற்கும் கேமரா ஒப்புதல்'))),
+                      ]);
+                    }),
+                    const SizedBox(height: 14),
+                    FilledButton.icon(
+                        onPressed: state.busy || state.offline
+                            ? null
+                            : () => state.setOnline(!online),
+                        icon: Icon(online ? Icons.pause : Icons.headset_mic),
+                        label: Text(online
+                            ? state.text('Go offline', 'ஆஃப்லைன் செல்லவும்')
+                            : state.text('Go online', 'ஆன்லைன் செல்லவும்'))),
+                    const SizedBox(height: 10),
+                    Text(
+                        state.text(
+                            'Keep the app open for live calls. Camera permission is requested for each video call.',
+                            'நேரடி அழைப்புகளுக்கு செயலியைத் திறந்து வையுங்கள். ஒவ்வொரு வீடியோ அழைப்பிற்கும் கேமரா அனுமதி கேட்கப்படும்.'),
+                        style: const TextStyle(
+                            color: NsColors.muted, fontSize: 11)),
+                  ])),
+          const SizedBox(height: 14),
+          Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: NsColors.violet.withAlpha(40)),
+                  gradient: const LinearGradient(
+                      colors: [Color(0xFF15192D), Color(0xFF292147)])),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                const Icon(Icons.diamond_outlined,
-                    color: NsColors.gold, size: 32),
-                const SizedBox(height: 12),
-                Text(
-                    state.text(
-                        'Earnings & calls', 'வருமானம் மற்றும் அழைப்புகள்'),
-                    style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 8),
-                Text(state.text(
-                    'Review your server-confirmed test settlements.',
-                    'சேவையகம் உறுதிப்படுத்திய சோதனை வருமானத்தைப் பாருங்கள்.')),
-                TextButton.icon(
-                    onPressed: () => context.push('/earnings'),
-                    icon: const Icon(Icons.arrow_forward),
-                    label:
-                        Text(state.text('View earnings', 'வருமானத்தைப் பார்'))),
-              ])),
-          const SizedBox(height: 20),
+                    Text(
+                        state.text(
+                            'Earnings & calls', 'வருமானம் மற்றும் அழைப்புகள்'),
+                        style: const TextStyle(
+                            color: NsColors.muted, fontSize: 12)),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      Expanded(
+                          child: Text(
+                              state.historyLoaded
+                                  ? '₹${(earned / 100).toStringAsFixed(2)}'
+                                  : '—',
+                              style: const TextStyle(
+                                  fontSize: 30, fontWeight: FontWeight.w800))),
+                      IconButton(
+                          tooltip:
+                              state.text('View earnings', 'வருமானத்தைப் பார்'),
+                          onPressed: () => context.push('/earnings'),
+                          icon: const Icon(Icons.arrow_forward,
+                              color: NsColors.violet)),
+                    ]),
+                    const SizedBox(height: 4),
+                    Text(
+                        state.text(
+                            'Test earnings in loaded history · No cash payouts',
+                            'ஏற்றப்பட்ட வரலாற்றின் சோதனை வருமானம் · பணம் வழங்கப்படாது'),
+                        style: const TextStyle(
+                            color: NsColors.muted, fontSize: 10)),
+                  ])),
+          const SizedBox(height: 14),
           InvitationSettings(controller: state),
-          const SizedBox(height: 12),
-          Text(
-              state.text(
-                  'Proposed listener rate', 'முன்மொழியப்பட்ட கேட்பவர் விகிதம்'),
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Text(
-              state.text(
-                  '₹500 per 3,600 paid connected seconds. Six paid minutes = ₹50. These are test estimates, not cash earnings. Ringing, waiting and reconnect gaps earn nothing.',
-                  '3,600 கட்டண இணைப்பு விநாடிகளுக்கு ₹500. ஆறு கட்டண நிமிடங்கள் = ₹50. இது சோதனை மதிப்பீடு; உண்மையான பணம் அல்ல. காத்திருப்பு மற்றும் இணைப்பு இடைவெளிக்கு வருமானம் இல்லை.'),
-              style: const TextStyle(color: NsColors.muted)),
+          const SizedBox(height: 14),
+          ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              title: Text(
+                  state.text('Proposed listener rate',
+                      'முன்மொழியப்பட்ட கேட்பவர் விகிதம்'),
+                  style: const TextStyle(fontSize: 13)),
+              children: [
+                Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: Text(
+                        state.text(
+                            '₹500 per 3,600 paid connected seconds. Six paid minutes = ₹50. These are test estimates, not cash earnings. Ringing, waiting and reconnect gaps earn nothing.',
+                            '3,600 கட்டண இணைப்பு விநாடிகளுக்கு ₹500. ஆறு கட்டண நிமிடங்கள் = ₹50. இது சோதனை மதிப்பீடு; உண்மையான பணம் அல்ல. காத்திருப்பு மற்றும் இணைப்பு இடைவெளிக்கு வருமானம் இல்லை.'),
+                        style: const TextStyle(
+                            color: NsColors.muted, fontSize: 12)))
+              ]),
         ]));
   }
 }
@@ -265,7 +306,7 @@ class _MediaAvailabilityTile extends StatelessWidget {
   final String title, message;
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
           color: NsColors.card, borderRadius: BorderRadius.circular(18)),
       child: Column(children: [

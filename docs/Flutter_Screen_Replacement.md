@@ -20,7 +20,7 @@ The production release gate remains. No app installation, live server migration,
 - Existing test credit balances, frozen rates, elapsed time and estimated earnings remain server-derived. Source prices, coin/diamond conversion, promotion claims, cash withdrawal thresholds and guaranteed earnings are not approved policy.
 - Payment/card/bank, withdrawals, ratings, tickets and synchronized Ludo have no existing backend workflows. Their complete layouts are available for design review; live actions explain unavailability. Real card/CVV entry, fake transaction success, invented ticket references and remote game synchronization are not implemented.
 - System permission examples are explanatory Flutter views. Only the real platform permission flow can grant access; app-rendered Allow text cannot manufacture a grant.
-- Real profiles use actual account names and neutral avatars. Sample portraits, availability and history in a design preview are not presented as real people or activity in discovery.
+- Real profiles use actual account names and their explicitly selected built-in avatar, with a neutral fallback. Sample portraits, availability and history in a design preview are not presented as real people or activity in discovery.
 - Training content, final offers/payment route, review/retention policy, payout terms and any unsupported privacy/security promises still require owner decisions under D28 and existing finance/safety decisions.
 
 ## Source-to-widget coverage
@@ -84,7 +84,7 @@ Source SHA-256: `6c48fb1786c2e52d264ad0fc4b2a07f3f29e048d4defa996ead5e6e9ce77ae2
 | 53 | Camera & Audio Permission Dialog | `entry` |
 | 54 | Connecting & Finding Companion | `call` |
 
-## Verification
+## First-pass verification (superseded visual build)
 
 - Full Flutter suite: **703 passed**, **24 existing explicit platform/time-zone skips**, zero failures, 28 seconds. No authorization/lifecycle assertions were removed or relaxed.
 - All **54 native widget variants** render at **390 × 844** with **1× and 2× text scaling**. The 110-case catalogue run also checks exact source coverage and verifies that opening previews performs no API operation.
@@ -98,4 +98,29 @@ The ARM64 debug QA APK builds successfully as `com.agilandeenadhayalan.nightshif
 
 Local APK: `artifacts/nightshift-native-designs-6008-arm64.apk` (163,511,997 bytes), SHA-256 `a30426cdb67a77ebb42b67bd56f62fa1d442536b6b7ec52c74cde76344141d8d`. Private configuration, APK, capture images and provenance records remain outside Git. This does not attest every external SDK/package-cache input.
 
-Physical device/TalkBack/media verification, pixel-identical comparison to every supplied HTML image, installation and production readiness are not claimed. Neutral native avatars and the painted mascot replace external sample portraits; live discovery does not invent sample people.
+Physical device/TalkBack/media verification, pixel-identical comparison to every supplied HTML image, installation and production readiness are not claimed. The first pass used neutral avatars and a painted mascot; the refinement below replaces portrait placeholders with the owner's supplied assets. Live discovery does not invent sample people.
+
+## Owner-requested visual refinement — 23 November 2026
+
+After reviewing the first pass, the owner requested closer design fidelity and supplied two archives containing 30 male and 30 female portraits. All 60 PNGs are bundled unchanged, alongside the source design's Plus Jakarta Sans, Space Grotesk and Outfit fonts and their licenses. See [asset provenance and rollout requirements](Avatar_Assets.md).
+
+The revised native layouts use compact grouped profile rows, portrait-led feeds, full-canvas call imagery, anchored call controls, a complete painted Ludo board, smaller preview labels and source-like authentication/permission compositions. All 54 variants remain available. Screen 44 uses a two-column feed and screen 41 uses a scrolling filter panel; this is a closer native adaptation, not a claim of pixel-identical reproduction.
+
+The profile editor offers both portrait collections and the four existing emoji choices to either Customer or Listener. A selection is a local draft until consent and Save complete against the API. The editor loads the current profile before showing editable fields, supports retry after a failed load, and discards stale picker/load/save callbacks after an account or service change. Saved allowlisted avatar codes are returned with profiles, discovery and call/history participants. Migration 020 extends the avatar constraint without rewriting existing choices; it has not been applied to the running phone backend.
+
+Riverpod presentation state and the existing AppController authority are retained. No new customer-facing mode, identity claim, gender verification or Listener eligibility rule is inferred from a portrait. Staff access remains separately authorized. Payment, payout, support, rating and synchronized-game activation still follow the boundaries above.
+
+The final gallery contains 54 native captures at 390 × 844 with the bundled fonts and portraits. All images decode, search and next/previous navigation work, and the gallery has no horizontal overflow at 360 px. The previous captures are archived separately. Physical device installation and production release remain outside this visual refinement.
+
+### Final refinement validation
+
+- Full Flutter suite: **723 passed**, **24 existing explicit skips**, zero failures, 32 seconds. `flutter analyze` is clean. The suite includes all 54 variants at normal and 2× text size, stale account/service and profile-save guards, permission/OTP behavior and active-call routing.
+- The full run exposed two outdated copy-based profile assertions and an off-screen ringing Cancel action. Restore tests now assert the actual route, mode, account and edit control. Live Cancel/Decline and End are anchored above the bottom safe area; direct-tap regressions cover short 800 × 600 viewports. The focused call/video/allowance run passes 66/66, including Tamil 2× text and End while another operation is busy. No authorization or lifecycle assertion was removed.
+- Current-profile loading, failed-load retry, draft-versus-saved selection and stale-owner picker results have dedicated UI coverage. Invalid avatar codes, URLs and paths are rejected without changing the persisted choice. Legacy values and optional-field absence retain coverage.
+- Backend integration: **437/437 passed**, including the six new portrait persistence/projection/migration cases; **74 API unit** and **10 schema** checks pass. Type checking and build pass; all **90 generated Dart client files** match the contracts.
+- Repository secret/contracts/dependency checks and **27 tooling tests** pass. The audio reference remains unchanged and passes **3/3** under pinned Node 24.13.0.
+- Independent reviews of portrait selection, owner guards, live call reachability and sampled visual compositions found no remaining blocking issue. Screenshot review does not replace physical TalkBack, device media or release acceptance.
+
+The refined ARM64 debug QA APK is version code **6009**, package `com.agilandeenadhayalan.nightshift`, using the unchanged private Firebase configuration and debug signer. The build compares **324 mobile/contracts source inputs**, four private inputs and named tool/test evidence hashes before and after compilation. All **66 portrait/font/license assets** inside the APK byte-match their captured source files, and all **31 native libraries** pass 16 KB ELF/ZIP alignment and official `zipalign` checks. The ignored build record is sealed to the exact source commit after commit review.
+
+Local artifact: `artifacts/nightshift-native-designs-6009-arm64.apk`, **167,510,529 bytes**, SHA-256 `f1a40f265b053c176fbfaf2931706e684e326e60eb6cd46fbd51c186ec1a2d3d`. This supersedes the first-pass 6008 APK for visual review. It is not installed; the running phone backend is not migrated. The debug build is not a production release or exhaustive attestation of external SDK/package-cache inputs.

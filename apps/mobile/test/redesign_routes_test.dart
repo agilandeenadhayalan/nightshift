@@ -91,6 +91,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(LoginScreen), findsOneWidget);
     expect(find.byType(CommerceDesignScreen), findsNothing);
+    scope.read(routerProvider).go('/edit-profile');
+    await tester.pumpAndSettle();
+    expect(find.byType(LoginScreen), findsOneWidget);
   });
 
   testWidgets(
@@ -98,7 +101,7 @@ void main() {
       (tester) async {
     final (app, scope) = await mount(tester);
     app.activeCall = CallSession.fromJson(callJson(state: 'connected'));
-    for (final path in ['/designs', '/wallet', '/support']) {
+    for (final path in ['/designs', '/wallet', '/support', '/edit-profile']) {
       scope.read(routerProvider).go(path);
       await tester.pumpAndSettle();
       expect(find.byType(CallScreen), findsOneWidget);

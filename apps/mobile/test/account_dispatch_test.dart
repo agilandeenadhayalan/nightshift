@@ -41,7 +41,82 @@ void main() {
     expect(sends, 0);
     expect(app.user!.id, 'b');
     expect(app.onboardingProfile, isNull);
-    expect(app.errorCode, 'PRIVATE_SESSION_CHANGED');
+    expect(app.errorCode, isNull);
+    expect(app.busy, isFalse);
+  });
+  for (final changeOrigin in [false, true]) {
+    test(
+        'stale onboarding cannot clear replacement ${changeOrigin ? 'origin' : 'owner'} operation busy or error state',
+        () async {
+      final oldGate = Completer<void>(), newGate = Completer<void>();
+      var sends = 0, replacementStarted = false;
+      final api = NightShiftApi(client: MockClient((request) async {
+        sends++;
+        return http.Response('{}', 200);
+      }))
+        ..token = 'token-a'
+        ..baseUrl = 'https://api.example';
+      final app = AppController(
+          api: api,
+          store: MemoryStore(),
+          audio: FakeAudio(),
+          startTimers: false)
+        ..user = UserProfile.fromJson({...userJson(), 'id': 'a'});
+      addTearDown(app.dispose);
+      api.prepareSession = () => oldGate.future;
+      final pending = app.completeOnboarding(draft);
+      Future<void>? replacement;
+      try {
+        expect(app.busy, isTrue);
+        if (changeOrigin) {
+          api.baseUrl = 'https://other.example';
+        } else {
+          app.user = UserProfile.fromJson({...userJson(), 'id': 'b'});
+          api.token = 'token-b';
+        }
+        expect(app.busy, isFalse,
+            reason:
+                'An old profile operation must not block the replacement scope');
+        replacement = app.perform(() async {
+          replacementStarted = true;
+          await newGate.future;
+        });
+        expect(replacementStarted, isTrue);
+        app.errorCode = 'CURRENT_SCOPE_ERROR';
+        expect(app.busy, isTrue);
+        oldGate.complete();
+        await pending;
+        expect(sends, 0,
+            reason:
+                'Neither a stale mutation nor a replacement snapshot refresh may dispatch');
+        expect(app.errorCode, 'CURRENT_SCOPE_ERROR');
+        expect(app.busy, isTrue);
+        expect(app.onboardingProfile, isNull);
+        newGate.complete();
+        await replacement;
+        expect(app.busy, isFalse);
+      } finally {
+        if (!oldGate.isCompleted) oldGate.complete();
+        if (!newGate.isCompleted) newGate.complete();
+        await pending;
+        await replacement;
+      }
+    });
+  }
+  test(
+      'current-owner onboarding failure still reports the error and releases busy',
+      () async {
+    final app = AppController(
+        api: FakeApi()..token = 'current',
+        store: MemoryStore(),
+        audio: FakeAudio(),
+        startTimers: false)
+      ..user = UserProfile.fromJson(userJson())
+      ..needsOnboarding = true;
+    addTearDown(app.dispose);
+    await app.completeOnboarding({...draft, 'dateOfBirth': 'invalid'});
+    expect(app.errorCode, 'INVALID_BIRTH_DATE');
+    expect(app.busy, isFalse);
   });
   test(
       'late onboarding response cannot install profile for a different current account',

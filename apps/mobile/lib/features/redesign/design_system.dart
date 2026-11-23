@@ -25,17 +25,24 @@ ThemeData nightshiftTheme({bool light = false}) {
           onSurface: Color(0xFFF1F5F9),
           error: Color(0xFFFF8A9B),
           outline: Color(0xFF475569));
-  final base = ThemeData(useMaterial3: true, colorScheme: scheme);
+  final base = ThemeData(
+      useMaterial3: true, colorScheme: scheme, fontFamily: 'PlusJakartaSans');
   return base.copyWith(
     scaffoldBackgroundColor:
         light ? const Color(0xFFF8F9FB) : NsColors.background,
     textTheme: base.textTheme.copyWith(
-      headlineLarge: base.textTheme.headlineLarge
-          ?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -1),
-      headlineMedium: base.textTheme.headlineMedium
-          ?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -.7),
-      headlineSmall: base.textTheme.headlineSmall
-          ?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -.4),
+      headlineLarge: base.textTheme.headlineLarge?.copyWith(
+          fontFamily: 'SpaceGrotesk',
+          fontWeight: FontWeight.w700,
+          letterSpacing: -1),
+      headlineMedium: base.textTheme.headlineMedium?.copyWith(
+          fontFamily: 'SpaceGrotesk',
+          fontWeight: FontWeight.w700,
+          letterSpacing: -.7),
+      headlineSmall: base.textTheme.headlineSmall?.copyWith(
+          fontFamily: 'SpaceGrotesk',
+          fontWeight: FontWeight.w700,
+          letterSpacing: -.4),
       titleLarge:
           base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
       bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.5),
@@ -68,8 +75,10 @@ ThemeData nightshiftTheme({bool light = false}) {
             padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            textStyle:
-                const TextStyle(fontSize: 15, fontWeight: FontWeight.w700))),
+            textStyle: const TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 15,
+                fontWeight: FontWeight.w700))),
     outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
             minimumSize: const Size(48, 52),
@@ -95,6 +104,11 @@ ThemeData nightshiftTheme({bool light = false}) {
     chipTheme: base.chipTheme.copyWith(
         backgroundColor: light ? Colors.white : NsColors.card,
         selectedColor: NsColors.violet.withAlpha(70),
+        labelStyle: TextStyle(
+            color: light ? const Color(0xff382351) : const Color(0xffe2e8f0)),
+        secondaryLabelStyle:
+            TextStyle(color: light ? const Color(0xff5426a8) : Colors.white),
+        checkmarkColor: light ? const Color(0xff6d28d9) : NsColors.cyan,
         side: BorderSide(color: scheme.outline.withAlpha(60)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
   );
@@ -114,6 +128,7 @@ class NightshiftBrand extends StatelessWidget {
         Flexible(
             child: Text('nightshift',
                 style: TextStyle(
+                    fontFamily: 'SpaceGrotesk',
                     fontSize: size,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -1,
@@ -173,12 +188,66 @@ class NightshiftMascotPainter extends CustomPainter {
   bool shouldRepaint(NightshiftMascotPainter oldDelegate) => false;
 }
 
+/// Only a selected, allowlisted built-in code can identify a portrait asset.
+/// Neither role, display name nor account ID determines a person's appearance.
+String? avatarAssetPath(String? code) {
+  if (code == null ||
+      !RegExp(r'^(male|female)_(0[1-9]|[12][0-9]|30)$').hasMatch(code)) {
+    return null;
+  }
+  final parts = code.split('_');
+  return 'assets/avatars/${parts[0]}/avatar_${parts[1]}.png';
+}
+
+class AvatarPortrait extends StatelessWidget {
+  const AvatarPortrait(
+      {super.key,
+      required this.assetPath,
+      this.width,
+      this.height,
+      this.fit = BoxFit.cover,
+      this.alignment = Alignment.topCenter,
+      this.borderRadius = const BorderRadius.all(Radius.circular(24))});
+  final String assetPath;
+  final double? width, height;
+  final BoxFit fit;
+  final AlignmentGeometry alignment;
+  final BorderRadiusGeometry borderRadius;
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+        borderRadius: borderRadius,
+        child: Image.asset(
+          assetPath,
+          width: width,
+          height: height,
+          fit: fit,
+          alignment: alignment,
+          filterQuality: FilterQuality.medium,
+          excludeFromSemantics: true,
+          errorBuilder: (_, __, ___) => SizedBox(
+              width: width,
+              height: height,
+              child: const ColoredBox(
+                  color: NsColors.card,
+                  child: Center(
+                      child: Icon(Icons.person_outline_rounded,
+                          color: NsColors.muted)))),
+        ),
+      );
+}
+
 class NightshiftAvatar extends StatelessWidget {
   const NightshiftAvatar(
-      {super.key, required this.name, this.size = 80, this.listener = false});
+      {super.key,
+      required this.name,
+      this.size = 80,
+      this.listener = false,
+      this.avatarCode,
+      this.assetPath});
   final String name;
   final double size;
   final bool listener;
+  final String? avatarCode, assetPath;
   @override
   Widget build(BuildContext context) => Semantics(
         label: name,
@@ -198,10 +267,22 @@ class NightshiftAvatar extends StatelessWidget {
                   BoxShadow(
                       color: NsColors.violet.withAlpha(40), blurRadius: 30)
                 ]),
-            child: Icon(
-                listener ? Icons.headset_mic_rounded : Icons.person_rounded,
-                size: size * .5,
-                color: Colors.white)),
+            padding: const EdgeInsets.all(3),
+            child: assetPath != null || avatarAssetPath(avatarCode) != null
+                ? AvatarPortrait(
+                    assetPath: assetPath ?? avatarAssetPath(avatarCode)!,
+                    width: size - 6,
+                    height: size - 6,
+                    borderRadius: BorderRadius.circular(size))
+                : Center(
+                    child: Text(
+                        switch (avatarCode) {
+                          'star' => '⭐',
+                          'leaf' => '🌿',
+                          'wave' => '🌊',
+                          _ => '🌙',
+                        },
+                        style: TextStyle(fontSize: size * .48)))),
       );
 }
 

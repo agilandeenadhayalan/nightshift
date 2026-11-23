@@ -81,7 +81,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
           path: '/phone-login', builder: (_, __) => const PhoneLoginScreen()),
       GoRoute(
-          path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
+          path: '/onboarding',
+          builder: (_, __) =>
+              OnboardingScreen(key: ValueKey(state.accountIdentity))),
+      GoRoute(
+          path: '/edit-profile',
+          builder: (_, __) => OnboardingScreen(
+              key: ValueKey(state.accountIdentity), editing: true)),
       GoRoute(path: '/call', builder: (_, __) => const CallScreen()),
       GoRoute(path: '/matching', builder: (_, __) => const MatchingScreen()),
       GoRoute(path: '/privacy', builder: (_, __) => const PrivacyScreen()),

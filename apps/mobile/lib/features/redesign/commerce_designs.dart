@@ -199,13 +199,13 @@ class CommerceDesignScreen extends ConsumerWidget {
 
   Widget _previewNotice({bool light = false}) => Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
-        color: light ? const Color(0xffeee8ff) : const Color(0xff271d43),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+        color: light ? const Color(0xfff4f0ff) : NsColors.background,
         child: _CommerceText(
-          'DESIGN PREVIEW · Sample amounts · No transactions',
+          'DESIGN PREVIEW · No transactions',
           style: TextStyle(
             color: light ? const Color(0xff5c24b8) : const Color(0xffddd0ff),
-            fontSize: 11,
+            fontSize: 9,
             fontWeight: FontWeight.w600,
           ),
         ),

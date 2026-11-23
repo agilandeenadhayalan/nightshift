@@ -4,9 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../core/controller.dart';
+import '../core/api.dart' show ApiFailure;
 import '../core/phone_sign_in.dart';
 import 'message_copy.dart';
 import 'redesign/design_system.dart';
+import 'redesign/avatar_picker.dart';
 
 class PhoneLoginScreen extends ConsumerStatefulWidget {
   const PhoneLoginScreen(
@@ -239,7 +241,8 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
 }
 
 class OnboardingScreen extends ConsumerStatefulWidget {
-  const OnboardingScreen({super.key});
+  const OnboardingScreen({super.key, this.editing = false});
+  final bool editing;
   @override
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
@@ -249,6 +252,38 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   String _avatar = 'moon', _interfaceLanguage = 'en';
   final Set<String> _languages = {'ta'};
   bool _consent = false, _loaded = false;
+  Object? _formOwner;
+  bool _editReady = false, _editLoading = false;
+  String? _editError;
+  int _editRequest = 0;
+
+  Future<void> _loadEditProfile() async {
+    if (!mounted || _editLoading) return;
+    final app = ref.read(appControllerProvider), owner = _formOwner;
+    final request = ++_editRequest;
+    bool current() =>
+        mounted && owner == app.accountIdentity && request == _editRequest;
+    setState(() {
+      _editLoading = true;
+      _editError = null;
+      _editReady = false;
+    });
+    try {
+      await app.loadOnboarding();
+      if (!current()) return;
+      setState(() {
+        _editReady = true;
+        _loaded = false;
+      });
+    } on ApiFailure catch (error) {
+      if (current()) setState(() => _editError = error.code);
+    } catch (_) {
+      if (current()) setState(() => _editError = 'UNKNOWN');
+    } finally {
+      if (current()) setState(() => _editLoading = false);
+    }
+  }
+
   @override
   void dispose() {
     _name.dispose();
@@ -259,6 +294,50 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final app = ref.watch(appControllerProvider);
+    if (_formOwner != app.accountIdentity) {
+      _formOwner = app.accountIdentity;
+      _loaded = false;
+      _consent = false;
+      _avatar = 'moon';
+      _name.clear();
+      _dob.clear();
+      _interfaceLanguage = app.locale;
+      _languages
+        ..clear()
+        ..add('ta');
+      _editReady = !widget.editing;
+      _editLoading = false;
+      _editError = null;
+      _editRequest++;
+      if (widget.editing) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) unawaited(_loadEditProfile());
+        });
+      }
+    }
+    if (widget.editing && !_editReady) {
+      return Scaffold(
+          appBar: AppBar(
+              title: Text(app.text('Edit profile', 'சுயவிவரத்தை திருத்து'))),
+          body: Center(
+              child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    if (_editLoading || _editError == null) ...[
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      Text(app.text('Loading your profile…',
+                          'உங்கள் சுயவிவரம் ஏற்றப்படுகிறது…')),
+                    ] else ...[
+                      Text(errorMessage(_editError, app.locale),
+                          textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                          onPressed: _loadEditProfile,
+                          child: Text(app.text('Retry', 'மீண்டும் முயற்சி'))),
+                    ],
+                  ]))));
+    }
     final profile = app.onboardingProfile;
     if (!_loaded && profile != null) {
       _loaded = true;
@@ -276,7 +355,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
     return Scaffold(
         appBar: AppBar(
-            title: Text(app.text('Your profile', 'உங்கள் சுயவிவரம்')),
+            title: Text(widget.editing
+                ? app.text('Edit profile', 'சுயவிவரத்தை திருத்து')
+                : app.text('Your profile', 'உங்கள் சுயவிவரம்')),
             actions: [
               IconButton(
                   onPressed: () => context.go('/privacy'),
@@ -340,28 +421,28 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               child: NightshiftAvatar(
                                   name:
                                       app.text('Your avatar', 'உங்கள் அவதாரம்'),
+                                  avatarCode: _avatar,
                                   size: 88)),
                           const SizedBox(height: 16),
-                          DropdownButtonFormField<String>(
-                              value: _avatar,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                  labelText: app.text('Avatar', 'அவதாரம்')),
-                              items: [
-                                for (final entry in <String, String>{
-                                  'moon': app.text('Moon', 'நிலா'),
-                                  'star': app.text('Star', 'நட்சத்திரம்'),
-                                  'leaf': app.text('Leaf', 'இலை'),
-                                  'wave': app.text('Wave', 'அலை')
-                                }.entries)
-                                  DropdownMenuItem(
-                                      value: entry.key,
-                                      child: Text(entry.value))
-                              ],
-                              onChanged: app.busy
-                                  ? null
-                                  : (value) =>
-                                      setState(() => _avatar = value!)),
+                          OutlinedButton.icon(
+                            key: const Key('onboarding-avatar-picker'),
+                            onPressed: app.busy
+                                ? null
+                                : () async {
+                                    final owner = app.accountIdentity;
+                                    final code = await showAvatarPicker(context,
+                                        selected: _avatar,
+                                        tamil: app.locale == 'ta');
+                                    if (mounted &&
+                                        owner == app.accountIdentity &&
+                                        code != null) {
+                                      setState(() => _avatar = code);
+                                    }
+                                  },
+                            icon: const Icon(Icons.face_retouching_natural),
+                            label: Text(app.text('Choose your avatar',
+                                'உங்கள் அவதாரத்தை தேர்ந்தெடுக்கவும்')),
+                          ),
                           const SizedBox(height: 16),
                           DropdownButtonFormField<String>(
                               value: _interfaceLanguage,
@@ -420,14 +501,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               onPressed: !app.busy &&
                                       _consent &&
                                       _languages.isNotEmpty
-                                  ? () =>
-                                      app.completeOnboarding(<String, dynamic>{
+                                  ? () async {
+                                      final owner = app.accountIdentity;
+                                      await app
+                                          .completeOnboarding(<String, dynamic>{
                                         'dateOfBirth': _dob.text.trim(),
                                         'displayName': _name.text.trim(),
                                         'avatarCode': _avatar,
                                         'interfaceLanguage': _interfaceLanguage,
                                         'languages': _languages.toList(),
-                                      })
+                                      });
+                                      if (widget.editing &&
+                                          context.mounted &&
+                                          owner == app.accountIdentity &&
+                                          app.errorCode == null &&
+                                          !app.needsOnboarding) {
+                                        context.go('/profile');
+                                      }
+                                    }
                                   : null,
                               child: Text(app.text(
                                   'Save and continue', 'சேமித்து தொடரவும்'))),
@@ -441,25 +532,27 @@ class _AccountHeader extends StatelessWidget {
   final IconData icon;
   final String title, subtitle;
   @override
-  Widget build(BuildContext context) => Column(children: [
-        const Center(child: NightshiftBrand(size: 28)),
-        const SizedBox(height: 28),
-        Container(
-            width: 84,
-            height: 84,
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(26),
-                gradient: const LinearGradient(
-                    colors: [Color(0xFF382263), Color(0xFF123047)]),
-                border: Border.all(color: NsColors.cyan.withAlpha(80))),
-            child: Icon(icon, color: NsColors.cyan, size: 38)),
-        const SizedBox(height: 24),
+  Widget build(BuildContext context) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Expanded(child: NightshiftBrand(size: 25)),
+          Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: const LinearGradient(
+                      colors: [Color(0xFF382263), Color(0xFF123047)]),
+                  border: Border.all(color: NsColors.cyan.withAlpha(80))),
+              child: Icon(icon, color: NsColors.cyan, size: 22))
+        ]),
+        const SizedBox(height: 32),
         Text(title,
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.left,
             style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 12),
         Text(subtitle,
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.left,
             style: const TextStyle(color: NsColors.muted)),
       ]);
 }

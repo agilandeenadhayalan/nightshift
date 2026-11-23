@@ -4,6 +4,7 @@ const date={type:'string',format:'date-time'}, nullableDate={type:['string','nul
 const ref=name=>({$ref:`#/components/schemas/${name}`});
 const array=items=>({type:'array',items});
 const object=(properties,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
+const avatarCode={type:'string',enum:['moon','star','leaf','wave',...['male','female'].flatMap(prefix=>Array.from({length:30},(_,i)=>`${prefix}_${String(i+1).padStart(2,'0')}`))]};
 const mediaType={type:'string',enum:['audio','video']};
 const schemas={
   User:object({id,displayName:str,languages:array({type:'string',enum:['ta','en']}),mode:{type:'string',enum:['customer','listener']},listenerApproved:bool,online:bool}),
@@ -40,9 +41,9 @@ const schemas={
   PhoneSessionRequest:object({idToken:{type:'string',minLength:1,maxLength:16384},deviceId:{type:'string',minLength:1,maxLength:128},attemptId:id},['idToken','deviceId']),
   FirebasePhoneAdmission:object({attemptId:id,expiresAt:date,retryAt:date}),
   PhoneSession:object({token:str,expiresAt:date,user:ref('User'),needsOnboarding:bool,testOnly:{const:true,type:'boolean'}}),
-  OnboardingProfile:object({displayName:{type:'string',maxLength:40},avatarCode:{type:'string',enum:['moon','star','leaf','wave']},interfaceLanguage:{type:'string',enum:['ta','en']},languages:{type:'array',minItems:1,maxItems:2,uniqueItems:true,items:{type:'string',enum:['ta','en']}},dateOfBirth:{type:['string','null'],format:'date'}}),
+  OnboardingProfile:object({displayName:{type:'string',maxLength:40},avatarCode,interfaceLanguage:{type:'string',enum:['ta','en']},languages:{type:'array',minItems:1,maxItems:2,uniqueItems:true,items:{type:'string',enum:['ta','en']}},dateOfBirth:{type:['string','null'],format:'date'}}),
   OnboardingState:object({required:bool,profile:ref('OnboardingProfile')}),
-  CompleteOnboardingRequest:object({displayName:{type:'string',minLength:2,maxLength:40},avatarCode:{type:'string',enum:['moon','star','leaf','wave']},interfaceLanguage:{type:'string',enum:['ta','en']},languages:{type:'array',minItems:1,maxItems:2,uniqueItems:true,items:{type:'string',enum:['ta','en']}},dateOfBirth:{type:'string',format:'date'},consentVersion:{type:'string',enum:['adult-onboarding-v1']}}),
+  CompleteOnboardingRequest:object({displayName:{type:'string',minLength:2,maxLength:40},avatarCode,interfaceLanguage:{type:'string',enum:['ta','en']},languages:{type:'array',minItems:1,maxItems:2,uniqueItems:true,items:{type:'string',enum:['ta','en']}},dateOfBirth:{type:'string',format:'date'},consentVersion:{type:'string',enum:['adult-onboarding-v1']}}),
   ConsentEvent:object({id,purpose:str,noticeVersion:str,granted:bool,createdAt:date}),
   ConsentHistory:object({items:array(ref('ConsentEvent'))}),
   DeletionNotice:object({noticeVersion:{type:'string',const:'account-deletion-test-v1'},text:str,testOnly:{type:'boolean',const:true},retentionReviewRequired:{type:'boolean',const:true}}),
@@ -65,6 +66,10 @@ const schemas={
   Event:object({id,type:{type:'string',enum:['call.invited','call.state_changed']},entityId:id,version:integer,timestamp:date,data:ref('Call')})
 };
 // Additive optional fields preserve old durable event/idempotency payloads.
+schemas.User.properties.avatarCode=avatarCode;
+schemas.Listener.properties.avatarCode=avatarCode;
+schemas.Call.properties.customerAvatarCode=avatarCode;
+schemas.Call.properties.listenerAvatarCode=avatarCode;
 schemas.Call.properties.mediaType=mediaType;
 schemas.Call.properties.durationLimitReason={type:'string',enum:['test_credit_balance','test_duration_cap'],description:'Reason for the frozen connected-time allowance at reservation. May be absent on legacy events and idempotent responses.'};
 schemas.RtcToken.properties.mediaType=mediaType;
